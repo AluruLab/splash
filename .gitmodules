@@ -1,0 +1,3 @@
+[submodule "ext/cmake-utils"]
+	path = ext/cmake-utils
+	url = https://tcpan@bitbucket.org/tcpan/cmake-utils.git
