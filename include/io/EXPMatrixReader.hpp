@@ -23,6 +23,8 @@ using namespace std;
 #include <mpi.h>
 #endif  // with mpi
 
+namespace splash { namespace io { 
+
 /*use the same format with ARACNE*/
 template<typename FloatType>
 class EXPMatrixReader {
@@ -104,7 +106,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize(string& fileName,
 	size_t bufferSize = 0;
 	int numChars;
 	const char delim[] = "\t";
-	CustomFileReader fileReader;
+	splash::io::CustomFileReader fileReader;
 
 	/*open the file*/
 	if (!fileReader.open(fileName.c_str(), "rb")) {
@@ -170,7 +172,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData(string& fileName,
 	int numChars, index;
 	// bool firstEntry;
 	const char delim[] = "\t";
-	CustomFileReader fileReader;
+	splash::io::CustomFileReader fileReader;
 
 	/*open the file*/
 	if (!fileReader.open(fileName.c_str(), "rb")) {
@@ -719,3 +721,4 @@ bool EXPMatrixReader<FloatType>::loadMatrixData(string& fileName,
 #endif // with_mpi.
 
 
+}}

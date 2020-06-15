@@ -7,9 +7,8 @@
  *  						Georgia Institute of Technology, Atlanta, GA 30332
  *  URL: www.liuyc.org
  */
+#pragma once
 
-#ifndef INCLUDE_CUSTOMFILEREADER_HPP_
-#define INCLUDE_CUSTOMFILEREADER_HPP_
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,6 +54,8 @@ typedef FILE* FileReaderDescriptor;
 #define myfread(buffer, size, nmemb, file) fread(buffer, size, nmemb, file)
 
 #endif	/*COMPRESSED_INPUT*/
+
+namespace splash { namespace io { 
 
 /*define the structure*/
 class CustomFileReader {
@@ -202,5 +203,4 @@ public:
 	int32_t _fileBufferSentinel;
 };
 
-
-#endif /* INCLUDE_CUSTOMFILEREADER_HPP_ */
+}}
