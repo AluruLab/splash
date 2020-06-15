@@ -9,11 +9,7 @@
 
 #pragma once  // instead of #ifndef ...
 
-#include <stdlib.h> // aligned_alloc
-#include <new>      // bad_alloc
-
-#include "ds/common.hpp"
-#include "io/error_handler.hpp"
+#include "utils/memory.hpp"
 
 namespace splash { namespace ds { 
 
@@ -45,22 +41,18 @@ class aligned_matrix {
 
     public:
         aligned_matrix() : 
-            _data(nullptr), _rows(0), _cols(0), _align(SPL_CACHELINE_WIDTH), _bytes_per_row(0), manage(true) {}
+            _data(nullptr), _rows(0), _cols(0), _align(splash::utils::get_cacheline_size()), _bytes_per_row(0), manage(true) {}
         
         // construct, optionally with allocated data.
-        aligned_matrix(size_t const & rows, size_t const & cols, size_t const & align = SPL_CACHELINE_WIDTH,
+        // alignment of 0 indicates: use system's cacheline size.
+        aligned_matrix(size_t const & rows, size_t const & cols, size_t const & align = 0, 
                         void* data = nullptr, bool const & copy=true) :
-            _rows(rows), _cols(cols), _align(align),
-            _bytes_per_row((cols * sizeof(FloatType) + static_cast<size_t>(align - 1)) & ~(static_cast<size_t>(align - 1))),
+            _rows(rows), _cols(cols), _align(align == 0 ? splash::utils::get_cacheline_size() : align),
+            _bytes_per_row(splash::utils::get_aligned_size(cols * sizeof(FloatType), _align)),
             manage(copy)
         {
             if (manage) {
-                _data = aligned_alloc(_align, _bytes_per_row * _rows);  // total size is multiple of alignment.
-
-                if (!_data) {
-                    splash::io::print_err("Memory allocation failed at line %d in file %s\n", __LINE__, __FILE__);
-                    throw std::bad_alloc();
-                }
+                _data = splash::utils::aligned_alloc(_bytes_per_row * _rows, _align);  // total size is multiple of alignment.
             }
             if (data)
                 if (copy)
@@ -76,12 +68,9 @@ class aligned_matrix {
             else {
                 // not same size.  free and reallocate.
                 if (allocated() != other.allocated()) {
-                    if (_data) free(_data);
-                    _data = aligned_alloc(other._align, other.allocated());  // total size is multiple of alignment.
-                    if (!_data) {
-                        splash::io::print_err("Memory allocation failed at line %d in file %s\n", __LINE__, __FILE__);
-                        throw std::bad_alloc();
-                    }
+                    if (_data) splash::utils::aligned_free(_data);
+                    _data = splash::utils::aligned_alloc(other.allocated(), other._align);  // total size is multiple of alignment.
+                    
                 memcpy(_data, other._data, other.allocated());
             }
             _rows = other._rows;
@@ -111,7 +100,7 @@ class aligned_matrix {
 
         ~aligned_matrix() {
             if (_data && manage) {
-                free(_data);
+                splash::utils::aligned_free(_data);
             }
             _data = nullptr;
         }

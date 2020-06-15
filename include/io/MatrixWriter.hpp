@@ -20,6 +20,8 @@
 #include "benchmark.hpp"
 
 
+namespace splash { namespace io { 
+
 template<typename FloatType>
 class MatrixWriter {
 
@@ -102,5 +104,5 @@ public:
 };
 
 
-#endif
 
+}}

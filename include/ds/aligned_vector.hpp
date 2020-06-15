@@ -9,11 +9,7 @@
 
 #pragma once
 
-#include <stdlib.h>
-#include <new>
-
-#include "ds/common.hpp"
-#include "io/error_handler.hpp"
+#include "utils/memory.hpp"
 
 namespace splash { namespace ds { 
 
@@ -38,22 +34,18 @@ class aligned_vector {
 
     public:
         aligned_vector() : 
-            _data(nullptr), _cols(0), _align(SPL_CACHELINE_WIDTH), manage(true) {}
+            _data(nullptr), _cols(0), _align(splash::utils::get_cacheline_size()), manage(true) {}
 
         // construct, optionally with allocated data.
-        aligned_vector(size_t const & cols, size_t const & align = SPL_CACHELINE_WIDTH,
+        // alignment of 0 indicates: use system's cacheline size.
+        aligned_vector(size_t const & cols, size_t const & align = 0,
                         void* data = nullptr, bool const & copy=true) :
-            _cols(cols), _align(align),
-            bytes((cols * sizeof(FloatType) + static_cast<size_t>(align - 1)) & ~(static_cast<size_t>(align - 1))),
+            _cols(cols), _align(align == 0 ? splash::utils::get_cacheline_size() : align),
+            bytes(splash::utils::get_aligned_size(cols * sizeof(FloatType), _align)),
             manage(copy)
         {
             if (manage) {
-                _data = aligned_alloc(_align, bytes);  // total size is multiple of alignment.
-
-                if (!_data) {
-                    splash::io::print_err("Memory allocation failed at line %d in file %s\n", __LINE__, __FILE__);
-                    throw std::bad_alloc();
-                }
+                _data = splash::utils::aligned_alloc(bytes, _align);  // total size is multiple of alignment.
             }
             if (data)
                 if (copy)
@@ -69,12 +61,8 @@ class aligned_vector {
             else {
                 // not same size.  free and reallocate.
                 if (allocated() != other.allocated()) {
-                    if (_data) free(_data);
-                    _data = aligned_alloc(other._align, other.allocated());  // total size is multiple of alignment.
-                    if (!_data) {
-                        splash::io::print_err("Memory allocation failed at line %d in file %s\n", __LINE__, __FILE__);
-                        throw std::bad_alloc();
-                    }
+                    if (_data) splash::utils::aligned_free(_data);
+                    _data = splash::utils::aligned_alloc(other.allocated(), other._align);  // total size is multiple of alignment.
                 memcpy(_data, other._data, other.allocated());
             }
             _cols = other._cols;
@@ -101,7 +89,7 @@ class aligned_vector {
 
         ~aligned_vector() {
             if (_data && manage) {
-                free(_data);
+                splash::utils::aligned_free(_data);
             }
             _data = nullptr;
         }

@@ -17,6 +17,7 @@
 #include <string>
 #include <limits>
 
+namespace splash { namespace io { 
 
 
 template<typename FloatType>
@@ -25,31 +26,31 @@ class VectorWriter {
 
 public:
 
-    static bool storeMatrixData(const char * fileName, size_t const & cols, 
+    static bool storeVectorData(const char * fileName, size_t const & cols, 
         FloatType* vectors) {
-            return VectorWriter::storeMatrixData(std::string(fileName), cols, vectors);
+            return VectorWriter::storeVectorData(std::string(fileName), cols, vectors);
         }
 
 
-    static bool storeMatrixData(std::string const & fileName, size_t const & cols, 
+    static bool storeVectorData(std::string const & fileName, size_t const & cols, 
         FloatType* vectors) {
         
 		std::vector<std::string> col_names(cols);
 		for (size_t i = 0; i < cols; ++i) {
 			col_names[i] = std::to_string(i);
 		}
-		return VectorWriter::storeMatrixData(fileName, 
+		return VectorWriter::storeVectorData(fileName, 
 			col_names,
 			vectors);
     }
     
-    static bool storeMatrixData(const char * fileName, 
+    static bool storeVectorData(const char * fileName, 
 			std::vector<std::string> const & col_names, FloatType* vectors) {
-            return VectorWriter::storeMatrixData(std::string(fileName), col_names, vectors);
+            return VectorWriter::storeVectorData(std::string(fileName), col_names, vectors);
         }
 
 	/*dump the matrix data.  matrix in row-major.  output is 1 line per row.*/
-	static bool storeMatrixData(std::string const & fileName, 
+	static bool storeVectorData(std::string const & fileName, 
 			std::vector<std::string> const & col_names, FloatType* vectors) {
 
         const char delim[] = ",";
@@ -91,5 +92,4 @@ public:
 };
 
 
-#endif
-
+}}
