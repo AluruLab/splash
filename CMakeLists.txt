@@ -193,6 +193,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin CACHE PATH "Output directory 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 #include_directories("${CMAKE_BINARY_DIR}")
 include_directories("${EXT_PROJECTS_DIR}") 
+include_directories("${EXT_PROJECTS_DIR}/CLI11/include") 
 
 
 if (BUILD_APPLICATIONS)
