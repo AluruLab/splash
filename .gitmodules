@@ -1,3 +1,6 @@
 [submodule "ext/cmake-utils"]
 	path = ext/cmake-utils
 	url = https://tcpan@bitbucket.org/tcpan/cmake-utils.git
+[submodule "ext/CLI11"]
+	path = ext/CLI11
+	url = https://github.com/CLIUtils/CLI11.git
