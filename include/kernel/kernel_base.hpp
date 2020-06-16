@@ -11,17 +11,33 @@
 
 namespace splash { namespace kernel { 
 
+// vector + vector -> scalar operator.
 template <typename IT, typename OT>
-class BinaryVectorOpBase {
+class VV2SOp {
     public:
         inline OT operator()(IT const * first, IT const * second, size_t const & count) {};
 };
 
 
+// Vector generator.
+template <typename OT>
+class N2VOp {
+    public:
+        inline void operator()(size_t const & count,
+            OT * out_vector) {};
+};
 
-// for operation on a single matrix
+// Matrix generator.
+template <typename OT>
+class N2MOp {
+    public:
+        inline void operator()(size_t const & rows, size_t const & cols, size_t const & row_stride,
+            OT * out_matrix) {};
+};
+
+// matrix -> matrix operator.
 template <typename IT, typename OT>
-class UnaryMatrixOpBase {
+class M2MOp {
     public:
         inline void operator()(IT const * in_matrix, 
             size_t const & rows, size_t const & cols, size_t const & row_stride,
@@ -29,9 +45,9 @@ class UnaryMatrixOpBase {
 };
 
 
-// for operation on a single matrix
+// vector -> vector operator.
 template <typename IT, typename OT>
-class UnaryVectorOpBase {
+class V2VOp {
     public:
         inline void operator()(IT const * in_vector, 
             size_t const & count,
