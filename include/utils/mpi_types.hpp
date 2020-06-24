@@ -24,14 +24,14 @@ template <> struct datatype<unsigned long long, true> {  MPI_Datatype value { MP
 template <> struct datatype<float, true> {  MPI_Datatype value { MPI_FLOAT }; };
 template <> struct datatype<double, true> {  MPI_Datatype value { MPI_DOUBLE }; };
 template <> struct datatype<long double, true> {  MPI_Datatype value { MPI_LONG_DOUBLE }; };
-template <> struct datatype<int8_t, true> {  MPI_Datatype value { MPI_INT8_T }; };
-template <> struct datatype<int16_t, true> {  MPI_Datatype value { MPI_INT16_T }; };
-template <> struct datatype<int32_t, true> {  MPI_Datatype value { MPI_INT32_T }; };
-template <> struct datatype<int64_t, true> {  MPI_Datatype value { MPI_INT64_T }; };
-template <> struct datatype<uint8_t, true> {  MPI_Datatype value { MPI_UINT8_T }; };
-template <> struct datatype<uint16_t, true> {  MPI_Datatype value { MPI_UINT16_T }; };
-template <> struct datatype<uint32_t, true> {  MPI_Datatype value { MPI_UINT32_T }; };
-template <> struct datatype<uint64_t, true> {  MPI_Datatype value { MPI_UINT64_T }; };
+// template <> struct datatype<int8_t, true> {  MPI_Datatype value { MPI_INT8_T }; };
+// template <> struct datatype<int16_t, true> {  MPI_Datatype value { MPI_INT16_T }; };
+// template <> struct datatype<int32_t, true> {  MPI_Datatype value { MPI_INT32_T }; };
+// template <> struct datatype<int64_t, true> {  MPI_Datatype value { MPI_INT64_T }; };
+// template <> struct datatype<uint8_t, true> {  MPI_Datatype value { MPI_UINT8_T }; };
+// template <> struct datatype<uint16_t, true> {  MPI_Datatype value { MPI_UINT16_T }; };
+// template <> struct datatype<uint32_t, true> {  MPI_Datatype value { MPI_UINT32_T }; };
+// template <> struct datatype<uint64_t, true> {  MPI_Datatype value { MPI_UINT64_T }; };
 
 
 // array types.  use std::vector as the specialization.
