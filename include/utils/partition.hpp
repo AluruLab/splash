@@ -25,12 +25,12 @@ namespace splash { namespace utils {
 
 template <typename ST>
 struct partition {
-    static_assert(::std::is_integral<ST>, "Partition: supports only integral template parameter");
+    static_assert( ::std::is_integral<ST>::value, "Partition: supports only integral template parameter" );
 
     using id_type = typename std::conditional<
         (sizeof(ST) > 2),
         typename std::conditional<
-            (sizeof(ST) == 8), int64_t, int32_t>::type
+            (sizeof(ST) == 8), int64_t, int32_t>::type,
         typename std::conditional<
             (sizeof(ST) == 2), int16_t, int8_t>::type
         >::type;
@@ -59,7 +59,7 @@ struct datatype<partition<ST>, false> {
             &test.offset - &test,
             &test.size - &test,
             &test.id - &test
-        }
+        };
         MPI_Type_create_struct(3, blocklen, disp, type, &value);
         MPI_Type_commit(&value);
     }
@@ -110,12 +110,12 @@ class partitioner1D<PARTITION_EQUAL> {
             ST offset = src.offset;
             block += 1;
             for (; i < remainder; ++i) {
-                partitions.emplace_back(partition<ST>{.offset = offset, .size = block, .id = i});
+                partitions.emplace_back(offset, block, i);
                 offset += block;
             }
             block -= 1;
             for (; i < parts; ++i) {
-                partitions.emplace_back(partition<ST>{.offset = offset, .size = block, .id = i});
+                partitions.emplace_back(offset, block, i);
                 offset += block;
             }
 
@@ -160,7 +160,7 @@ class partitioner1D<PARTITION_FIXED> {
             typename partition<ST>::id_type i = 0;
             ST offset = src.offset;
             for (; i < parts; ++i) {
-                partitions.emplace_back(partition{.offset = offset, .size = block, .id = i});
+                partitions.emplace_back(offset, block, i);
                 offset += block;
             }
             partitions[parts - 1].size = src.offset + src.size - partitions[parts - 1].offset;
@@ -178,7 +178,7 @@ class partitioner1D<PARTITION_FIXED> {
             typename partition<ST>::id_type parts = (src.size + block - 1) / block;
             ST offset = block * id;
 
-            return partition{.offset = offset + src.offset, 
+            return partition<ST>{.offset = offset + src.offset, 
                 .size = std::min(block, src.size - offset),
                 .parts = parts,
                 .id = id};
@@ -189,7 +189,7 @@ class partitioner1D<PARTITION_FIXED> {
 // the id is a 
 template <typename ST>
 struct partition2D {
-    static_assert(::std::is_integral<ST>, "Partition: supports only integral template parameter");
+    static_assert( ::std::is_integral<ST>::value, "Partition: supports only integral template parameter" );
 
     using part1D_type = partition<ST>;
     using id_type = typename partition<ST>::id_type;
@@ -221,7 +221,7 @@ struct datatype<partition2D<ST>, false> {
             &test.c - &test,
             &test.id - &test,
             &test.id_cols - &test
-        }
+        };
         MPI_Type_create_struct(4, blocklen, disp, type, &value);
         MPI_Type_commit(&value);
     }
@@ -252,10 +252,10 @@ class partitioner2D<PARTITION_EQUAL> {
         template <typename ST>
         inline std::vector<partition2D<ST>> divide(ST const & rows, ST const & cols,
             int const & row_parts, int const & col_parts) {
-            return divide(partition2D<ST>{
+            return divide(partition2D<ST> {
                         .r = partition<ST>{.offset = 0, .size = rows, .id = 0},
                         .c = partition<ST>{.offset = 0, .size = cols, .id = 0},
-                        .id = 0;
+                        .id = 0,
                         .id_cols = 1}, row_parts, col_parts);
         }
 
@@ -276,11 +276,10 @@ class partitioner2D<PARTITION_EQUAL> {
             for (int i = 0; i < row_parts; ++i) {
                 for (int j = 0; j < col_parts; ++j) {
                     partitions.emplace_back(
-                        partition2D<ST>{
-                        .r = r_partitions[i],
-                        .c = c_partitions[j],
-                        .id = id++;
-                        .id_cols = col_parts});
+                        r_partitions[i],
+                        c_partitions[j],
+                        id++,
+                        col_parts);
                 }
             }
             return partitions;
@@ -294,10 +293,11 @@ class partitioner2D<PARTITION_EQUAL> {
             return get_partition(partition2D<ST>{
                         .r = partition<ST>{.offset = 0, .size = rows, .id = 0},
                         .c = partition<ST>{.offset = 0, .size = cols, .id = 0},
-                        .id = 0;
+                        .id = 0,
                         .id_cols = 1}, row_parts, col_parts, id);
             }
 
+        template <typename ST>
         inline partition2D<ST> get_partition(partition2D<ST> const & src,
             int const & row_parts, int const & col_parts,
             int const & id) {
@@ -312,7 +312,7 @@ class partitioner2D<PARTITION_EQUAL> {
             return partition2D<ST>{
                         .r = r_partition,
                         .c = c_partition,
-                        .id = id;
+                        .id = id,
                         .id_cols = col_parts};
         }
 
@@ -333,7 +333,7 @@ class partitioner2D<PARTITION_FIXED> {
             return divide(partition2D<ST>{
                         .r = partition<ST>{.offset = 0, .size = rows, .id = 0},
                         .c = partition<ST>{.offset = 0, .size = cols, .id = 0},
-                        .id = 0;
+                        .id = 0,
                         .id_cols = 1}, row_block, col_block);
 
             }
@@ -355,11 +355,10 @@ class partitioner2D<PARTITION_FIXED> {
             for (int i = 0; i < row_parts; ++i) {
                 for (int j = 0; j < col_parts; ++j) {
                     partitions.emplace_back(
-                        partition2D<ST>{
-                        .r = r_partitions[i],
-                        .c = c_partitions[j],
-                        .id = id++;
-                        .id_cols = col_parts});
+                        r_partitions[i],
+                        c_partitions[j],
+                        id++,
+                        col_parts);
                 }
             }
 
@@ -375,7 +374,7 @@ class partitioner2D<PARTITION_FIXED> {
             return get_partition(partition2D<ST>{
                         .r = partition<ST>{.offset = 0, .size = rows, .id = 0},
                         .c = partition<ST>{.offset = 0, .size = cols, .id = 0},
-                        .id = 0;
+                        .id = 0,
                         .id_cols = 1}, row_block, col_block, id);
         }
                     
@@ -396,7 +395,7 @@ class partitioner2D<PARTITION_FIXED> {
             return partition2D<ST>{
                         .r = r_partition,
                         .c = c_partition,
-                        .id = id;
+                        .id = id,
                         .id_cols = col_parts};
         }
 
@@ -477,7 +476,7 @@ class banded_diagonal_filter {
 
     public:
         banded_diagonal_filter(size_t const & _band_width = 0, 
-            int64_t const & _dist_from_diag = 0) : band_width(_band_width), off_diag(_dist_form_diag) {}
+            int64_t const & _dist_from_diag = 0) : band_width(_band_width), off_diag(_dist_from_diag) {}
 
         template <typename ST>
         inline std::vector<partition2D<ST>> filter(std::vector<partition2D<ST>> const & parts) {
