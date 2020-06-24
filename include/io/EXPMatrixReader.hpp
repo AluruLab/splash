@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <CustomFileReader.hpp>
+#include <io/CustomFileReader.hpp>
 #include <string>
 #include <vector>
 #include "ds/aligned_matrix.hpp"
