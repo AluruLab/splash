@@ -27,22 +27,6 @@ class N2VOp {
             OT * out_vector) {};
 };
 
-// Matrix generator.
-template <typename OT>
-class N2MOp {
-    public:
-        inline void operator()(size_t const & rows, size_t const & cols, size_t const & row_stride,
-            OT * out_matrix) {};
-};
-
-// matrix -> matrix operator.
-template <typename IT, typename OT>
-class M2MOp {
-    public:
-        inline void operator()(IT const * in_matrix, 
-            size_t const & rows, size_t const & cols, size_t const & row_stride,
-            OT * out_matrix) {};
-};
 
 
 // vector -> vector operator.
@@ -52,6 +36,24 @@ class V2VOp {
         inline void operator()(IT const * in_vector, 
             size_t const & count,
             OT * out_vector) {};
+};
+
+// Matrix generator.
+template <typename OT>
+class N2MOp {
+    public:
+        inline void operator()(
+            size_t const & rows, size_t const & cols, size_t const & stride_bytes,
+            OT * out_matrix) {};
+};
+
+// matrix -> matrix operator.
+template <typename IT, typename OT>
+class M2MOp {
+    public:
+        inline void operator()(IT const * in_matrix, 
+            size_t const & rows, size_t const & cols, size_t const & stride_bytes,
+            OT * out_matrix) {};
 };
 
 
