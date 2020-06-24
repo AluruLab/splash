@@ -13,7 +13,7 @@
 #include <omp>
 #endif
 
-#if defined(WITH_MPI)
+#if defined(USE_MPI)
 #include <mpi.h>
 #endif
 
@@ -29,7 +29,7 @@ class random_number_generator {
         std::vector<Generator> generators;
         
     public:
-#ifdef WITH_MPI
+#ifdef USE_MPI
         random_number_generator(long const & _global_seed == 0, MPI_Comm comm = MPI_COMM_WORLD) {
 #else
         random_number_generator(long const & _global_seed == 0) {
@@ -40,7 +40,7 @@ class random_number_generator {
 
             // -------- compute machine seed.
             int rank = 0;
-#ifdef WITH_MPI
+#ifdef USE_MPI
             MPI_Comm_rank(MPI_COMM_WORLD, &rank);
             // instead of having rank 0 generate all seeds, start all processes with same seed.
             // then get rand "rank" number of times.  the next one is the actual seed.

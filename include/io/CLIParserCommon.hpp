@@ -15,7 +15,7 @@
 #include "io/parameters_base.hpp"
 #include <string>
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 #include <mpi.h>
 #endif
 
@@ -29,7 +29,7 @@ class mpi_parameters : public parameter_base {
         mpi_parameters() :
             procs(1), rank(0) {}
         virtual ~mpi_parameters() {
-#ifdef WITH_MPI
+#ifdef USE_MPI
             MPI_Finalize();
 #endif
         };
@@ -37,7 +37,7 @@ class mpi_parameters : public parameter_base {
         virtual void config(CLI::App& app) {}
 
         virtual void post_parse() {
-#ifdef WITH_MPI
+#ifdef USE_MPI
 	        MPI_Init(&argc, &argv);
             MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         	MPI_Comm_size(MPI_COMM_WORLD, &procs);

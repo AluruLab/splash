@@ -12,7 +12,7 @@
 #include "utils/memory.hpp"
 #include "utils/partition.hpp"
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 #include "mpi.h"
 #include "utils/mpi_types.hpp"
 #endif
@@ -23,7 +23,7 @@ template<typename FloatType>
 class aligned_matrix;
 }}
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 namespace splash { namespace utils { namespace mpi {
 
 // define data type for 1 row.
@@ -207,7 +207,7 @@ class aligned_matrix {
             memcpy(output._data, _data, allocated());
         }
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
         bool check_aligned_matrix(MPI_Comm comm = MPI_COMM_WORLD) {
             // first get the row and column counts on each rank
             size_t check[2];
@@ -223,7 +223,7 @@ class aligned_matrix {
         }
 #endif
             
-#ifdef WITH_MPI
+#ifdef USE_MPI
         aligned_matrix<FloatType> gather(int target_rank = 0, MPI_Comm comm = MPI_COMM_WORLD) {
             // validate that all columns are same.
             // validate that all alignments are same.
@@ -281,7 +281,7 @@ class aligned_matrix {
 #endif
         }
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
         aligned_matrix<FloatType> scatter(int src_rank = 0, MPI_Comm comm = MPI_COMM_WORLD) {
             // validate that all columns are same.
             // validate that all alignments are same.
@@ -331,7 +331,7 @@ class aligned_matrix {
         }
 
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
         aligned_matrix<FloatType> allgather(MPI_Comm comm = MPI_COMM_WORLD) {
             // validate that all columns are same.
             // validate that all alignments are same.
@@ -378,7 +378,7 @@ class aligned_matrix {
 #endif
         }
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
         void allgather_inplace(splash::utils::partition<size_t> const & part, MPI_Comm comm = MPI_COMM_WORLD) {
             // validate that all columns are same.
             // validate that all alignments are same.
@@ -430,7 +430,7 @@ class aligned_matrix {
 
 
         // ---- NOT YET NEEDED -------
-#ifdef WITH_MPI
+#ifdef USE_MPI
         aligned_matrix<FloatType> shift(int rank_distance, MPI_Comm comm = MPI_COMM_WORLD) {
             // validate that all columns are same.
             // validate that all alignments are same.

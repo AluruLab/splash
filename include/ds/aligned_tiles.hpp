@@ -8,7 +8,7 @@
 #include <limits>
 #include <algorithm>  // min/max
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 #include <mpi.h>
 #include "utils/mpi_types.hpp"
 #endif
@@ -221,7 +221,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         }
 
         // partition by row, for MPI.  based on offsets only.
-#ifdef WITH_MPI
+#ifdef USE_MPI
         aligned_tiles<T, S> gather(int const & target_rank, 
             MPI_Comm comm = MPI_COMM_WORLD ) {
 

@@ -20,7 +20,7 @@ void print_err(Types... args) {
 
 template <class... Types>
 void print(Types... args) {
-#ifdef WITH_MPI
+#ifdef USE_MPI
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) fprintf(stdout, args...);

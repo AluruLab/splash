@@ -21,7 +21,7 @@ using namespace std;
 #define EXP_SKIP_TWO_ROWS false
 #endif
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 #include <mpi.h>
 #endif  // with mpi
 
@@ -83,7 +83,7 @@ protected:
 public:
 	/*get gene expression matrix size*/
 	static bool getMatrixSize(string& fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
-#ifdef WITH_MPI
+#ifdef USE_MPI
 		return getMatrixSize_impl(fileName, numVectors, vectorSize, skip, MPI_COMM_WORLD);
 #else
 		return getMatrixSize_impl(fileName, numVectors, vectorSize, skip);
@@ -94,7 +94,7 @@ public:
 	static bool loadMatrixData(string& fileName, vector<string>& genes,
 			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
 			const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
-#ifdef WITH_MPI
+#ifdef USE_MPI
 		return loadMatrixData_impl(fileName, genes, samples, vectors, numVectors, vectorSize, stride_bytes, skip, MPI_COMM_WORLD);
 #else
 		return loadMatrixData_impl(fileName, genes, samples, vectors, numVectors, vectorSize, stride_bytes, skip);
@@ -105,7 +105,7 @@ public:
 	static bool loadMatrixData(string& fileName, vector<string>& genes,
 			vector<string>& samples, splash::ds::aligned_matrix<FloatType> & output,
 			const bool skip = EXP_SKIP_TWO_ROWS) {
-#ifdef WITH_MPI
+#ifdef USE_MPI
 		return loadMatrixData_impl(fileName, genes, samples, 
 			output.data(), output.rows(), output.columns(), output.column_bytes(), 
 			skip, MPI_COMM_WORLD);
@@ -130,7 +130,7 @@ protected:
 	// 		vector<string>& samples, splash::ds::aligned_matrix<FloatType> & input, const bool skip = EXP_SKIP_TWO_ROWS);
 
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 	/*get gene expression matrix size*/
 	static bool getMatrixSize_impl(string& fileName, int& numVectors, int& vectorSize, 
 		MPI_Comm comm,
@@ -487,7 +487,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 
 
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 
 template <typename FloatType>
 bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string& fileName, int& numVectors, int& vectorSize, 

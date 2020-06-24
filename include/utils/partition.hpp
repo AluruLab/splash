@@ -4,7 +4,7 @@
 #include <algorithrm>
 #include <type_traits>
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 #include "utils/mpi_types.hpp"
 #endif
 
@@ -39,7 +39,7 @@ struct partition {
     id_type id;
 };
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 namespace mpi {
 
 template <typename ST>
@@ -199,7 +199,7 @@ struct partition2D {
     id_type id_cols;  // id row size.
 };
 
-#ifdef WITH_MPI
+#ifdef USE_MPI
 namespace mpi {
 
 template <typename ST>
