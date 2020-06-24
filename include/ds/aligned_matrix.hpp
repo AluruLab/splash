@@ -260,7 +260,7 @@ class aligned_matrix {
             aligned_matrix<FloatType> output;
             if (rank == target_rank) {
                 // allocate final
-                output = aligned_matrix<FloatType>(row_offsets[procs] , _cols, _align);
+                output = std::move(aligned_matrix<FloatType>(row_offsets[procs] , _cols, _align));
             }
 
             // gatherv, row by row.

@@ -69,6 +69,38 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             if (_data) splash::utils::aligned_free(_data);
         }
 
+        aligned_tile(aligned_tile const & other) : _align(other._align), parts(other.parts), offsets(other.offsets) {
+            _data = reinterpret_cast<T*>(splash::utils::aligned_alloc(elements * sizeof(T), _align));
+            memcpy(_data, other._data, other.allocated() * sizeof(T));
+        }
+        aligned_tile & operator=(aligned_tile const & other) {
+            if ((_align != other._align) && (allocated() != other.allocated())) {
+                splash::utils::aligned_free(_data);
+                _data = reinterpret_cast<T*>(splash::utils::aligned_alloc(elements * sizeof(T), _align));
+            }
+            memcpy(_data, other._data, other.allocated() * sizeof(T));
+
+            _align = other._align;
+            parts.assign(other.parts.begin(), other.parts.end());
+            offsets.assign(other.offsets.begin(), other.offsets.end());
+            return *this;
+        }
+        // move constructor.  take ownership.
+        aligned_tile(aligned_tile && other) : _align(other._align) {
+            parts.swap(other.parts);
+            offsets.swap(other.offsets);
+            std::swap(_data, other._data);
+        }
+        aligned_tile & operator=(aligned_tile && other) {
+            std::swap(_align, other._align);
+            parts.swap(other.parts);
+            offsets.swap(other.offsets);
+            std::swap(_data, other._data);
+
+        }
+
+
+
         size_t size() const { return parts.size(); }
         size_t allocated() const { return offsets.last(); }
         T* data(size_t const & id) { return _data + offsets[id]; }
@@ -150,6 +182,25 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             return output;
         }
 
+        aligned_tiles<T, S> operator+(aligned_tiles<T, S> const & other) {
+            aligned_tiles<T, S> output(parts.size() + other.parts.size(), allocated() + other.allocated(), _align);
+
+            size_t i = 0;
+            for (; i < parts.size(); ++i) {
+                output.parts[i] = parts[i];
+                output.offsets[i] = offsets[i];
+            }
+            memcpy(output._data, _data, allocated() * sizeof(T));
+
+            size_t offset = allocated();
+            for (size_t j = 0; j < other.parts.size(); ++j, ++i) {
+                output.parts[i] = other.parts[j];
+                output.offsets[i] = offset + other.offsets[j];
+            }
+            memcpy(output._data + allocated(), other._data, other.allocated() * sizeof(T));
+
+        }
+
         // fill dense matrix
         void copy_to(aligned_matrix<T, S> & matrix) {
             T const * src;
@@ -171,6 +222,68 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
 
         // partition by row, for MPI.  based on offsets only.
 #ifdef WITH_MPI
+        aligned_tiles<T, S> gather(int const & target_rank, 
+            MPI_Comm comm = MPI_COMM_WORLD ) {
+
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            // get count of partitions
+            int * part_counts = nullptr;
+            int * elem_counts = nullptr;
+            int parts = parts.size();
+            int elems = parts.size();
+            if (rank == target_rank) {
+                part_counts = new int[procs] {};
+                elem_counts = new int[procs] {};
+            }
+            splash::utils::mpi::datatype<int> int_dt;
+            MPI_Gather(&parts, 1, int_dt.value, part_counts, 1, int_dt.value, target_rank, comm);
+            MPI_Gather(&elems, 1, int_dt.value, elem_counts, 1, int_dt.value, target_rank, comm);
+            int *part_offsets = nullptr;
+            int *elem_offsets = nullptr;
+            if (rank == target_rank) {
+                part_offsets = new int[procs + 1];
+                elem_offsets = new int[procs + 1];
+                part_offsets[0] = 0;
+                elem_offsets[0] = 0;
+                for (int i = 0; i < procs; ++i) {
+                    part_offsets[i + 1] = part_offsets[i] + part_counts[i];
+                    elem_offsets[i + 1] = elem_offsets[i] + elem_counts[i];
+                }
+            }
+
+            // allocate output
+            aligned_tiles<T, S> output;
+            if (rank == target_rank) {
+                output = std::move(aligned_tile<T, S>(part_offsets[procs], elem_offsets[procs], _align));
+            }
+            // -------- move parts by bytes
+            splash::utils::mpi::datatype<partition2D<S>> part2d_dt;
+            MPI_Gatherv(parts.data(), parts, part2d_dt.value,
+                output.parts.data(), part_counts, part_offsets, part2d_dt.value, 
+                target_rank, comm);
+
+            // -------- move data by bytes
+            splash::utils::mpi::datatype<T> t_dt;
+            MPI_Gatherv(_data, elems, t_dt.value,
+                output._data, elem_counts, elem_offsets, t_dt.value,
+                target_rank, comm);
+            
+            // --------- update offsets
+            if (rank == target_rank) {
+                S offset = 0;
+                for (int i = 0; i < output.parts.size(); ++i) {
+                    output.offsets[i] = offset;
+                    offset += output.parts[i].r.size * output.parts[i].c.size;
+                }
+            }
+            return output;
+        }
+
+
         aligned_tiles<T, S> row_partition(splash::utils::partition<S> const & row_partition, 
             MPI_Comm comm = MPI_COMM_WORLD) {
             
@@ -240,7 +353,6 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             aligned_tiles<T, S> output(recv_part_offsets[procs], recv_elem_offsets[procs], _align);
 
             // -------- move parts by bytes
-            // TODO custom data types.
             splash::utils::mpi::datatype<partition2D<S>> part2d_dt;
             MPI_Alltoallv(parts.data(), part_counts, part_offsets,  part2d_dt.value,
                 output.parts.data(), recv_parts, recv_part_offsets, part2d_dt.value, comm);
