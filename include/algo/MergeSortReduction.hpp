@@ -190,10 +190,10 @@ class MergeSortAndReduce {
         splash::algo::MergeAndReduce<ElemType, Type> merger;
     public:
         MergeSortAndReduce(size_t const & count) : vecSize(count) {
-            buffer = reinterpret_cast<ElemType*>(splash::utils::aligned_malloc(count * sizeof(ElemType)));
+            buffer = reinterpret_cast<ElemType*>(splash::utils::amalloc(count * sizeof(ElemType)));
         }
         ~MergeSortAndReduce() {
-            splash::utils::aligned_free(buffer);
+            splash::utils::afree(buffer);
         }
 
         inline void clear(ElemType* data, size_t const & count) {

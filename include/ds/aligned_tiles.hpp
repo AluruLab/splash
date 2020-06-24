@@ -41,7 +41,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         aligned_tiles(size_t const & _count, size_t const & elements, size_t const & align = 0) :
             _align(align == 0 ? splash::utils::get_cacheline_size() : align) {
 
-            _data = reinterpret_cast<T*>(splash::utils::aligned_alloc(elements * sizeof(T), _align));
+            _data = reinterpret_cast<T*>(splash::utils::aalloc(elements * sizeof(T), _align));
             memset(_data, 0, allocated());
 
             parts.allocate(_count);
@@ -62,21 +62,21 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             }
             offsets.push_back(elements);
 
-            _data = reinterpret_cast<T*>(splash::utils::aligned_alloc(elements * sizeof(T), _align));
+            _data = reinterpret_cast<T*>(splash::utils::aalloc(elements * sizeof(T), _align));
             memset(_data, 0, allocated());
         }
         ~aligned_tiles() {
-            if (_data) splash::utils::aligned_free(_data);
+            if (_data) splash::utils::afree(_data);
         }
 
         aligned_tile(aligned_tile const & other) : _align(other._align), parts(other.parts), offsets(other.offsets) {
-            _data = reinterpret_cast<T*>(splash::utils::aligned_alloc(elements * sizeof(T), _align));
+            _data = reinterpret_cast<T*>(splash::utils::aalloc(elements * sizeof(T), _align));
             memcpy(_data, other._data, other.allocated() * sizeof(T));
         }
         aligned_tile & operator=(aligned_tile const & other) {
             if ((_align != other._align) && (allocated() != other.allocated())) {
-                splash::utils::aligned_free(_data);
-                _data = reinterpret_cast<T*>(splash::utils::aligned_alloc(elements * sizeof(T), _align));
+                splash::utils::afree(_data);
+                _data = reinterpret_cast<T*>(splash::utils::aalloc(elements * sizeof(T), _align));
             }
             memcpy(_data, other._data, other.allocated() * sizeof(T));
 

@@ -1,10 +1,11 @@
 #pragma once
 
 #include <vector>
-#include <algorithrm>
+#include <algorithm>
 #include <type_traits>
 
 #ifdef USE_MPI
+#include <mpi.h>
 #include "utils/mpi_types.hpp"
 #endif
 

@@ -533,7 +533,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string& fileName, int& numVe
 	}
 	
 	// allocate buffer. 
-	char * read_buffer = reinterpret_cast<char *>(splash::utils::aligned_alloc((bytes_per_proc + 2) * sizeof(char)));
+	char * read_buffer = reinterpret_cast<char *>(splash::utils::aalloc((bytes_per_proc + 2) * sizeof(char)));
 	// read
 	MPI_Status status;
 	result = MPI_File_read_at_all(fh, offset, read_buffer, bytes_per_proc, MPI_BYTE, &status);
@@ -652,7 +652,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string& fileName, int& numVe
 	MPI_Allreduce(MPI_IN_PLACE, &numVectors, 1, MPI_INT, MPI_SUM, comm);
 	if (rank == 0)	fprintf(stderr, "Number of gene expression profiles: %d\n", numVectors);
 
-	splash::utils::aligned_free(read_buffer);
+	splash::utils::afree(read_buffer);
 
 	return true;
 
@@ -703,7 +703,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 	}
 	
 	// allocate buffer.  over provision by 12.5%.
-	char * read_buffer = reinterpret_cast<char *>(splash::utils::aligned_alloc((filesize + 2) * sizeof(char)));
+	char * read_buffer = reinterpret_cast<char *>(splash::utils::aalloc((filesize + 2) * sizeof(char)));
 	// read
 	MPI_Status status;
 	result = MPI_File_read_at_all(fh, offset, read_buffer + offset, bytes_per_proc, MPI_BYTE, &status);
@@ -716,8 +716,8 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 
 
 	// ======= allgatherv the data, then parse.  instead of parse, then gather, because we have column major data.
-	int * recvcounts = reinterpret_cast<int *>(splash::utils::aligned_alloc(procs * sizeof(int)));
-	int * displs = reinterpret_cast<int *>(splash::utils::aligned_alloc(procs * sizeof(int)));
+	int * recvcounts = reinterpret_cast<int *>(splash::utils::aalloc(procs * sizeof(int)));
+	int * displs = reinterpret_cast<int *>(splash::utils::aalloc(procs * sizeof(int)));
 	recvcounts[rank] = bytes_read;
 	MPI_Allgather(MPI_IN_PLACE, 1, MPI_INT, recvcounts, 1, MPI_INT, comm);
 	displs[0] = 0;
@@ -731,8 +731,8 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 	bytes_read = displs[procs - 1] + recvcounts[procs - 1];
 	read_buffer[bytes_read] = '\n';
 	read_buffer[bytes_read + 1] = 0;  // zero terminated.
-	splash::utils::aligned_free(recvcounts);
-	splash::utils::aligned_free(displs);
+	splash::utils::afree(recvcounts);
+	splash::utils::afree(displs);
 
 	// // scan for first endline.  assumption is that send_count << bytes_read.
 	// int send_count = 0;
@@ -896,7 +896,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 				"Error: number of genes (%d) is inconsistent with numVectors (%d) and  gene size %lu\n", numGenes, numVectors, genes.size());
 		return false;
 	}
-	splash::utils::aligned_free(read_buffer);
+	splash::utils::afree(read_buffer);
 
 	return true;
 }
@@ -944,7 +944,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 // 	}
 	
 // 	// allocate buffer.  over provision by 12.5%.
-// 	char * read_buffer = reinterpret_cast<char *>(splash::utils::aligned_alloc((filesize + 2) * sizeof(char)));
+// 	char * read_buffer = reinterpret_cast<char *>(splash::utils::aalloc((filesize + 2) * sizeof(char)));
 // 	// read
 // 	MPI_Status status;
 // 	result = MPI_File_read_at_all(fh, offset, read_buffer + offset, bytes_per_proc, MPI_BYTE, &status);
@@ -957,8 +957,8 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 
 
 // 	// ======= allgatherv the data, then parse.  instead of parse, then gather, because we have column major data.
-// 	int * recvcounts = reinterpret_cast<int *>(splash::utils::aligned_alloc(procs * sizeof(int)));
-// 	int * displs = reinterpret_cast<int *>(splash::utils::aligned_alloc(procs * sizeof(int)));
+// 	int * recvcounts = reinterpret_cast<int *>(splash::utils::aalloc(procs * sizeof(int)));
+// 	int * displs = reinterpret_cast<int *>(splash::utils::aalloc(procs * sizeof(int)));
 // 	recvcounts[rank] = bytes_read;
 // 	MPI_Allgather(MPI_IN_PLACE, 1, MPI_INT, recvcounts, 1, MPI_INT, comm);
 // 	displs[0] = 0;
@@ -972,8 +972,8 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 // 	bytes_read = displs[procs - 1] + recvcounts[procs - 1];
 // 	read_buffer[bytes_read] = '\n';
 // 	read_buffer[bytes_read + 1] = 0;  // zero terminated.
-// 	splash::utils::aligned_free(recvcounts);
-// 	splash::utils::aligned_free(displs);
+// 	splash::utils::afree(recvcounts);
+// 	splash::utils::afree(displs);
 
 // 	// // scan for first endline.  assumption is that send_count << bytes_read.
 // 	// int send_count = 0;
@@ -1140,7 +1140,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 // 				"Error: number of genes (%d) is inconsistent with numVectors (%d) and  gene size %lu\n", numGenes, output.rows(), genes.size());
 // 		return false;
 // 	}
-// 	splash::utils::aligned_free(read_buffer);
+// 	splash::utils::afree(read_buffer);
 
 // 	return true;
 // }

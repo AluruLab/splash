@@ -152,11 +152,11 @@ class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
         RandomMatrixGeneartor(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
 
-        inline void operator()(splash::utils::aligned_matrix<OT> & matrix) {
+        inline void operator()(splash::utils::amatrix<OT> & matrix) {
             splash::utils::partition<size_t> part{.offset = 0, .size = matrix.rows()};
             this->operator()(part, matrix.cols(), matrix.column_bytes(), matrix.data());
         }
-        inline void operator()(splash::utils::aligned_matrix<OT> & matrix,
+        inline void operator()(splash::utils::amatrix<OT> & matrix,
             splash::utils::partition<size_t> const & part) {
             this->operator()(part, matrix.cols(), matrix.column_bytes(), matrix.data());
         }

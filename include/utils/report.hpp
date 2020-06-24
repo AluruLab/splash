@@ -11,7 +11,11 @@
 
 #include <cstdio>
 
-namespace splash{ namespace io {
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
+
+namespace splash { namespace io {
 
 template <class... Types>
 void print_err(Types... args) {

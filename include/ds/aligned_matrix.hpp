@@ -95,7 +95,7 @@ class aligned_matrix {
             manage(copy)
         {
             if (manage) {
-                _data = splash::utils::aligned_alloc_2D(_rows, _cols * sizeof(FloatType), _align);  // total size is multiple of alignment.
+                _data = splash::utils::aalloc_2D(_rows, _cols * sizeof(FloatType), _align);  // total size is multiple of alignment.
                 memset(_data, 0, allocated());
             }
             if (data)
@@ -112,8 +112,8 @@ class aligned_matrix {
             else {
                 // not same size.  free and reallocate.
                 if (allocated() != other.allocated()) {
-                    if (_data) splash::utils::aligned_free(_data);
-                    _data = splash::utils::aligned_alloc(other.allocated(), other._align);  // total size is multiple of alignment.
+                    if (_data) splash::utils::afree(_data);
+                    _data = splash::utils::aalloc(other.allocated(), other._align);  // total size is multiple of alignment.
                     
                 memcpy(_data, other._data, other.allocated());
             }
@@ -144,7 +144,7 @@ class aligned_matrix {
 
         ~aligned_matrix() {
             if (_data && manage) {
-                splash::utils::aligned_free(_data);
+                splash::utils::afree(_data);
             }
             _data = nullptr;
         }

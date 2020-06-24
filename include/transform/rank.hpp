@@ -42,10 +42,10 @@ class Rank : public splash::kernel::V2VOp<IT, OT> {
         using OutputType = OT;
 
 		Rank(size_t const & _count, RankType const & first = 1) : vecSize(_count), firstRank(first) {
-			sort_buffer = reinterpret_cast<MyPair* >(splash::utils::aligned_alloc(_count * sizeof(MyPair)));
+			sort_buffer = reinterpret_cast<MyPair* >(splash::utils::aalloc(_count * sizeof(MyPair)));
 		}
 		~Rank() {
-			splash::utils::aligned_free(sort_buffer);
+			splash::utils::afree(sort_buffer);
 		}
 
 

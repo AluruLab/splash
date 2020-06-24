@@ -47,7 +47,7 @@ class aligned_vector {
             manage(copy)
         {
             if (manage) {
-                _data = splash::utils::aligned_alloc(bytes, _align);  // total size is multiple of alignment.
+                _data = splash::utils::aalloc(bytes, _align);  // total size is multiple of alignment.
                 memset(_data, 0, bytes);
             }
             if (data)
@@ -64,8 +64,8 @@ class aligned_vector {
             else {
                 // not same size.  free and reallocate.
                 if (allocated() != other.allocated()) {
-                    if (_data) splash::utils::aligned_free(_data);
-                    _data = splash::utils::aligned_alloc(other.allocated(), other._align);  // total size is multiple of alignment.
+                    if (_data) splash::utils::afree(_data);
+                    _data = splash::utils::aalloc(other.allocated(), other._align);  // total size is multiple of alignment.
                 memcpy(_data, other._data, other.allocated());
             }
             _cols = other._cols;
@@ -92,7 +92,7 @@ class aligned_vector {
 
         ~aligned_vector() {
             if (_data && manage) {
-                splash::utils::aligned_free(_data);
+                splash::utils::afree(_data);
             }
             _data = nullptr;
         }
