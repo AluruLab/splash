@@ -120,7 +120,7 @@ public:
 
             ofs << genes[i] << delim << "---";
 
-            row = reinterpret_cast<FloatType*>(reinterpret_cast<void *>(vectors) + i * stride_bytes);
+            row = reinterpret_cast<FloatType*>(reinterpret_cast<unsigned char *>(vectors) + i * stride_bytes);
             for (size_t j = 0; j < samples.size(); ++j) {
                 ofs << delim << row[j];
             }

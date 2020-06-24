@@ -17,7 +17,7 @@
 #include "kernel/kernel_base.hpp"
 
 #if defined(USE_SIMD)
-#include <omp>
+#include <omp.h>
 #endif
 
 namespace splash { namespace kernel { 

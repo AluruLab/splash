@@ -38,6 +38,15 @@ struct partition {
     ST offset;
     ST size;
     id_type id;
+
+    partition() = default;
+    partition(ST const & _off, ST const & _size, id_type const & _id) :
+        offset(_off), size(_size), id(_id) {}
+    partition(partition const & other) = default;
+    partition(partition && other) = default;
+    partition& operator=(partition const & other) = default;
+    partition& operator=(partition && other) = default;
+
 };
 
 #ifdef USE_MPI
@@ -55,11 +64,10 @@ struct datatype<partition<ST>, false> {
         };
         int blocklen[3] = {1, 1, 1};
         partition<ST> test {};
-        MPI_Aint disp[3] = {
-            &test.offset - &test,
-            &test.size - &test,
-            &test.id - &test
-        };
+        MPI_Aint disp[3]; 
+        disp[0] = reinterpret_cast<unsigned char *>(&test.offset) - reinterpret_cast<unsigned char *>(&test);
+        disp[1] = reinterpret_cast<unsigned char *>(&test.size) - reinterpret_cast<unsigned char *>(&test);
+        disp[2] = reinterpret_cast<unsigned char *>(&test.id) - reinterpret_cast<unsigned char *>(&test);
         MPI_Type_create_struct(3, blocklen, disp, type, &value);
         MPI_Type_commit(&value);
     }
@@ -83,11 +91,11 @@ class partitioner1D<PARTITION_EQUAL> {
 
         template <typename ST>
         inline ST get_offset(ST const & block, ST const & remainder, int const & id) {
-            return block * id + (id < remainder ? id : remainder);
+            return block * id + (static_cast<ST>(id) < remainder ? id : remainder);
         }
         template <typename ST>
         inline ST get_size(ST const & block, ST const & remainder, int const & id) {
-            return block + (id < remainder ? 1 : 0);
+            return block + (static_cast<ST>(id) < remainder ? 1 : 0);
         }
 
     public:
@@ -104,7 +112,7 @@ class partitioner1D<PARTITION_EQUAL> {
             ST remainder = src.size - block * parts;
 
             std::vector<partition<ST>> partitions;
-            partitions.allocate(parts);
+            partitions.reserve(parts);
 
             ST i = 0;
             ST offset = src.offset;
@@ -155,7 +163,7 @@ class partitioner1D<PARTITION_FIXED> {
             typename partition<ST>::id_type parts = (src.size + block - 1) / block;
 
             std::vector<partition<ST>> partitions;
-            partitions.allocate(parts);
+            partitions.reserve(parts);
 
             typename partition<ST>::id_type i = 0;
             ST offset = src.offset;
@@ -198,6 +206,15 @@ struct partition2D {
     part1D_type c;
     id_type id;         // linear id
     id_type id_cols;  // id row size.
+
+    partition2D() = default;
+    partition2D(part1D_type const & _r, part1D_type const & _c, id_type const & _id, id_type const & _id_cols) :
+        r(_r), c(_c), id(_id), id_cols(_id_cols) {}
+    partition2D(partition2D const & other) = default;
+    partition2D(partition2D && other) = default;
+    partition2D& operator=(partition2D const & other) = default;
+    partition2D& operator=(partition2D && other) = default;
+    
 };
 
 #ifdef USE_MPI
@@ -216,12 +233,11 @@ struct datatype<partition2D<ST>, false> {
         };
         int blocklen[4] = {1, 1, 1, 1};
         partition2D<ST> test {};
-        MPI_Aint disp[4] = {
-            &test.r - &test,
-            &test.c - &test,
-            &test.id - &test,
-            &test.id_cols - &test
-        };
+        MPI_Aint disp[4];
+        disp[0] = reinterpret_cast<unsigned char *>(&test.r) - reinterpret_cast<unsigned char *>(&test);
+        disp[1] = reinterpret_cast<unsigned char *>(&test.c) - reinterpret_cast<unsigned char *>(&test);
+        disp[2] = reinterpret_cast<unsigned char *>(&test.id) - reinterpret_cast<unsigned char *>(&test);
+        disp[3] = reinterpret_cast<unsigned char *>(&test.id_cols) - reinterpret_cast<unsigned char *>(&test);
         MPI_Type_create_struct(4, blocklen, disp, type, &value);
         MPI_Type_commit(&value);
     }
@@ -269,7 +285,7 @@ class partitioner2D<PARTITION_EQUAL> {
 
             int parts = row_parts * col_parts;
             std::vector<partition2D<ST>> partitions;
-            partitions.allocate(parts);
+            partitions.reserve(parts);
 
             // iterator and make a combined.
             int id = 0;
@@ -348,12 +364,12 @@ class partitioner2D<PARTITION_FIXED> {
             size_t row_parts = r_partitions.size();
             size_t col_parts = c_partitions.size();
             std::vector<partition2D<ST>> partitions;
-            partitions.allocate(row_parts * col_parts);
+            partitions.reserve(row_parts * col_parts);
 
             // iterator and make a combined.
             int id = 0;
-            for (int i = 0; i < row_parts; ++i) {
-                for (int j = 0; j < col_parts; ++j) {
+            for (size_t i = 0; i < row_parts; ++i) {
+                for (size_t j = 0; j < col_parts; ++j) {
                     partitions.emplace_back(
                         r_partitions[i],
                         c_partitions[j],
@@ -430,7 +446,7 @@ class upper_triangle_filter {
             if (parts.size() == 0) return parts;
             
             std::vector<partition2D<ST>> selected;
-            selected.allocate(parts.size());
+            selected.reserve(parts.size());
 
             // keep the original r and c coord, as well as orig cols.  change id to be sequential.
             size_t id = 0;
@@ -483,12 +499,13 @@ class banded_diagonal_filter {
             if (parts.size() == 0) return parts;
             
             std::vector<partition2D<ST>> selected;
-            selected.allocate(parts.size());
+            selected.reserve(parts.size());
 
             // keep the original r and c coord, as well as orig cols.  change id to be sequential.
-            ST id = 0;
+            using id_type = typename partition2D<ST>::id_type;
+            id_type id = 0;
             // if even, need 1 + cols/2 in order to cover full matrix
-            ST bw = (band_width > 0) ? (parts.first().id_cols / 2 + 1) : band_width;
+            id_type bw = (band_width > 0) ? (parts.front().id_cols / 2 + 1) : band_width;
             for (auto part : parts) {
                 id = get_linear_id(part.r.id, part.c.id, bw);
                 if (id >= 0) {
@@ -503,8 +520,9 @@ class banded_diagonal_filter {
         template <typename ST>
         partition2D<ST> filter(partition2D<ST> const & part) {
             partition2D<ST> output;
-            ST bw = (band_width > 0) ? (part.id_cols / 2 + 1) : band_width;
-            ST id = get_linear_id(part.r.id, part.c.id, bw);
+            using id_type = typename partition2D<ST>::id_type;
+            id_type bw = (band_width > 0) ? (part.id_cols / 2 + 1) : band_width;
+            auto id = get_linear_id(part.r.id, part.c.id, bw);
             
             if (id >= 0) {
                 output = part;

@@ -21,7 +21,7 @@ namespace splash { namespace utils {
 inline size_t get_cacheline_size() {
     long val = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
     if (val < 1) {
-        splash::io::print_err("%s:%d: Unable to detect cacheline size.  using default of 64\n", __FILE__, __LINE__);
+        PRINT_ERR("%s:%d: Unable to detect cacheline size.  using default of 64\n", __FILE__, __LINE__);
         return 64UL;
     } else 
         return val;
@@ -41,7 +41,7 @@ inline void* aalloc(size_t const & bytes, size_t const & alignment) {
     void* data = aligned_alloc(alignment, splash::utils::get_aligned_size(bytes, alignment));
 
     if (!data) {
-        splash::io::print_err("%s:%d: Memory allocation failed\n", __FILE__, __LINE__);
+        PRINT_ERR("%s:%d: Memory allocation failed\n", __FILE__, __LINE__);
         throw std::bad_alloc();
     }
 

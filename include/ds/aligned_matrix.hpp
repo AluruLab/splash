@@ -18,13 +18,14 @@
 #endif
 
 // forward declare
-namespace splash { namespace ds { 
+namespace splash { 
+namespace ds { 
 template<typename FloatType>
 class aligned_matrix;
-}}
+}
 
 #ifdef USE_MPI
-namespace splash { namespace utils { namespace mpi {
+namespace utils { namespace mpi {
 
 // define data type for 1 row.
 template <typename T> 
@@ -35,12 +36,14 @@ struct datatype<splash::ds::aligned_matrix<T>, false> {
         MPI_Datatype type[2] = {
             dt1.value,
             dt2.value
-        }
-        int blocklen[2] = {count, row_bytes - count * sizeof(T)};
-        MPI_Aint disp[2] = {
-            0,
-            count * sizeof(T)
-        }
+        };
+        int blocklen[2];
+        blocklen[0] = count;
+        blocklen[1]  = row_bytes - count * sizeof(T);
+        MPI_Aint disp[2];
+        disp[0] = 0;
+        disp[1] = count * sizeof(T);
+
         MPI_Type_create_struct(2, blocklen, disp, type, &value);
         MPI_Type_commit(&value);
     }
@@ -50,10 +53,10 @@ struct datatype<splash::ds::aligned_matrix<T>, false> {
     MPI_Datatype value;
 };
 
-}}}
+}}
 #endif
 
-namespace splash { namespace ds { 
+namespace ds { 
 
 // NOTE: this is a local data structure. 
 //       It is not thread safe.
@@ -67,18 +70,20 @@ class aligned_matrix {
         using iterator = pointer;
         using const_iterator = const_pointer;
 
+        using size_type = size_t;
+
     protected:
-        void* _data; // internal pointer.
-        size_t _rows;   // number of vectors in the data
-        size_t _cols;   // vector length
+        unsigned char* _data; // internal pointer.
+        size_type _rows;   // number of vectors in the data
+        size_type _cols;   // vector length
         size_t _align;  // alignment
-        size_t _bytes_per_row;   // assume row major
+        size_type _bytes_per_row;   // assume row major
         bool manage;   // owning _data or not.
 
-        inline pointer _get_row(size_t const & row = 0) {
+        inline pointer _get_row(size_type const & row = 0) {
             return reinterpret_cast<pointer>(_data + row * _bytes_per_row);
         }
-        inline const_pointer _get_row(size_t const & row = 0) const {
+        inline const_pointer _get_row(size_type const & row = 0) const {
             return reinterpret_cast<const_pointer>(_data + row * _bytes_per_row);
         }
 
@@ -88,20 +93,21 @@ class aligned_matrix {
         
         // construct, optionally with allocated data.
         // alignment of 0 indicates: use system's cacheline size.
-        aligned_matrix(size_t const & rows, size_t const & cols, size_t const & align = 0, 
+        aligned_matrix(size_type const & rows, size_type const & cols, size_t const & align = 0, 
                         void* data = nullptr, bool const & copy=true) :
             _rows(rows), _cols(cols), _align(align == 0 ? splash::utils::get_cacheline_size() : align),
             _bytes_per_row(splash::utils::get_aligned_size(cols * sizeof(FloatType), _align)),
             manage(copy)
         {
             if (manage) {
-                _data = splash::utils::aalloc_2D(_rows, _cols * sizeof(FloatType), _align);  // total size is multiple of alignment.
-                memset(_data, 0, allocated());
+                _data = reinterpret_cast<unsigned char*>(splash::utils::aalloc_2D(_rows, _cols * sizeof(FloatType), _align));  // total size is multiple of alignment.
+                memset(_data, 0, this->allocated());
             }
-            if (data)
+            if (data) {
                 if (copy)
                    memcpy(_data, data, _rows * _bytes_per_row);
-                else _data = data;
+                else _data = reinterpret_cast<unsigned char*>(data);
+            }
         }
         // copy constructor and assignment.  deep copy.
         aligned_matrix(aligned_matrix const & other) : 
@@ -111,10 +117,10 @@ class aligned_matrix {
                 _data = other._data;
             else {
                 // not same size.  free and reallocate.
-                if (allocated() != other.allocated()) {
+                if (this->allocated() != other.allocated()) {
                     if (_data) splash::utils::afree(_data);
-                    _data = splash::utils::aalloc(other.allocated(), other._align);  // total size is multiple of alignment.
-                    
+                    _data = reinterpret_cast<unsigned char*>(splash::utils::aalloc(other.allocated(), other._align));  // total size is multiple of alignment.
+                }
                 memcpy(_data, other._data, other.allocated());
             }
             _rows = other._rows;
@@ -122,6 +128,7 @@ class aligned_matrix {
             _align = other._align;
             _bytes_per_row = other._bytes_per_row;
             manage = other.manage;
+            return *this;
         }
         // move constructor.  take ownership.
         aligned_matrix(aligned_matrix && other) : aligned_matrix() {
@@ -139,6 +146,7 @@ class aligned_matrix {
             std::swap(_align, other._align);
             std::swap(_bytes_per_row, other._bytes_per_row);
             std::swap(manage, other.manage);
+            return *this;
         }
 
 
@@ -149,37 +157,37 @@ class aligned_matrix {
             _data = nullptr;
         }
 
-        inline size_t size() const {  return _rows * _cols; }
-        inline size_t allocated() const {
+        inline size_type size() const {  return _rows * _cols; }
+        inline size_type allocated() const {
             return _rows * _bytes_per_row;
         }
 
-        inline size_t rows() const {  return _rows; }
-        inline size_t columns() const {  return _cols; }
-        inline size_t column_bytes() const {
+        inline size_type rows() const {  return _rows; }
+        inline size_type columns() const {  return _cols; }
+        inline size_type column_bytes() const {
             return _bytes_per_row;
         }
 
 
-        inline pointer data(size_t const & row = 0, size_t const & col = 0) noexcept { 
+        inline pointer data(size_type const & row = 0, size_type const & col = 0) noexcept { 
             return _get_row(row) + col; 
         }
-        inline const_pointer data(size_t const & row = 0, size_t const & col = 0) const noexcept {
+        inline const_pointer data(size_type const & row = 0, size_type const & col = 0) const noexcept {
             return _get_row(row) + col; 
         }
 
         // data value accessor
-        inline reference operator()(size_t const & row = 0, size_t const & col = 0) { 
+        inline reference operator()(size_type const & row = 0, size_type const & col = 0) { 
             return _get_row(row)[col]; 
         }
-        inline const_reference operator()(size_t const & row = 0, size_t const & col = 0) const { 
+        inline const_reference operator()(size_type const & row = 0, size_type const & col = 0) const { 
             return _get_row(row)[col]; 
         }
 
-        inline reference at(size_t const & row = 0, size_t const & col = 0) { 
+        inline reference at(size_type const & row = 0, size_type const & col = 0) { 
             return _get_row(row)[col]; 
         }
-        inline const_reference at(size_t const & row = 0, size_t const & col = 0) const { 
+        inline const_reference at(size_type const & row = 0, size_type const & col = 0) const { 
             return _get_row(row)[col]; 
         }
 
@@ -193,9 +201,9 @@ class aligned_matrix {
         
             pointer in;
             /*transpose the matrix*/
-            for(size_t row = 0; row < _rows; ++row){
+            for(size_type row = 0; row < _rows; ++row){
                 in = this->_get_row(row);
-                for(size_t col = 0; col < _cols; ++col) {
+                for(size_type col = 0; col < _cols; ++col) {
                     output(col, row) = in[col];
                 }
             }
@@ -204,7 +212,7 @@ class aligned_matrix {
         // shallow copy?
         aligned_matrix<FloatType> deep_copy() {
             aligned_matrix<FloatType> output(_rows, _cols, _align);
-            memcpy(output._data, _data, allocated());
+            memcpy(output._data, _data, this->allocated());
         }
 
 #ifdef USE_MPI
@@ -275,11 +283,12 @@ class aligned_matrix {
             }      
             // return
             return output;
+        }
 #else
         aligned_matrix<FloatType> gather(int target_rank = 0) {
             return *this;
-#endif
         }
+#endif
 
 #ifdef USE_MPI
         aligned_matrix<FloatType> scatter(int src_rank = 0, MPI_Comm comm = MPI_COMM_WORLD) {
@@ -295,11 +304,11 @@ class aligned_matrix {
             MPI_Comm_size(comm, &procs);
             MPI_Comm_rank(comm, &rank);
 
-            splash::utils::partitioner1D<size_t> partitioner;
+            splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
             int *counts = nullptr;
             int *offsets = nullptr;
             if (rank == src_rank) {
-                std::vector<splash::utils::partition<size_t>> parts = partitioner.divide(_rows, procs);
+                std::vector<splash::utils::partition<size_type>> parts = partitioner.divide(_rows, procs);
 
                 counts = new int[procs];
                 offsets = new int[procs];
@@ -309,7 +318,7 @@ class aligned_matrix {
                 }
             }
             
-            splash::utils::partition<size_t> part = partitioner.get_partition(_rows, procs, rank);
+            splash::utils::partition<size_type> part = partitioner.get_partition(_rows, procs, rank);
 
             // allocate the data
             aligned_matrix<FloatType> result(part.size, _cols, _align);
@@ -323,12 +332,13 @@ class aligned_matrix {
                 delete [] counts;
                 delete [] offsets;
             }
-            return results;
+            return result;
+        }
 #else
         aligned_matrix<FloatType> scatter(int src_rank = 0) {
             return *this;
-#endif
         }
+#endif
 
 
 #ifdef USE_MPI
@@ -372,14 +382,15 @@ class aligned_matrix {
 
             // return
             return output;
+        }
 #else
         aligned_matrix<FloatType> allgather() {
             return *this;
-#endif
         }
+#endif
 
 #ifdef USE_MPI
-        void allgather_inplace(splash::utils::partition<size_t> const & part, MPI_Comm comm = MPI_COMM_WORLD) {
+        void allgather_inplace(splash::utils::partition<size_type> const & part, MPI_Comm comm = MPI_COMM_WORLD) {
             // validate that all columns are same.
             // validate that all alignments are same.
             if (! check_aligned_matrix()) {
@@ -400,13 +411,13 @@ class aligned_matrix {
                 comm);
             
             int *row_offsets = new int[procs + 1];
-            byte_offsets[0] = 0;
+            row_offsets[0] = 0;
             for (int i = 0; i < procs; ++i) {
-                byte_offsets[i+1] = byte_offsets[i] + byte_counts[i];
+                row_offsets[i+1] = row_offsets[i] + row_counts[i];
             }
 
             // check for consistent row counts
-            if (row_offsets[procs] != _rows) {
+            if (row_offsets[procs] != static_cast<int>(_rows)) {
                 throw std::logic_error("row count does not match between MPI processes.\n");
             }
 
@@ -416,16 +427,15 @@ class aligned_matrix {
                 _data, row_counts, row_offsets, row_dt.value, 
                 comm);
 
-            delete [] byte_counts;
-            delete [] byte_offsets;
+            delete [] row_counts;
+            delete [] row_offsets;
 
             // return
-            return output;
-#else
-        void allgather_inplace(splash::utils::partition<size_t> const & part) {
-            return *this;
-#endif
         }
+#else
+        void allgather_inplace(splash::utils::partition<size_type> const & part) {
+        }
+#endif
 
 
 
@@ -444,12 +454,12 @@ class aligned_matrix {
             MPI_Comm_rank(comm, &rank);
 
             // sendrecv rows and bytes info.
-            size_t rows = 0;
+            size_type rows = 0;
             int dest_rank = (rank + rank_distance) % procs;
-            int src_rank = (rank + proc - rank_distance) % procs;
+            int src_rank = (rank + procs - rank_distance) % procs;
              
             // move size
-            splash::utils::mpi::datatype<size_t> s_dt;
+            splash::utils::mpi::datatype<size_type> s_dt;
             MPI_Sendrecv(&_rows, 1, s_dt.value, dest_rank, 1,
                 &rows, 1, s_dt.value, src_rank, 1, 
                 comm, MPI_STATUS_IGNORE);
@@ -464,19 +474,20 @@ class aligned_matrix {
                 comm, MPI_STATUS_IGNORE);
 
             return output;
+        }
 #else
         aligned_matrix<FloatType> shift(int rank_distance) {
             return *this;
-#endif
         }
+#endif
 
         // aligned_matrix<FloatType> transpose(MPI_Comm comm = MPI_COMM_WORLD) {}
 
         void print() {
             pointer d;
-            for (size_t row = 0; row < _rows; ++row){
+            for (size_type row = 0; row < _rows; ++row){
                 d = this->_get_row(row);
-                for (size_t col = 0; col < _cols; ++col) {
+                for (size_type col = 0; col < _cols; ++col) {
                     printf("%f,", d[col]);
                 }
                 printf("\n");
@@ -487,4 +498,5 @@ class aligned_matrix {
 
 
 
-}}
+}
+}

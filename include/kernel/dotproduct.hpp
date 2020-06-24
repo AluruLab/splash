@@ -12,7 +12,7 @@
 #include "kernel/kernel_base.hpp"
 
 #if defined(USE_SIMD)
-#include <omp>
+#include <omp.h>
 #endif
 
 namespace splash { namespace kernel { 
@@ -31,7 +31,7 @@ class DotProductKernel : public splash::kernel::VV2SOp<IT, IT> {
 #pragma omp simd reduction(+:prod)
 #endif
 			// MAJORITY OF TIME HERE.  slowdown: O3 + omp simd (1x).  O3 (5x).  sanitizer + omp simd (11x), sanitizer (5.5x) 
-			for (int j = 0; j < count; ++j) {
+			for (size_t j = 0; j < count; ++j) {
 				prod += first[j] * second[j];
 			}
 			return prod;

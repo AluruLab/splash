@@ -12,4 +12,4 @@ class parameters_base {
 
         // TO PARSE, USE
         // CLI11_PARSE(app, argc, argv)
-}
+};

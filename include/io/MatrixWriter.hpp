@@ -106,7 +106,7 @@ public:
         for (size_t i = 0; i < row_names.size(); ++i) {
             ofs << row_names[i];
 
-            row = reinterpret_cast<FloatType*>(reinterpret_cast<void *>(vectors) + i * stride_bytes);
+            row = reinterpret_cast<FloatType*>(reinterpret_cast<unsigned char *>(vectors) + i * stride_bytes);
             for (size_t j = 0; j < col_names.size(); ++j) {
                 ofs << delim << row[j];
             }
@@ -153,7 +153,7 @@ public:
         ofs.precision(std::numeric_limits<FloatType>::max_digits10);
 
         // now write all data.
-        FloatType * row;
+        auto row = input.data();
         for (size_t i = 0; i < row_names.size(); ++i) {
             ofs << row_names[i];
 

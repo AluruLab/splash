@@ -4,13 +4,15 @@
 #include <stdlib.h>  // srand, rand, for seeds
 #include <time.h>    // time(0), for current time to use as seed.
 #include <random>
-#include <type_tratis>  
+#include <type_traits>  
 #include <algorithm>  // generate_n
 #include <vector>
 #include "utils/partition.hpp"
+#include "ds/aligned_vector.hpp"
+#include "ds/aligned_matrix.hpp"
 
 #if defined(USE_OPENMP)
-#include <omp>
+#include <omp.h>
 #endif
 
 #if defined(USE_MPI)
@@ -30,9 +32,9 @@ class random_number_generator {
         
     public:
 #ifdef USE_MPI
-        random_number_generator(long const & _global_seed == 0, MPI_Comm comm = MPI_COMM_WORLD) {
+        random_number_generator(long const & _global_seed = 0, MPI_Comm comm = MPI_COMM_WORLD) {
 #else
-        random_number_generator(long const & _global_seed == 0) {
+        random_number_generator(long const & _global_seed = 0) {
 #endif
             // --------  set global seed.
             if (_global_seed == 0) srand48(time(0));
@@ -87,11 +89,11 @@ class RandomVectorGenerator : public splash::kernel::N2VOp<OT> {
         splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
 
 	public:
-        RandomVectorGeneartor(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
+        RandomVectorGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
 
-		inline void operator()(splash::ds::aligned_vector<OT> & vector) {
-            this->operator(output.size(), output.data());
+		inline void operator()(splash::ds::aligned_vector<OT> & output) {
+            this->operator()(output.size(), output.data());
         }
 
 		inline void operator()(size_t const & count, OT * out_vector) {
@@ -149,22 +151,22 @@ class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
         splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
 
 	public:
-        RandomMatrixGeneartor(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
+        RandomMatrixGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
 
-        inline void operator()(splash::utils::amatrix<OT> & matrix) {
+        inline void operator()(splash::ds::aligned_matrix<OT> & matrix) {
             splash::utils::partition<size_t> part{.offset = 0, .size = matrix.rows()};
-            this->operator()(part, matrix.cols(), matrix.column_bytes(), matrix.data());
+            this->operator()(part, matrix.columns(), matrix.column_bytes(), matrix.data());
         }
-        inline void operator()(splash::utils::amatrix<OT> & matrix,
+        inline void operator()(splash::ds::aligned_matrix<OT> & matrix,
             splash::utils::partition<size_t> const & part) {
-            this->operator()(part, matrix.cols(), matrix.column_bytes(), matrix.data());
+            this->operator()(part, matrix.columns(), matrix.column_bytes(), matrix.data());
         }
 
 		inline void operator()(size_t const & rows, size_t const & cols, size_t const & stride_bytes,
             OT * out_matrix) {
             splash::utils::partition<size_t> part{.offset = 0, .size = rows};
-            this->operator(part, cols, stride_bytes, out_matrix);
+            this->operator()(part, cols, stride_bytes, out_matrix);
         }
 
 		inline void operator()(splash::utils::partition<size_t> const & part, size_t const & cols, size_t const & stride_bytes,
@@ -192,7 +194,7 @@ class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
             OT * vec;
             size_t off = part.offset;
             for (size_t i = 0; i < part.size; ++i, ++off) {
-                vec = reinterpret_cast<OT*>(reinterpret_cast<void*>(out_matrix) + off * stride_bytes);
+                vec = reinterpret_cast<OT*>(reinterpret_cast<unsigned char*>(out_matrix) + off * stride_bytes);
 
                 std::generate_n(vec, cols, [&generator, &distribution](){ return distribution(generator); });
             }

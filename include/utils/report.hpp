@@ -15,25 +15,14 @@
 #include <mpi.h>
 #endif
 
-namespace splash { namespace io {
-
-template <class... Types>
-void print_err(Types... args) {
-    fprintf(stderr, args...);
-}
-
-template <class... Types>
-void print(Types... args) {
+#define PRINT_ERR(...)  fprintf(stderr, __VA_ARGS__)
 #ifdef USE_MPI
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank == 0) fprintf(stdout, args...);
+#define PRINT(...) do {\
+    int rank; \
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); \
+    if (rank == 0) fprintf(stdout, __VA_ARGS__); \
+} while (1)
 #else
-    fprintf(stdout, args...);
+#define PRINT(...)  fprintf(stdout, __VA_ARGS__)
 #endif
-}
-
-
-
-} }
 
