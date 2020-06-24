@@ -13,7 +13,7 @@
 #include <stdlib.h>  // aligned_alloc
 #include <new>       // bad_alloc
 #include <exception>
-#include "utils/error_handler.hpp"
+#include "utils/report.hpp"
 
 
 namespace splash { namespace utils { 
@@ -50,6 +50,15 @@ inline void* aligned_alloc(size_t const & bytes, size_t const & alignment) {
 
 inline void* aligned_alloc(size_t const & bytes) {
     return splash::utils::aligned_alloc(bytes, splash::utils::get_cacheline_size());
+}
+
+inline void* aligned_alloc_2D(size_t const & rows, size_t const & col_bytes, size_t const & align) {
+    return splash::utils::aligned_alloc(rows * splash::utils::get_aligned_size(col_bytes, align), align);
+}
+inline void* aligned_alloc_2D(size_t const & rows, size_t const & col_bytes) {
+    return splash::utils::aligned_alloc_2D(rows, col_bytes, splash::utils::get_cacheline_size());    
+}
+
 }
 
 inline void free(void* data) {
