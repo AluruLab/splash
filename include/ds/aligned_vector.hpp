@@ -13,6 +13,8 @@
 
 namespace splash { namespace ds { 
 
+// NOTE: this is a STRICTLY LOCAL data structure.
+//       It is NOT thread-safe.
 template<typename FloatType>
 class aligned_vector {
     public:
@@ -46,6 +48,7 @@ class aligned_vector {
         {
             if (manage) {
                 _data = splash::utils::aligned_alloc(bytes, _align);  // total size is multiple of alignment.
+                memset(_data, 0, bytes);
             }
             if (data)
                 if (copy)
@@ -99,7 +102,7 @@ class aligned_vector {
         inline size_t allocated() const { return bytes; }
 
         inline pointer data(size_t const & idx = 0) noexcept { return reinterpret_cast<pointer>(_data) + idx; }
-        inline const_pointer data(size_t const & idx = 0) const noexcept { return reinterpret_cast<pointer>(_data) + idx; }
+        inline const_pointer data(size_t const & idx = 0) const noexcept { return reinterpret_cast<const_pointer>(_data) + idx; }
 
         // data value accessor
         inline reference operator[](size_t idx) { return *(data(idx)); }
@@ -110,8 +113,8 @@ class aligned_vector {
         inline reference at(size_t idx) { return *(data(idx)); }
         inline const_reference at(size_t idx) const { return *(data(idx)); }
 
-        inline explicit operator FloatType*() { return reinterpret_cast<pointer>(_data); }
-        inline explicit operator FloatType*() const { return reinterpret_cast<pointer>(_data); }
+        // inline explicit operator FloatType*() { return reinterpret_cast<pointer>(_data); }
+        // inline explicit operator const FloatType*() const { return reinterpret_cast<const_pointer>(_data); }
 
         // shallow copy?
         aligned_vector<FloatType> deep_copy() {
@@ -130,6 +133,7 @@ class aligned_vector {
 
 };
 
-
-
 }}
+
+
+
