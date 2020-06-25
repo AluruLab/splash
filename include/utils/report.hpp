@@ -15,6 +15,8 @@
 #include <mpi.h>
 #endif
 
+// has to use macro.  if function, format string will become variable instead of literal.
+
 #define PRINT_ERR(...)  fprintf(stderr, __VA_ARGS__)
 #ifdef USE_MPI
 #define PRINT(...) do {\

@@ -181,13 +181,13 @@ public:
         ofs.precision(std::numeric_limits<FloatType>::max_digits10);
 
         // now write all data. 
-        FloatType * row;
+        auto row = input.data();
         for (size_t i = 0; i < genes.size(); ++i) {
 
             ofs << genes[i] << delim << "---";
 
             row = input.data(i);
-            for (size_t j = 0; j < col_names.size(); ++j) {
+            for (size_t j = 0; j < samples.size(); ++j) {
                 ofs << delim << row[j];
             }
             ofs << std::endl;
