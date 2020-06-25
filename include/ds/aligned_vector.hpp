@@ -129,7 +129,7 @@ class aligned_vector {
 
         void print() {
             for (size_type i = 0; i < _cols; ++i){
-                printf("%f ", data[i]);
+                printf("%f ", data(i));
             }
             printf("\n");
         }
