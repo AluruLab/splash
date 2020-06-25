@@ -18,13 +18,17 @@
 // has to use macro.  if function, format string will become variable instead of literal.
 
 #define PRINT_ERR(...)  fprintf(stderr, __VA_ARGS__)
+
 #ifdef USE_MPI
-#define PRINT(...) do {\
+#define PRINT_MPI(...) do {\
     int rank; \
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); \
     if (rank == 0) fprintf(stdout, __VA_ARGS__); \
 } while (false)
 #else
-#define PRINT(...)  fprintf(stdout, __VA_ARGS__)
+#define PRINT_MPI(...)  fprintf(stdout, __VA_ARGS__)
 #endif
 
+#define PRINT(...) fprintf(stdout, __VA_ARGS__)
+
+#define FLUSH() do { fflush(stdout); fflush(stderr); } while(false)
