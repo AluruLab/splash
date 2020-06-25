@@ -21,7 +21,7 @@
     int rank; \
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); \
     if (rank == 0) fprintf(stdout, __VA_ARGS__); \
-} while (1)
+} while (false)
 #else
 #define PRINT(...)  fprintf(stdout, __VA_ARGS__)
 #endif
