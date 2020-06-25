@@ -155,7 +155,7 @@ class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
             generators(_gen), mn(min), mx(max) {}
 
         inline void operator()(splash::ds::aligned_matrix<OT> & matrix) {
-            splash::utils::partition<size_t> part{.offset = 0, .size = matrix.rows()};
+            splash::utils::partition<size_t> part(0, matrix.rows(), 0);
             this->operator()(part, matrix.columns(), matrix.column_bytes(), matrix.data());
         }
         inline void operator()(splash::ds::aligned_matrix<OT> & matrix,
@@ -165,7 +165,7 @@ class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
 
 		inline void operator()(size_t const & rows, size_t const & cols, size_t const & stride_bytes,
             OT * out_matrix) {
-            splash::utils::partition<size_t> part{.offset = 0, .size = rows};
+            splash::utils::partition<size_t> part(0, rows, 0);
             this->operator()(part, cols, stride_bytes, out_matrix);
         }
 
