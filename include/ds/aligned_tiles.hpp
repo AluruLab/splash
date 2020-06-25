@@ -168,8 +168,8 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             size_type const & orig_rows, 
             size_type const & orig_cols,
             T * transposed) {
-            T const * ptr;
-            T * nptr;
+            T const * ptr = orig;
+            T * nptr = transposed;
             for (size_type c = 0; c < orig_cols; ++c) {
                 
                 for (size_type r = 0; r < orig_rows; ++r, ++nptr) {
