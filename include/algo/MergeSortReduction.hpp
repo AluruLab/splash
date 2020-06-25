@@ -10,6 +10,7 @@
 #pragma once
 
 #include "utils/memory.hpp"
+#include <cstring>  //memset
 
 namespace splash { namespace algo { 
 

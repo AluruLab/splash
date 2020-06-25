@@ -8,6 +8,8 @@
 #include <limits>
 #include <algorithm>  // min/max
 
+#include <cstring> // memset, memcpy
+
 #ifdef USE_MPI
 #include <mpi.h>
 #include "utils/mpi_types.hpp"
@@ -391,7 +393,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             return output;
         }
 #else   
-        aligned_tiles row_partition() {
+        aligned_tiles row_partition(splash::utils::partition<S> const & row_partition) {
             return *this;
         }
 #endif

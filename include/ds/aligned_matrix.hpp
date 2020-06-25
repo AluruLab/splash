@@ -11,6 +11,7 @@
 
 #include "utils/memory.hpp"
 #include "utils/partition.hpp"
+#include <cstring> //memset, memcpy
 
 #ifdef USE_MPI
 #include "mpi.h"

@@ -10,6 +10,7 @@
 #pragma once
 
 #include "utils/memory.hpp"
+#include <cstring>  // memset, memcpy
 
 namespace splash { namespace ds { 
 

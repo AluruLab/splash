@@ -188,12 +188,12 @@ class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
             auto generator = generators.get_generator(thread_id);
 
             // get the partition
-            splash::utils::partition<size_t> part = partitioner.get_partition(part, num_threads, thread_id);
+            splash::utils::partition<size_t> p = partitioner.get_partition(part, num_threads, thread_id);
 
             // compute. lambda capture is by reference.
             OT * vec;
-            size_t off = part.offset;
-            for (size_t i = 0; i < part.size; ++i, ++off) {
+            size_t off = p.offset;
+            for (size_t i = 0; i < p.size; ++i, ++off) {
                 vec = reinterpret_cast<OT*>(reinterpret_cast<unsigned char*>(out_matrix) + off * stride_bytes);
 
                 std::generate_n(vec, cols, [&generator, &distribution](){ return distribution(generator); });
