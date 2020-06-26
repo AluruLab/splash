@@ -120,21 +120,27 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             return *this;
         }
         // move constructor.  take ownership.
-        aligned_tiles(aligned_tiles && other) : aligned_tiles() {
-            parts.swap(other.parts);
-            offsets.swap(other.offsets);
-            std::swap(_data, other._data);
-            std::swap(bytes, other.bytes);
+        aligned_tiles(aligned_tiles && other) : 
+            _align(other._align), _data(other._data),
+            parts(std::move(other.parts)), offsets(std::move(other.offsets)),
+            bytes(other.bytes) {
+                other._data = nullptr;
+                other.bytes = 0;
                 // PRINT("MOVE _data: %p, %lu\n", _data, sizeof(_data));
                 // FLUSH();
         }
         aligned_tiles & operator=(aligned_tiles && other) {
-            std::swap(_align, other._align);
-            parts.swap(other.parts);
-            offsets.swap(other.offsets);
-            std::swap(_data, other._data);
-            std::swap(bytes, other.bytes);
+            _align = other._align;
 
+            if (_data) splash::utils::afree(_data);
+            _data = other._data;
+            other._data = nullptr;
+
+            parts = std::move(other.parts);
+            offsets = std::move(other.offsets);
+            
+            bytes = other.bytes; 
+            other.bytes = 0;
                 // PRINT("MOVE= _data: %p, %lu\n", _data, sizeof(_data));
                 // FLUSH();
             return *this;

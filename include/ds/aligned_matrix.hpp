@@ -132,22 +132,35 @@ class aligned_matrix {
             return *this;
         }
         // move constructor.  take ownership.
-        aligned_matrix(aligned_matrix && other) : aligned_matrix() {
-            std::swap(_data, other._data);
-            std::swap(_rows, other._rows);
-            std::swap(_cols, other._cols);
-            std::swap(_align, other._align);
-            std::swap(_bytes_per_row, other._bytes_per_row);
-            std::swap(manage, other.manage);
+        aligned_matrix(aligned_matrix && other) : 
+            _data(other._data), _rows(other._rows), _cols(other._cols), _align(other._align),
+            _bytes_per_row(other._bytes_per_row), manage(other.manage)
+         {
+            other._data = nullptr;
+            other.manage = false;
+            other._rows = 0;
+            other._cols = 0;
+            other._bytes_per_row = 0;
         }
         aligned_matrix & operator=(aligned_matrix && other) {
-            std::swap(_data, other._data);
-            std::swap(_rows, other._rows);
-            std::swap(_cols, other._cols);
-            std::swap(_align, other._align);
-            std::swap(_bytes_per_row, other._bytes_per_row);
-            std::swap(manage, other.manage);
+            if (_data && manage) {
+                splash::utils::afree(_data);
+            }
+            _data = other._data;
+            manage = other.manage;
+            other._data = nullptr;
+            other.manage = false;
 
+            _rows = other._rows;
+            other._rows = 0;
+            
+            _cols = other._cols;
+            other._cols = 0;
+            
+            _align = other._align;
+            _bytes_per_row = other._bytes_per_row;
+            other._bytes_per_row = 0;
+            
             return *this;
         }
 

@@ -80,20 +80,29 @@ class aligned_vector {
             return *this;
         }
         // move constructor.  take ownership.
-        aligned_vector(aligned_vector && other) : aligned_vector() {
-            std::swap(_data, other._data);
-            std::swap(_cols, other._cols);
-            std::swap(_align, other._align);
-            std::swap(bytes, other.bytes);
-            std::swap(manage, other.manage);
+        aligned_vector(aligned_vector && other) : _data(other._data),
+            _cols(other._cols), _align(other._align), bytes(other.bytes), manage(other.manage) {
+                other._data = nullptr;
+                other._cols = 0;
+                other.bytes = 0;
+                other.manage = false;
         }
         aligned_vector & operator=(aligned_vector && other) {
-            std::swap(_data, other._data);
-            std::swap(_cols, other._cols);
-            std::swap(_align, other._align);
-            std::swap(bytes, other.bytes);
-            std::swap(manage, other.manage);
+            if (_data && manage) {
+                splash::utils::afree(_data);
+            }
+            _data = other._data;
+            manage = other.manage;
+            other._data = nullptr;
+            other.manage = false;
 
+            _cols = other._cols;
+            other._cols = 0;
+            
+            _align = other._align;
+            bytes = other.bytes;
+            other.bytes = 0;
+            
             return *this;
         }
 
