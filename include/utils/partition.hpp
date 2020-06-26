@@ -95,24 +95,24 @@ class partitioner1D<PARTITION_EQUAL> {
     protected:
 
         template <typename ST>
-        inline ST get_offset(ST const & block, ST const & remainder, int const & id) {
+        inline ST get_offset(ST const & block, ST const & remainder, int const & id) const {
             return block * id + (static_cast<ST>(id) < remainder ? id : remainder);
         }
         template <typename ST>
-        inline ST get_size(ST const & block, ST const & remainder, int const & id) {
+        inline ST get_size(ST const & block, ST const & remainder, int const & id) const {
             return block + (static_cast<ST>(id) < remainder ? 1 : 0);
         }
 
     public:
         // ------------ block partition a 1D range.
         template <typename ST>
-        inline std::vector<partition<ST>> divide(ST const & total, int const & parts) {
+        inline std::vector<partition<ST>> divide(ST const & total, int const & parts) const {
             return divide(partition<ST>(0, total, 0), parts);
         }
 
         // partitions the given partition.  advance the offset, but does minimal with the id and parts.
         template <typename ST>
-        inline std::vector<partition<ST>> divide(partition<ST> const & src, int const & parts) {
+        inline std::vector<partition<ST>> divide(partition<ST> const & src, int const & parts) const {
             ST block = src.size / parts;
             ST remainder = src.size - block * parts;
 
@@ -137,12 +137,12 @@ class partitioner1D<PARTITION_EQUAL> {
 
         // block partition a 1D range and return the target partition
         template <typename ST>
-        inline partition<ST> get_partition(ST const & total, int const & parts, int const & id) {
+        inline partition<ST> get_partition(ST const & total, int const & parts, int const & id) const {
             return get_partition(partition<ST>(0, total, 0), parts, id);
         }
 
         template <typename ST>
-        inline partition<ST> get_partition(partition<ST> const & src, int const & parts, int const & id) {
+        inline partition<ST> get_partition(partition<ST> const & src, int const & parts, int const & id) const {
             ST block = src.size / parts;
             ST remainder = src.size - block * parts;
 
@@ -160,11 +160,11 @@ class partitioner1D<PARTITION_FIXED> {
 
         // ---------------- fixed size partition a 1D range.
         template <typename ST>
-        inline std::vector<partition<ST>> divide(ST const & total, ST const & block) {
+        inline std::vector<partition<ST>> divide(ST const & total, ST const & block) const {
             return divide(partition<ST>(0, total, 0), block);
         }
         template <typename ST>
-        inline std::vector<partition<ST>> divide(partition<ST> const & src, ST const & block) {
+        inline std::vector<partition<ST>> divide(partition<ST> const & src, ST const & block) const {
             typename partition<ST>::id_type parts = (src.size + block - 1) / block;
 
             std::vector<partition<ST>> partitions;
@@ -183,11 +183,11 @@ class partitioner1D<PARTITION_FIXED> {
 
         // block partition a 1D range and return the target partition
         template <typename ST>
-        inline partition<ST> get_partition(ST const & total, ST const & block, int const & id) {
+        inline partition<ST> get_partition(ST const & total, ST const & block, int const & id) const {
             return get_partition(partition<ST>(0, total, 0), block, id);
         }
         template <typename ST>
-        inline partition<ST> get_partition(partition<ST> const & src, ST const & block, int const & id) {
+        inline partition<ST> get_partition(partition<ST> const & src, ST const & block, int const & id) const {
             typename partition<ST>::id_type parts = (src.size + block - 1) / block;  // number of parts
             ST offset = block * id;   // offset from src.offset
 
@@ -279,7 +279,7 @@ class partitioner2D<PARTITION_EQUAL> {
         // -------------- block partition a 2D range, rectilinear.
         template <typename ST>
         inline std::vector<partition2D<ST>> divide(ST const & rows, ST const & cols,
-            int const & row_parts, int const & col_parts) {
+            int const & row_parts, int const & col_parts) const {
             return divide(partition2D<ST>(
                         partition<ST>(0, rows, 0),
                         partition<ST>(0, cols, 0),
@@ -289,7 +289,7 @@ class partitioner2D<PARTITION_EQUAL> {
 
         template <typename ST>
         inline std::vector<partition2D<ST>> divide(partition2D<ST> const & src,
-            int const & row_parts, int const & col_parts) {
+            int const & row_parts, int const & col_parts) const {
 
             // first partition horizontal and vertical
             std::vector<partition<ST>> r_partitions = r_partitioner.divide(src.r, row_parts);
@@ -317,7 +317,7 @@ class partitioner2D<PARTITION_EQUAL> {
         template <typename ST>
         inline partition2D<ST> get_partition(ST const & rows, ST const & cols,
             int const & row_parts, int const & col_parts,
-            int const & id) {
+            int const & id) const {
             return get_partition(partition2D<ST>(
                         partition<ST>(0, rows, 0),
                         partition<ST>(0, cols, 0),
@@ -328,7 +328,7 @@ class partitioner2D<PARTITION_EQUAL> {
         template <typename ST>
         inline partition2D<ST> get_partition(partition2D<ST> const & src,
             int const & row_parts, int const & col_parts,
-            int const & id) {
+            int const & id) const {
 
             int r_id = id / col_parts;
             int c_id = id - r_id * col_parts;
@@ -357,7 +357,7 @@ class partitioner2D<PARTITION_FIXED> {
         // ---------------- fixed size partition a 2D range, rectilinear..
         template <typename ST>
         inline std::vector<partition2D<ST>> divide(ST const & rows, ST const & cols,
-            ST const & row_block, ST const & col_block) {
+            ST const & row_block, ST const & col_block) const {
             return divide(partition2D<ST>(
                         partition<ST>(0, rows, 0),
                         partition<ST>(0, cols, 0),
@@ -367,7 +367,7 @@ class partitioner2D<PARTITION_FIXED> {
             }
         template <typename ST>
         inline std::vector<partition2D<ST>> divide(partition2D<ST> const & src,
-            ST const & row_block, ST const & col_block) {
+            ST const & row_block, ST const & col_block) const {
 
             // first partition horizontal and vertical
             std::vector<partition<ST>> r_partitions = r_partitioner.divide(src.r, row_block);
@@ -397,7 +397,7 @@ class partitioner2D<PARTITION_FIXED> {
         template <typename ST>
         inline partition2D<ST> get_partition(ST const & rows, ST const & cols,
             ST const & row_block, ST const & col_block,
-            int const & id) {
+            int const & id) const {
 
             return get_partition(partition2D<ST>(
                         partition<ST>(0, rows, 0),
@@ -410,7 +410,7 @@ class partitioner2D<PARTITION_FIXED> {
         template <typename ST>
         inline partition2D<ST> get_partition(partition2D<ST> const & src,
             ST const & row_block, ST const & col_block,
-            int const & id) {
+            int const & id) const {
 
             int col_parts = (src.c.size + col_block - 1) / col_block;
 
@@ -437,7 +437,7 @@ class partitioner2D<PARTITION_FIXED> {
 class upper_triangle_filter {
     protected:
         template <typename T>
-        inline T get_linear_id(T const & r, T const & c, T const & columns) {
+        inline T get_linear_id(T const & r, T const & c, T const & columns) const {
             if ((c - off_diag) < r) return -1;
             // get rows above.  a full rectangle (r * columns) - lower triangle in rxr
             // r-1 rows, * (r-1 + 1)/2
@@ -454,7 +454,7 @@ class upper_triangle_filter {
         upper_triangle_filter(int64_t const & dist_from_diag = 0) : off_diag(dist_from_diag) {}
 
         template <typename ST>
-        inline std::vector<partition2D<ST>> filter(std::vector<partition2D<ST>> const & parts) {
+        inline std::vector<partition2D<ST>> filter(std::vector<partition2D<ST>> const & parts) const {
             if (parts.size() == 0) return parts;
             
             std::vector<partition2D<ST>> selected;
@@ -474,7 +474,7 @@ class upper_triangle_filter {
 
         // if one that will be filtered out, then id is -1.
         template <typename ST>
-        partition2D<ST> filter(partition2D<ST> const & part) {
+        partition2D<ST> filter(partition2D<ST> const & part) const {
             partition2D<ST> output;
             typename partition2D<ST>::id_type id = get_linear_id(part.r.id, part.c.id, part.id_cols);
             if (id >= 0) {
@@ -492,7 +492,7 @@ class banded_diagonal_filter {
     // columns is even or odd, need columns/2 +1 per row.
     protected:
         template <typename T>
-        inline T get_linear_id(T const & r, T const & c, T const & w, T const & bw) {
+        inline T get_linear_id(T const & r, T const & c, T const & w, T const & bw) const {
             // shifted by -r.  then shift by w to make all positive, then % w to restrict to [0, w)
             T c_id = (c + w - (r + off_diag)) % w;
 
@@ -509,7 +509,7 @@ class banded_diagonal_filter {
             int64_t const & _dist_from_diag = 0) : band_width(_band_width), off_diag(_dist_from_diag) {}
 
         template <typename ST>
-        inline std::vector<partition2D<ST>> filter(std::vector<partition2D<ST>> const & parts) {
+        inline std::vector<partition2D<ST>> filter(std::vector<partition2D<ST>> const & parts) const {
             if (parts.size() == 0) return parts;
             
             std::vector<partition2D<ST>> selected;
@@ -535,7 +535,7 @@ class banded_diagonal_filter {
 
         // if one that will be filtered out, then id is -1.
         template <typename ST>
-        partition2D<ST> filter(partition2D<ST> const & part) {
+        partition2D<ST> filter(partition2D<ST> const & part) const {
             partition2D<ST> output;
             using id_type = typename partition2D<ST>::id_type;
             id_type w = part.front().id_cols;

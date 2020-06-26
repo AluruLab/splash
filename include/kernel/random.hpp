@@ -102,7 +102,7 @@ class RandomVectorGenerator : public splash::kernel::N2VOp<OT> {
             this->operator()(output.size(), output.data());
         }
 
-		inline void operator()(size_t const & count, OT * out_vector) {
+		inline void operator()(size_t const & count, OT * out_vector) const {
             Distribution distribution(mn, mx);
 
 #ifdef USE_OPENMP
@@ -160,23 +160,23 @@ class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
         RandomMatrixGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
 
-        inline void operator()(splash::ds::aligned_matrix<OT> & matrix) {
+        inline void operator()(splash::ds::aligned_matrix<OT> & matrix) const {
             splash::utils::partition<size_t> part(0, matrix.rows(), 0);
             this->operator()(part, matrix.columns(), matrix.column_bytes(), matrix.data());
         }
         inline void operator()(splash::ds::aligned_matrix<OT> & matrix,
-            splash::utils::partition<size_t> const & part) {
+            splash::utils::partition<size_t> const & part) const {
             this->operator()(part, matrix.columns(), matrix.column_bytes(), matrix.data());
         }
 
 		inline void operator()(size_t const & rows, size_t const & cols, size_t const & stride_bytes,
-            OT * out_matrix) {
+            OT * out_matrix) const {
             splash::utils::partition<size_t> part(0, rows, 0);
             this->operator()(part, cols, stride_bytes, out_matrix);
         }
 
 		inline void operator()(splash::utils::partition<size_t> const & part, size_t const & cols, size_t const & stride_bytes,
-            OT * out_matrix) {
+            OT * out_matrix) const {
 
             Distribution distribution(mn, mx);
 

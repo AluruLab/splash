@@ -22,7 +22,8 @@ template<typename IT>
 class DotProductKernel : public splash::kernel::VV2SOp<IT, IT> {
 
 	public:
-		inline IT operator()(IT const * first, IT const * second, size_t const & count) {
+		inline IT operator()(IT const * first, IT const * second, size_t const & count)
+		const  {
 			IT prod = 0;
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned

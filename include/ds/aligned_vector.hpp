@@ -26,7 +26,9 @@ class aligned_vector {
         using iterator = pointer;
         using const_iterator = const_pointer;
 
+        using data_type = FloatType;
         using size_type = size_t;
+
     protected:
         unsigned char* _data;
         size_type _cols;   // vector length

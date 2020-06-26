@@ -32,7 +32,7 @@ class StandardScore : public splash::kernel::V2VOp<IT, OT> {
     public:
         inline void operator()(IT const * __restrict__ in_vec, 
             size_t const & count,
-            OT * __restrict__ out_vec) {
+            OT * __restrict__ out_vec) const {
 
             const OT avg = 1.0L / static_cast<OT>(count);
             const OT sample_avg = 1.0L / static_cast<OT>(count - SampleStats);

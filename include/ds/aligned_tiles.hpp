@@ -27,7 +27,9 @@ template <typename T, typename S>
 class aligned_tiles<T, splash::utils::partition2D<S>> {
 
     public:
-
+        using data_type = T;
+        using offset_type = S;
+        using id_type = typename splash::utils::partition2D<S>::id_type;
         using size_type = size_t;
     protected:
         size_t _align;  // alignment

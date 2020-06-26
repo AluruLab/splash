@@ -83,24 +83,24 @@ protected:
 public:
 	/*get gene expression matrix size*/
 #ifdef USE_MPI
-	static bool getMatrixSize(string& fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS,
+	static bool getMatrixSize(string const & fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS,
 		MPI_Comm comm = MPI_COMM_WORLD) {
 		return getMatrixSize_impl(fileName, numVectors, vectorSize, comm, skip);
 #else
-	static bool getMatrixSize(string& fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
+	static bool getMatrixSize(string const & fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
 		return getMatrixSize_impl(fileName, numVectors, vectorSize, skip);
 #endif
 	}
 
 	/*get the matrix data*/
 #ifdef USE_MPI
-	static bool loadMatrixData(string& fileName, vector<string>& genes,
+	static bool loadMatrixData(string const & fileName, vector<string>& genes,
 			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
 			const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS, MPI_Comm comm = MPI_COMM_WORLD) {
 		return loadMatrixData_impl(fileName, genes, samples, vectors, numVectors, vectorSize, stride_bytes,
 			comm, skip);
 #else
-	static bool loadMatrixData(string& fileName, vector<string>& genes,
+	static bool loadMatrixData(string const & fileName, vector<string>& genes,
 			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
 			const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
 		return loadMatrixData_impl(fileName, genes, samples, vectors, numVectors, vectorSize, stride_bytes, skip);
@@ -109,14 +109,14 @@ public:
 
 	/*get the matrix data*/
 #ifdef USE_MPI
-	static bool loadMatrixData(string& fileName, vector<string>& genes,
+	static bool loadMatrixData(string const & fileName, vector<string>& genes,
 			vector<string>& samples, splash::ds::aligned_matrix<FloatType> & output,
 			const bool skip = EXP_SKIP_TWO_ROWS, MPI_Comm comm = MPI_COMM_WORLD) {
 		return loadMatrixData_impl(fileName, genes, samples, 
 			output.data(), output.rows(), output.columns(), output.column_bytes(), 
 			comm, skip);
 #else
-	static bool loadMatrixData(string& fileName, vector<string>& genes,
+	static bool loadMatrixData(string const & fileName, vector<string>& genes,
 			vector<string>& samples, splash::ds::aligned_matrix<FloatType> & output,
 			const bool skip = EXP_SKIP_TWO_ROWS) {
 		return loadMatrixData_impl(fileName, genes, samples, 
@@ -127,35 +127,35 @@ public:
 
 protected:
 	/*get gene expression matrix size*/
-	static bool getMatrixSize_impl(string& fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS);
+	static bool getMatrixSize_impl(string const & fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS);
 
 	/*get the matrix data*/
-	static bool loadMatrixData_impl(string& fileName, vector<string>& genes,
+	static bool loadMatrixData_impl(string const & fileName, vector<string>& genes,
 			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
 			const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS);
 
 	/*get the matrix data*/
-	// static bool loadMatrixData_impl(string& fileName, vector<string>& genes,
+	// static bool loadMatrixData_impl(string const & fileName, vector<string>& genes,
 	// 		vector<string>& samples, splash::ds::aligned_matrix<FloatType> & input, const bool skip = EXP_SKIP_TWO_ROWS);
 
 
 #ifdef USE_MPI
 	/*get gene expression matrix size*/
-	static bool getMatrixSize_impl(string& fileName, int& numVectors, int& vectorSize, 
+	static bool getMatrixSize_impl(string const & fileName, int& numVectors, int& vectorSize, 
 		MPI_Comm comm,
 		const bool skip = EXP_SKIP_TWO_ROWS);
 
-	static bool loadMatrixData_impl(string& fileName, vector<string>& genes,
+	static bool loadMatrixData_impl(string const & fileName, vector<string>& genes,
 			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
 			const int stride_bytes, MPI_Comm comm, const bool skip = EXP_SKIP_TWO_ROWS);
 
-	// static bool loadMatrixData_impl(string& fileName, vector<string>& genes,
+	// static bool loadMatrixData_impl(string const & fileName, vector<string>& genes,
 	// 		vector<string>& samples, splash::ds::aligned_matrix<FloatType> & input, MPI_Comm comm, const bool skip = EXP_SKIP_TWO_ROWS);
 #endif
 };
 
 template<typename FloatType>
-bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string& fileName, 
+bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, 
 		int& numVectors, int& vectorSize, const bool skip) {
 	char* buffer = NULL, *tok;
 	size_t bufferSize = 0;
@@ -218,7 +218,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string& fileName,
 }
 
 template<typename FloatType>
-bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
+bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		vector<string>& genes, vector<string>& samples, FloatType* vectors,
 		const int numVectors, const int vectorSize, 
 		const int stride_bytes, const bool skip) {
@@ -357,7 +357,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 }
 
 // template<typename FloatType>
-// bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
+// bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 		vector<string>& genes, vector<string>& samples, 
 // 		splash::ds::aligned_matrix<FloatType> & output, const bool skip) {
 // 	char* buffer = NULL, *tok;
@@ -499,7 +499,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 #ifdef USE_MPI
 
 template <typename FloatType>
-bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string& fileName, int& numVectors, int& vectorSize, 
+bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, int& numVectors, int& vectorSize, 
 		MPI_Comm comm,
 		const bool skip) {
 
@@ -670,7 +670,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string& fileName, int& numVe
 
 
 template<typename FloatType>
-bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
+bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		vector<string>& genes, vector<string>& samples, FloatType* vectors,
 		const int numVectors, const int vectorSize, 
 		const int stride_bytes, MPI_Comm comm, const bool skip) {
@@ -912,7 +912,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
 }
 
 // template<typename FloatType>
-// bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string& fileName,
+// bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 		vector<string>& genes, vector<string>& samples, 
 // 		splash::ds::aligned_matrix<FloatType> & output, MPI_Comm comm, const bool skip) {
 // 	char* buffer = NULL, *tok;

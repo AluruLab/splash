@@ -51,7 +51,7 @@ class Rank : public splash::kernel::V2VOp<IT, OT> {
 
         inline void operator()(IT const * __restrict__ in_vec, 
             size_t const & count,
-            OT * __restrict__ out_vec) {
+            OT * __restrict__ out_vec) const {
 
 			size_t j;
 			/*get the rank vector*/

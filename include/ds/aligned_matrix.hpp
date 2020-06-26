@@ -71,6 +71,7 @@ class aligned_matrix {
         using iterator = pointer;
         using const_iterator = const_pointer;
 
+        using data_type = FloatType;
         using size_type = size_t;
 
     protected:
