@@ -209,9 +209,10 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             T const * ptr = orig;
             T * nptr = transposed;
             for (size_type c = 0; c < orig_cols; ++c) {
-                
-                for (size_type r = 0; r < orig_rows; ++r, ++nptr) {
-                    *nptr = ptr[c * orig_rows + r];
+                ptr = orig + c;
+                for (size_type r = 0; r < orig_rows; ++r, 
+                    ++nptr, ptr += orig_cols) {
+                    *nptr = *ptr;
                 }
             }
 
@@ -224,13 +225,13 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         aligned_tiles transpose() const {
             // PRINT("aligned_tiles TRANSPOSE ");
             aligned_tiles output(parts.data(), parts.size(), _align);
-            size_type offset = 0;
             for (size_type i = 0; i < output.parts.size(); ++i) {
                 output.parts[i].r = parts[i].c;
                 output.parts[i].c = parts[i].r;
                 
-                offset += 
-                    transpose_tile(_data + offset, parts[i].r.size, parts[i].c.size, output._data + offset);
+                transpose_tile(_data + offsets[i], 
+                    parts[i].r.size, parts[i].c.size, 
+                    output._data + output.offsets[i]);
             }
 
             return output;
