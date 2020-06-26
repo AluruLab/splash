@@ -20,13 +20,37 @@
 #define PRINT_ERR(...)  fprintf(stderr, __VA_ARGS__)
 
 #ifdef USE_MPI
+#define PRINT_RANk() do {\
+    int rank; \
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); \
+    fprintf(stdout, "RANK %d: ", rank); \
+} while (false)
+#else  
+#define PRINT_RANK() 
+#endif
+
+#ifdef USE_MPI
+#define PRINT_MPI_ROOT(...) do {\
+    int rank; \
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); \
+    if (rank == 0) { \
+        fprintf(stdout, "RANK %d: ", rank); \
+        fprintf(stdout, __VA_ARGS__); \
+    }\
+} while (false)
+#else
+#define PRINT_MPI_ROOT(...)  fprintf(stdout, __VA_ARGS__)
+#endif
+
+#ifdef USE_MPI
 #define PRINT_MPI(...) do {\
     int rank; \
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); \
-    if (rank == 0) fprintf(stdout, __VA_ARGS__); \
+    fprintf(stdout, "RANK %d: ", rank); \
+    fprintf(stdout, __VA_ARGS__); \
 } while (false)
 #else
-#define PRINT_MPI(...)  fprintf(stdout, __VA_ARGS__)
+#define PRINT_MPI(...) fprintf(stdout, __VA_ARGS__)
 #endif
 
 #define PRINT(...) fprintf(stdout, __VA_ARGS__)
