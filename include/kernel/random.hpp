@@ -11,6 +11,9 @@
 #include "ds/aligned_vector.hpp"
 #include "ds/aligned_matrix.hpp"
 
+#include <sys/types.h>  // pid_t
+#include <unistd.h>     // getpid()
+
 #if defined(USE_OPENMP)
 #include <omp.h>
 #endif
@@ -20,9 +23,12 @@
 #endif
 
 // both Vector and Matrix generators only generate locally.
-// for distributed initialization, first generate per proc, then gather or allgather.
-// The random number generators handles distributed seeding.
-
+// for distributed initialization, each rank calls lrand48 differnent number of times.
+// The random_number_generator handles distributed seeding.
+// TINGE:
+//     random number seed is either user-specified (identical for all ranks, not okay).
+//     "current time + process id in os".  (should be different on each process.  use this.).
+//      
 namespace splash { namespace kernel { 
 
 template <typename Generator = std::default_random_engine>
@@ -30,6 +36,11 @@ class random_number_generator {
     protected:
         std::vector<Generator> generators;
         
+        union seed_type {
+            long s;
+            int p[2];
+        };
+
     public:
 #ifdef USE_MPI
         random_number_generator(long const & _global_seed = 0, MPI_Comm comm = MPI_COMM_WORLD) {
@@ -37,25 +48,19 @@ class random_number_generator {
         random_number_generator(long const & _global_seed = 0) {
 #endif
             // --------  set global seed.
-            if (_global_seed == 0) srand48(time(0));
-            else srand48(_global_seed);
-
+            long global;
+            if (_global_seed == 0) global = time(0) + getpid();
+            else global = _global_seed;
+                
             // -------- compute machine seed.
-            int rank = 0;
+            seed_type seed;
 #ifdef USE_MPI
-            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-            // instead of having rank 0 generate all seeds, start all processes with same seed.
-            // then get rand "rank" number of times.  the next one is the actual seed.
-            //      if global seed is provided, this process should be deterministic and unlikely
-            //          that 2 procs have the same value.
-            //      if time is used as global seed, and in the very unlikely scenario that all have the same
-            //          time stamp, then iterating over the first rank number of random numbers takes care of this.
+            MPI_Comm_rank(MPI_COMM_WORLD, seed.p);
+            // instead of having rank 0 generate all seeds, 
+            //  deterministically compute a seed for each rank and thread (via composition);
+#else 
+            seed.p[0] = 0;
 #endif
-            long seed = lrand48();  // this is the seed for the machine.
-            for (int i = 0; i < rank; ++i) {
-                seed ^= lrand48();   // make sure there is dependency so compiler does not optimize this out.
-            }
-            srand48(seed);
 
             // ------- compute thread seeds and generators.
             int threads = 1;
@@ -64,7 +69,8 @@ class random_number_generator {
 #endif
             generators.clear();
             for (int i = 0; i < threads; ++i) {
-                generators.push_back(Generator(lrand48())); // set generator (1) with seed _global_seed
+                seed.p[1] = i;  // do
+                generators.push_back(Generator(global ^ seed.s)); // set generator (1) with seed _global_seed
             }
         }
         ~random_number_generator() {}
