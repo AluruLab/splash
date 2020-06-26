@@ -62,9 +62,17 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             memset(_data, 0, bytes);
 
             offsets[_count] = elements;
+                // PRINT("INTERNAL _data: %p, %lu\n", _data, sizeof(_data));
+                // FLUSH();
         }
 
     public:
+        aligned_tiles() : _align(splash::utils::get_cacheline_size()),
+            _data(nullptr), bytes(0) {
+                // PRINT("DEFAULT _data: %p, %lu\n", _data, sizeof(_data));
+                // FLUSH();
+            }
+
         aligned_tiles(splash::utils::partition2D<S> const * start, size_type const & count, size_t const & align = 0) :
             _align(align == 0 ? splash::utils::get_cacheline_size() : align),
             parts(start, start + count) {
@@ -80,39 +88,56 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
 
             _data = reinterpret_cast<T*>(splash::utils::aalloc(bytes, _align));
             memset(_data, 0, bytes);
+                // PRINT("POPULATE _data: %p, %lu\n", _data, sizeof(_data));
+                // FLUSH();
         }
         ~aligned_tiles() {
+                // PRINT("DELETE _data: %p, %lu\n", _data, sizeof(_data));
+                // FLUSH();
             if (_data) splash::utils::afree(_data);
         }
 
         aligned_tiles(aligned_tiles const & other) : _align(other._align), parts(other.parts), offsets(other.offsets) {
-            _data = reinterpret_cast<T*>(splash::utils::aalloc(other.offsets.back() * sizeof(T), _align));
+            _data = reinterpret_cast<T*>(splash::utils::aalloc(other.allocated(), _align));
             memcpy(_data, other._data, other.allocated());
+            bytes = other.allocated();
+                // PRINT("COPY _data: %p, %lu\n", _data, sizeof(_data));
+                // FLUSH();
         }
         aligned_tiles & operator=(aligned_tiles const & other) {
-            if ((_align != other._align) && (allocated() != other.allocated())) {
+            if (allocated() != other.allocated()) {
                 if (_data) splash::utils::afree(_data);
-                _data = reinterpret_cast<T*>(splash::utils::aalloc(other.offsets.back() * sizeof(T), _align));
+                _data = reinterpret_cast<T*>(splash::utils::aalloc(other.allocated(), _align));
             }
-            memcpy(_data, other._data, other.allocated() );
+            if (_data != other._data) memcpy(_data, other._data, other.allocated() );
+            bytes = other.bytes;
 
             _align = other._align;
             parts.assign(other.parts.begin(), other.parts.end());
             offsets.assign(other.offsets.begin(), other.offsets.end());
+                // PRINT("COPY= _data: %p, %lu\n", _data, sizeof(_data));
+                // FLUSH();
             return *this;
         }
         // move constructor.  take ownership.
-        aligned_tiles(aligned_tiles && other) : _align(other._align) {
+        aligned_tiles(aligned_tiles && other) : aligned_tiles() {
             parts.swap(other.parts);
             offsets.swap(other.offsets);
             std::swap(_data, other._data);
+            std::swap(bytes, other.bytes);
+                // PRINT("MOVE _data: %p, %lu\n", _data, sizeof(_data));
+                // FLUSH();
         }
         aligned_tiles & operator=(aligned_tiles && other) {
             std::swap(_align, other._align);
             parts.swap(other.parts);
             offsets.swap(other.offsets);
             std::swap(_data, other._data);
+            std::swap(bytes, other.bytes);
 
+                // PRINT("MOVE= _data: %p, %lu\n", _data, sizeof(_data));
+                // FLUSH();
+            return *this;
         }
 
         size_type size() const { return parts.size(); }
@@ -131,33 +156,37 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
 
     public:
 
-        aligned_tiles sort_by_offsets() const {
+        aligned_tiles sort_by_offsets() {
             if (is_sorted_by_offsets()) return *this;
 
             // ====== first sort.
-            std::vector<sort_elem> x;
-            x.reserve(parts.size());
+            std::vector<sort_elem> ids;
+            ids.reserve(parts.size());
 
             for (size_t i = 0; i < parts.size(); ++i) {
-                x.emplace_back(parts[i].r.offset, parts[i].c.offset, i, offsets[i] );
+                ids.emplace_back(parts[i].r.offset, parts[i].c.offset, i, offsets[i] );
             }
 
             // sort the partitions
-            std::stable_sort(x.begin(), x.end(), [](sort_elem const & a, sort_elem const & b){
+            std::stable_sort(ids.begin(), ids.end(), [](sort_elem const & a, sort_elem const & b){
                 return (a.r_offset == b.r_offset) ? (a.c_offset < b.c_offset) : (a.r_offset < b.r_offset);
             });
             
             // ======= now copy with reorder
-            aligned_tiles output(x.size(), offsets.back(), _align);
+            // PRINT("aligned_tiles SORT ");
+            aligned_tiles output(ids.size(), offsets.back(), _align);
+            // PRINT("aligned_tiles SORT DONE\n");
+            // FLUSH();
+
             size_type offset = 0;
             size_type s = 0;
             splash::utils::partition2D<size_type> part;
-            for (size_t i = 0; i < x.size(); ++i) {
-                part = parts[x[i].part_id];
+            for (size_t i = 0; i < ids.size(); ++i) {
+                part = parts[ids[i].part_id];
                 output.parts[i] = part;
                 output.offsets[i] = offset;
                 s = part.r.size * part.c.size;
-                memcpy(output._data + offset, _data + x[i].ptr_offset, s * sizeof(T));
+                memcpy(output._data + offset, _data + ids[i].ptr_offset, s * sizeof(T));
                 offset += s;
             }
 
@@ -185,6 +214,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
 
         // transpose.  offsets don't change.  id and id_cols do not change.  r and c are swapped.
         aligned_tiles transpose() const {
+            // PRINT("aligned_tiles TRANSPOSE ");
             aligned_tiles output(parts.data(), parts.size(), _align);
             size_type offset = 0;
             for (size_type i = 0; i < output.parts.size(); ++i) {
@@ -199,6 +229,8 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         }
 
         aligned_tiles operator+(aligned_tiles const & other) const {
+            // PRINT("aligned_tiles OPERATOR+ ");
+
             aligned_tiles output(parts.size() + other.parts.size(), offsets.back() + other.offsets.back(), _align);
             // PRINT("left, parts: %ld, elements: %ld\n", size(), offsets.back());
             // PRINT("right, parts: %ld, elements: %ld\n", other.size(), other.offsets.back());
@@ -300,8 +332,10 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             }
 
             // allocate output
+            // PRINT("aligned_tiles GATHER ");
             aligned_tiles output;
-            if (rank == target_rank) {
+            if (rank == target_rank) {  
+                // PRINT("aligned_tiles GATHER assign");
                 output = std::move(aligned_tiles(part_offsets[procs], elem_offsets[procs], _align));
             }
             // -------- move parts by bytes
@@ -342,7 +376,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
 
 #ifdef USE_MPI
         aligned_tiles row_partition(splash::utils::partition<S> const & row_partition, 
-            MPI_Comm comm = MPI_COMM_WORLD) const {
+            MPI_Comm comm = MPI_COMM_WORLD) {
             
             int procs;
             int rank;
@@ -356,7 +390,10 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             MPI_Allgather(MPI_IN_PLACE, 1, int_dt.value, upper_bounds, 1, int_dt.value, comm);
 
             // -------- sort first.  we'd need things in order anyway.
+            // PRINT("aligned_tiles ROW_PARTITION sort ");
             aligned_tiles sorted = sort_by_offsets();
+            // PRINT("aligned_tiles ROW_PARTITION sort DONE\n");
+            // FLUSH();
             
             // -------- get counts.  this should be faster than sorting first.
             int * part_counts = new int[procs]{};
@@ -407,7 +444,9 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             }
 
             // --------- allocate
+            // PRINT("aligned_tiles ROW_PARTITION out ");
             aligned_tiles output(recv_part_offsets[procs], recv_elem_offsets[procs], _align);
+            // PRINT("aligned_tiles ROW_PARTITION out DONE\n");
 
             // -------- move parts by bytes
             splash::utils::mpi::datatype<splash::utils::partition2D<S>> part2d_dt;

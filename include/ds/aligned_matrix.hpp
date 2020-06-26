@@ -147,6 +147,7 @@ class aligned_matrix {
             std::swap(_align, other._align);
             std::swap(_bytes_per_row, other._bytes_per_row);
             std::swap(manage, other.manage);
+
             return *this;
         }
 

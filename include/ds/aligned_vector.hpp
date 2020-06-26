@@ -38,7 +38,7 @@ class aligned_vector {
 
     public:
         aligned_vector() : 
-            _data(nullptr), _cols(0), _align(splash::utils::get_cacheline_size()), manage(true) {}
+            _data(nullptr), _cols(0), _align(splash::utils::get_cacheline_size()), manage(true), bytes(0) {}
 
         // construct, optionally with allocated data.
         // alignment of 0 indicates: use system's cacheline size.
@@ -76,6 +76,8 @@ class aligned_vector {
             _align = other._align;
             bytes = other.bytes;
             manage = other.manage;
+
+            return *this;
         }
         // move constructor.  take ownership.
         aligned_vector(aligned_vector && other) : aligned_vector() {
@@ -91,6 +93,8 @@ class aligned_vector {
             std::swap(_align, other._align);
             std::swap(bytes, other.bytes);
             std::swap(manage, other.manage);
+
+            return *this;
         }
 
 
