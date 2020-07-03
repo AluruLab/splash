@@ -12,21 +12,22 @@
 #include "utils/memory.hpp"
 #include <cstring>  //memset
 
-namespace splash { namespace algo { 
-
 #define DC_MERGESORT_ASCEND_CONCORDANT  0
 #define DC_MERGESORT_ASCEND_DISCORDANT  2
 
+namespace splash { namespace algo { 
+
+namespace impl {
 
 template <typename ElemType, int Type>
 class MergeAndReduce;
 
 template <typename ElemType>
-class MergeAndReduce<ElemType, splash::algo::DC_MERGESORT_ASCEND_CONCORDANT> {
+class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
     public:
         inline size_t merge(ElemType const * in,
 			size_t const & start, size_t const & middle, size_t const & end,
-			ElemType * out, bool print = false) {
+			ElemType * out, bool print = false) const {
 
             // prefix is exclusive, with size count+1.
             // start, middle, and end are indices for in, and starts with 0.
@@ -111,11 +112,11 @@ class MergeAndReduce<ElemType, splash::algo::DC_MERGESORT_ASCEND_CONCORDANT> {
 };
 
 template <typename ElemType>
-class MergeAndReduce<ElemType, splash::algo::DC_MERGESORT_ASCEND_DISCORDANT> {
+class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
     public:
         inline size_t merge(ElemType const * in,
 			size_t const & start, size_t const & middle, size_t const & end,
-			ElemType * out, bool print = false) {
+			ElemType * out, bool print = false)  const {
 
             // suffix is exclusive, not counting equal part, and only the higher part of left half.
             // start, middle, and end are indices for in, and starts with 0.
@@ -169,7 +170,7 @@ class MergeAndReduce<ElemType, splash::algo::DC_MERGESORT_ASCEND_DISCORDANT> {
             return swap_count;
         }
 };
-
+} // impl namespace
 
 // TODO: hybrid insertion-merge sort.   size:  at most 32, or k * (64/datasize), where k is the set associativity.  
 //      binary search may not help as it is non-linear access to memory and cachelines.
@@ -185,29 +186,37 @@ class MergeAndReduce<ElemType, splash::algo::DC_MERGESORT_ASCEND_DISCORDANT> {
 template <typename ElemType, int Type>
 class MergeSortAndReduce {
     protected:
-        size_t vecSize;
-        ElemType * buffer;
+        mutable size_t vecSize;
+        mutable ElemType * buffer;
 
-        splash::algo::MergeAndReduce<ElemType, Type> merger;
+        splash::algo::impl::MergeAndReduce<ElemType, Type> merger;
     public:
         MergeSortAndReduce(size_t const & count) : vecSize(count) {
-            buffer = reinterpret_cast<ElemType*>(splash::utils::amalloc(count * sizeof(ElemType)));
+            buffer = reinterpret_cast<ElemType*>(splash::utils::aalloc(count * sizeof(ElemType)));
         }
         ~MergeSortAndReduce() {
             splash::utils::afree(buffer);
         }
 
-        inline void clear(ElemType* data, size_t const & count) {
+        inline void resize_buffer(size_t const & count) const {
+            if (count > vecSize) {
+                splash::utils::afree(buffer);
+                buffer = reinterpret_cast<ElemType*>(splash::utils::aalloc(count * sizeof(ElemType)));
+                this->vecSize = count;
+            }
+        }
+
+        inline void clear(ElemType* data, size_t const & count) const {
             memset(data, 0, count * sizeof(ElemType));
         }
-        inline void initialize(ElemType* data, size_t const & count) {
+        inline void initialize(ElemType* data, size_t const & count) const {
             for (size_t i = 0; i < count; ++i) {
                 data[i].init();
             }
         }
         
         // sorted_block_size is for later - when we integrate insertion sort for small size.
-		void sort(ElemType* data, size_t const & count, bool print=false, size_t sorted_block_size = 1) {
+		void sort(ElemType* data, size_t const & count, bool print=false, size_t sorted_block_size = 1) const {
             
 			// if an insertion sort step, do it here.
 			this->initialize(data, count);
