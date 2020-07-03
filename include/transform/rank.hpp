@@ -22,38 +22,31 @@
 
 namespace splash { namespace kernel { 
 
-
-template <typename IT, typename OT = IT>
-class Rank : public splash::kernel::V2VOp<IT, OT> {
-    public:
-        using RankType = typename std::conditional<
-            (sizeof(IT) == 4),
-            int, long
-        >::type;
+template <typename IT>
+class Sort {
 	protected:
-		// conditional type so that sizeof(MyPair) is a power of 2.
-		using MyPair = std::pair<IT, RankType>;
-	
-		MyPair* sort_buffer;
-		size_t vecSize;
-        RankType firstRank;
+		using PairType = std::pair<IT, size_t>;
 
-    public:
-        using OutputType = OT;
+		mutable PairType* sort_buffer;
+		mutable size_t vecSize;
 
-		Rank(size_t const & _count, RankType const & first = 1) : vecSize(_count), firstRank(first) {
-			sort_buffer = reinterpret_cast<MyPair* >(splash::utils::aalloc(_count * sizeof(MyPair)));
+	public:
+		Sort(size_t const & _count) : vecSize(_count) {
+			sort_buffer = reinterpret_cast<PairType* >(splash::utils::aalloc(_count * sizeof(PairType)));
 		}
-		~Rank() {
+		~Sort() {
 			splash::utils::afree(sort_buffer);
 		}
 
+		inline void resize_buffer(size_t const & _count) const {
+			if (_count > this->vecSize) {
+				splash::utils::afree(sort_buffer);
+				sort_buffer = reinterpret_cast<PairType* >(splash::utils::aalloc( _count * sizeof(PairType)));
+				this->vecSize = _count;
+			}
+		}
 
-        inline void operator()(IT const * __restrict__ in_vec, 
-            size_t const & count,
-            OT * __restrict__ out_vec) const {
-
-			size_t j;
+		inline void sort(IT const * __restrict__ in_vec, size_t const & count) const {
 			/*get the rank vector*/
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned
@@ -61,27 +54,111 @@ class Rank : public splash::kernel::V2VOp<IT, OT> {
 #if defined(USE_SIMD)
 #pragma omp simd
 #endif
-			for(j = 0; j < count; ++j){
+			for(size_t j = 0; j < count; ++j){
 				sort_buffer[j].first = in_vec[j];
 				sort_buffer[j].second = j;
 			}
 
 			// sort to get rank.
-			std::stable_sort(sort_buffer, sort_buffer + count, [](MyPair const & x, MyPair const & y){
+			std::stable_sort(sort_buffer, sort_buffer + count, [](PairType const & x, PairType const & y){
 				return x.first < y.first;
 			});
 
-			// unsort with rank.  can't vectorize either because of random memory access or because of forward dependency.
-			RankType rank = firstRank;
+		}
 
-			for(j = 0; j < count - 1; ++j){
-				out_vec[sort_buffer[j].second] = rank;
-				rank += (sort_buffer[j].first != sort_buffer[j + 1].first);  // branchless
+
+};
+
+
+template<typename RT>
+struct RankElemType {
+	RT pos;
+	RT rank;
+};
+
+
+template <typename IT, typename RT = IT>
+class Rank : public splash::kernel::V2VOp<IT, RT>, public splash::kernel::Sort<IT> {
+    public:
+        using OutputType = RT;
+		static_assert(std::is_arithmetic<OutputType>::value, "Rank type must be numeric");
+
+	protected:	
+        OutputType firstRank;
+
+		inline void rank(size_t const & count, OutputType * __restrict__ out_vec) const {
+			// unsort with rank.  can't vectorize either because of random memory access or because of forward dependency.
+			OutputType rank = firstRank;
+
+			for(size_t j = 0; j < count - 1; ++j){
+				out_vec[this->sort_buffer[j].second] = rank;
+				rank += (this->sort_buffer[j].first != this->sort_buffer[j + 1].first);  // branchless
 			}
-			out_vec[sort_buffer[count-1].second] = rank;
+			out_vec[this->sort_buffer[count-1].second] = rank;
 			// would a sort be faster here?  NO.  sort is much more expensive than random memory access.
 // 			/*do we need to normalize the out_vec to avoid overflow? NO.  pearson convert to standard score anyway.*/
 
+		}
+
+    public:
+  
+		Rank(size_t const & _count, OutputType const & first = 1) :  splash::kernel::Sort<IT>(_count), firstRank(first) {}
+		~Rank() {}
+
+        inline void operator()(IT const * __restrict__ in_vec, size_t const & count,
+            OutputType * __restrict__ out_vec) const {
+
+			this->resize_buffer(count);
+
+			this->sort(in_vec, count);
+			this->rank(count, out_vec);
+        }
+};
+
+
+
+template <typename IT, typename RT>
+class Rank<IT, RankElemType<RT>> :  public splash::kernel::V2VOp<IT, RankElemType<RT>>, public splash::kernel::Sort<IT> {
+    public:
+        using RankType = RT;
+		static_assert(std::is_arithmetic<RankType>::value, "Rank type must be numeric");
+
+	    using OutputType = RankElemType<RT>;
+
+	protected:	
+        RankType firstRank;
+
+		inline void rank(size_t const & count, OutputType * __restrict__ out_vec) const {
+
+			// unsort with rank.  can't vectorize either because of random memory access or because of forward dependency.
+			RankType rank = firstRank;
+			RankType id;
+			for(size_t j = 0; j < count - 1; ++j){
+				id = this->sort_buffer[j].second;
+				out_vec[id].pos = j;
+				out_vec[id].rank = rank;
+				rank += (this->sort_buffer[j].first != this->sort_buffer[j + 1].first);  // branchless
+			}
+			id = this->sort_buffer[count - 1L].second;
+			out_vec[id].pos = count - 1L;
+			out_vec[id].rank = rank;
+			
+			// would a sort be faster here?  NO.  sort is much more expensive than random memory access.
+// 			/*do we need to normalize the out_vec to avoid overflow? NO.  pearson convert to standard score anyway.*/
+		}
+
+    public:
+  
+		Rank(size_t const & _count, RankType const & first = 1) :  splash::kernel::Sort<IT>(_count), firstRank(first) {}
+		~Rank() {}
+
+        inline void operator()(IT const * __restrict__ in_vec, size_t const & count,
+            OutputType * __restrict__ out_vec) const {
+
+			this->resize_buffer(count);
+
+			this->sort(in_vec, count);
+			this->rank(count, out_vec);
         }
 };
 
