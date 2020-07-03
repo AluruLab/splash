@@ -511,12 +511,25 @@ class aligned_matrix {
 
         // aligned_matrix<FloatType> transpose(MPI_Comm comm = MPI_COMM_WORLD) {}
 
+        template <typename TT = FloatType, typename std::enable_if<std::is_arithmetic<TT>::value, int>::type = 1>
         void print() const {
             const_pointer d;
             for (size_type row = 0; row < _rows; ++row){
                 d = this->_get_row(row);
                 for (size_type col = 0; col < _cols; ++col) {
                     printf("%f,", d[col]);
+                }
+                printf("\n");
+            }
+        }
+        template <typename TT = FloatType, typename std::enable_if<(!std::is_arithmetic<TT>::value), int>::type = 1>
+        void print() const {
+            const_pointer d;
+            for (size_type row = 0; row < _rows; ++row){
+                d = this->_get_row(row);
+                for (size_type col = 0; col < _cols; ++col) {
+                    d[col].print();
+                    printf(", ");
                 }
                 printf("\n");
             }

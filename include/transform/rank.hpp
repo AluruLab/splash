@@ -72,8 +72,13 @@ class Sort {
 
 template<typename RT>
 struct RankElemType {
-	RT pos;
-	RT rank;
+	RT pos;  		// position in sorted array.
+	RT rank;   		// rank of value in sorted array. 
+	//  note: rank can repeat. pos are unique and order follows sorting method (i.e. stable sort or not)
+
+	void print() const {
+		PRINT("%ld", rank);
+	}
 };
 
 

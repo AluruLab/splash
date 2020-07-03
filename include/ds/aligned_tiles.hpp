@@ -312,8 +312,9 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             }
         }
 
+        template <typename TT = T, typename std::enable_if<std::is_arithmetic<TT>::value, int>::type = 1>
         inline void print(size_t const & id) const {
-            T const *  ptr = _data + offsets[id];;
+            TT const *  ptr = _data + offsets[id];;
 
             parts[id].print();
             PRINT("data offsets = %lu\n", offsets[id]);
@@ -323,11 +324,25 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 }
                 PRINT("\n");
             }
-
         }
+        template <typename TT = T, typename std::enable_if<!std::is_arithmetic<TT>::value, int>::type = 1>
+        inline void print(size_t const & id) const {
+            TT const *  ptr = _data + offsets[id];;
+
+            parts[id].print();
+            PRINT("data offsets = %lu\n", offsets[id]);
+            for (size_t r = 0; r < parts[id].r.size; ++r) {
+                for (size_t c = 0; c < parts[id].c.size; ++c, ++ptr) {
+                    ptr->print();
+                    PRINT(", ");
+                }
+                PRINT("\n");
+            }
+        }
+
         void print() const {
             for (size_t i = 0; i < parts.size(); ++i)  {
-                this->print(i);
+                this->print<T>(i);
             }
         }
 
