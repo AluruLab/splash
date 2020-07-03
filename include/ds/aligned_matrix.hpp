@@ -232,7 +232,7 @@ class aligned_matrix {
         }
 
 #ifdef USE_MPI
-        bool check_aligned_matrix(MPI_Comm comm = MPI_COMM_WORLD) {
+        bool check_aligned_matrix(MPI_Comm comm = MPI_COMM_WORLD) const {
             // first get the row and column counts on each rank
             size_t check[2];
             size_t result[2];
@@ -248,17 +248,19 @@ class aligned_matrix {
 #endif
             
 #ifdef USE_MPI
-        aligned_matrix<FloatType> gather(int target_rank = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+        aligned_matrix<FloatType> gather(int target_rank = 0, MPI_Comm comm = MPI_COMM_WORLD) const {
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            if (procs == 1) return *this;
+
             // validate that all columns are same.
             // validate that all alignments are same.
             if (! check_aligned_matrix()) {
                 throw std::logic_error("column count or alignment do not match between MPI processes.\n");
             }
-
-            int procs;
-            int rank;
-            MPI_Comm_size(comm, &procs);
-            MPI_Comm_rank(comm, &rank);
 
             // get total row count
             int rows = _rows;
@@ -301,13 +303,20 @@ class aligned_matrix {
             return output;
         }
 #else
-        aligned_matrix<FloatType> gather(int target_rank = 0) {
+        aligned_matrix<FloatType> gather(int target_rank = 0) const {
             return *this;
         }
 #endif
 
 #ifdef USE_MPI
-        aligned_matrix<FloatType> scatter(int src_rank = 0, MPI_Comm comm = MPI_COMM_WORLD) {
+        aligned_matrix<FloatType> scatter(int src_rank = 0, MPI_Comm comm = MPI_COMM_WORLD) const {
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            if (procs == 1) return *this;
+
             // validate that all columns are same.
             // validate that all alignments are same.
             if (! check_aligned_matrix()) {
@@ -315,10 +324,6 @@ class aligned_matrix {
             }
 
             // partition by the number of MPI procs.
-            int procs;
-            int rank;
-            MPI_Comm_size(comm, &procs);
-            MPI_Comm_rank(comm, &rank);
 
             splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
             int *counts = nullptr;
@@ -351,24 +356,26 @@ class aligned_matrix {
             return result;
         }
 #else
-        aligned_matrix<FloatType> scatter(int src_rank = 0) {
+        aligned_matrix<FloatType> scatter(int src_rank = 0) const {
             return *this;
         }
 #endif
 
 
 #ifdef USE_MPI
-        aligned_matrix<FloatType> allgather(MPI_Comm comm = MPI_COMM_WORLD) {
+        aligned_matrix<FloatType> allgather(MPI_Comm comm = MPI_COMM_WORLD) const {
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            if (procs == 1) return *this;
+
             // validate that all columns are same.
             // validate that all alignments are same.
             if (! check_aligned_matrix()) {
                 throw std::logic_error("column count or alignment do not match between MPI processes.\n");
             }
-
-            int procs;
-            int rank;
-            MPI_Comm_size(comm, &procs);
-            MPI_Comm_rank(comm, &rank);
 
             // get total row count
             int rows = _rows;
@@ -400,23 +407,26 @@ class aligned_matrix {
             return output;
         }
 #else
-        aligned_matrix<FloatType> allgather() {
+        aligned_matrix<FloatType> allgather() const {
             return *this;
         }
 #endif
 
 #ifdef USE_MPI
         void allgather_inplace(splash::utils::partition<size_type> const & part, MPI_Comm comm = MPI_COMM_WORLD) {
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            if (procs == 1) return;
+
             // validate that all columns are same.
             // validate that all alignments are same.
             if (! check_aligned_matrix()) {
                 throw std::logic_error("column count or alignment do not match between MPI processes.\n");
             }
 
-            int procs;
-            int rank;
-            MPI_Comm_size(comm, &procs);
-            MPI_Comm_rank(comm, &rank);
 
             // get counts and offsets
             int rows = part.size;
@@ -457,17 +467,19 @@ class aligned_matrix {
 
         // ---- NOT YET NEEDED -------
 #ifdef USE_MPI
-        aligned_matrix<FloatType> shift(int rank_distance, MPI_Comm comm = MPI_COMM_WORLD) {
+        aligned_matrix<FloatType> shift(int rank_distance, MPI_Comm comm = MPI_COMM_WORLD) const {
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            if (procs == 1) return *this;
+
             // validate that all columns are same.
             // validate that all alignments are same.
             if (! check_aligned_matrix()) {
                 throw std::logic_error("column count or alignment do not match between MPI processes.\n");
             }
-
-            int procs;
-            int rank;
-            MPI_Comm_size(comm, &procs);
-            MPI_Comm_rank(comm, &rank);
 
             // sendrecv rows and bytes info.
             size_type rows = 0;
@@ -492,15 +504,15 @@ class aligned_matrix {
             return output;
         }
 #else
-        aligned_matrix<FloatType> shift(int rank_distance) {
+        aligned_matrix<FloatType> shift(int rank_distance) const {
             return *this;
         }
 #endif
 
         // aligned_matrix<FloatType> transpose(MPI_Comm comm = MPI_COMM_WORLD) {}
 
-        void print() {
-            pointer d;
+        void print() const {
+            const_pointer d;
             for (size_type row = 0; row < _rows; ++row){
                 d = this->_get_row(row);
                 for (size_type col = 0; col < _cols; ++col) {
