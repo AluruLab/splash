@@ -98,7 +98,7 @@ class RandomVectorGenerator : public splash::kernel::N2VOp<OT> {
         RandomVectorGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
 
-		inline void operator()(splash::ds::aligned_vector<OT> & output) {
+		inline void operator()(splash::ds::aligned_vector<OT> & output) const {
             this->operator()(output.size(), output.data());
         }
 

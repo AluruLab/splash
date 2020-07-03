@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/partition.hpp"
+#include "ds/aligned_tiles.hpp"
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -10,7 +11,7 @@ namespace splash { namespace pattern {
 
 
 
-// rows in 2D
+// rows in 2D.  tested okay.
 template <typename IN, typename Op, typename OUT>
 class M2MProcessor {
 
@@ -32,7 +33,7 @@ class M2MProcessor {
         M2MProcessor(int const & _procs, int const & _rank) :
             procs(_procs), rank(_rank) {};
 
-        OUT operator()(IN const & input, Op const & op) {
+        OUT operator()(IN const & input, Op const & op) const {
             int threads = 1;
             int thread_id = 0;
 
@@ -43,14 +44,14 @@ class M2MProcessor {
                 threads = omp_get_num_threads();
                 thread_id = omp_get_thread_num();
 #endif
-                // partition the local 2D tiles.  omp_part.offset is local to this processor.
-                part1D_type omp_part = partitioner.get_partition(output.rows(), threads, thread_id);
+                // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
+                part1D_type omp_tile_parts = partitioner.get_partition(output.rows(), threads, thread_id);
                 PRINT_MPI("NORM thread %d partition: ", thread_id);
-                omp_part.print();
+                omp_tile_parts.print();
 
                 // iterate over rows.
-                size_t rid = omp_part.offset;
-                for (size_t i = 0; i < omp_part.size; ++i, ++rid) {
+                size_t rid = omp_tile_parts.offset;
+                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
                     op(input.data(rid),  input.columns(), output.data(rid));
                 }
 
@@ -91,19 +92,19 @@ class MM2MProcessor {
         MM2MProcessor(int const & _procs, int const & _rank) :
             procs(_procs), rank(_rank) {};
 
-        OUT operator()(IN const & input1, IN const & input2, Op const & op) {
+        OUT operator()(IN const & input1, IN const & input2, Op const & op) const {
             // ---- fixed-size partiton input and filter for tiles t
             auto stime = getSysTime();
-            std::vector<part2D_type> all_parts = partitioner2d.divide(input1.rows(), input2.rows(), 
+            std::vector<part2D_type> all_tile_parts = partitioner2d.divide(input1.rows(), input2.rows(), 
                     static_cast<typename OUT::size_type>(PARTITION_TILE_DIM), 
                     static_cast<typename OUT::size_type>(PARTITION_TILE_DIM) );
-            std::vector<part2D_type> parts = part_filter.filter( all_parts );
-            PRINT_MPI("Partitions: 2D %lu -> filtered %lu\n", all_parts.size(), parts.size());
+            std::vector<part2D_type> tile_parts = part_filter.filter( all_tile_parts );
+            PRINT_MPI("Partitions: 2D %lu -> filtered %lu\n", all_tile_parts.size(), tile_parts.size());
 
             // ---- partition the partitions for MPI
-            part1D_type mpi_part = partitioner.get_partition(parts.size(), this->procs, this->rank);
+            part1D_type mpi_tile_parts = partitioner.get_partition(tile_parts.size(), this->procs, this->rank);
             PRINT_MPI("MPI Rank %d partition: ", this->rank);
-            mpi_part.print();
+            mpi_tile_parts.print();
 
             auto etime = getSysTime();
             PRINT_MPI_ROOT("Correlation Partitioned in %f sec\n", get_duration_s(stime, etime));
@@ -113,7 +114,7 @@ class MM2MProcessor {
 
         	// ---- set up the temporary output, tiled, contains the partitions to process.
 	        // PRINT_MPI("[pearson TILES] ");
-	        tiles_type tiles(parts.data() + mpi_part.offset, mpi_part.size);
+	        tiles_type tiles(tile_parts.data() + mpi_tile_parts.offset, mpi_tile_parts.size);
 
             // OpenMP stuff.
             int threads = 1;
@@ -125,35 +126,32 @@ class MM2MProcessor {
                 threads = omp_get_num_threads();
                 thread_id = omp_get_thread_num();
 #endif
-                // partition the local 2D tiles.  omp_part.offset is local to this processor.
-		        part1D_type omp_part = partitioner.get_partition(mpi_part.size, threads, thread_id);
+                // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
+		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
 		        PRINT_MPI("thread %d partition: ", thread_id);
-		        omp_part.print();
+		        omp_tile_parts.print();
 
                 // run
                 // get range of global partitions for this thread.
-                // tiles.part(omp_part.offset).print();
+                // tiles.part(omp_tile_parts.offset).print();
 
                 // size_t rmin = std::numeric_limits<size_t>::max();
                 // size_t cmin = std::numeric_limits<size_t>::max();
                 // size_t rmax = std::numeric_limits<size_t>::lowest();
                 // size_t cmax = std::numeric_limits<size_t>::lowest();
 
-        		double sample_ratio = static_cast<double>(1.0) / static_cast<double>(input1.columns() - 1);
-
                 // iterate over all tiles
                 size_t row, col, row_end, col_end;
-                size_t id = omp_part.offset;
-                auto data = tiles.data(id);
-                auto i = omp_part.offset;
-                for (i = 0; i < omp_part.size; ++i, ++id) {
+                size_t id = omp_tile_parts.offset;
+                auto i = omp_tile_parts.offset;
+                for (i = 0; i < omp_tile_parts.size; ++i, ++id) {
                     auto part = tiles.part(id);  // id is a linear id.  tiles are filled sequentially within each proc-thread.
+                    auto data = tiles.data(id);
                     // part.print();
 
                     // work on 1 tile
                     row = part.r.offset;
                     row_end = row + part.r.size;
-                    data = tiles.data(id);
 
                     // rmin = std::min(rmin, row);
                     // cmin = std::min(cmin, part.c.offset);
@@ -171,7 +169,7 @@ class MM2MProcessor {
                             // no skipping entries within a tile, otherwise downstream copy into matrix would have missing entries. 
 
                             // compute correlation
-                            *data = op(input1.data(row), input2.data(col), input1.columns()) * sample_ratio;
+                            *data = op(input1.data(row), input2.data(col), input1.columns());
                             ++data;
                         }
                     }
@@ -191,6 +189,7 @@ class MM2MProcessor {
 
             PRINT_MPI("TILES BOUNDS: ");  tiles.get_bounds().print();
             PRINT_MPI("TILES COUNT: %lu\n", tiles.size());
+            // OKAY    tiles.print();
 
         	part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
             // row_part.print();
@@ -199,17 +198,20 @@ class MM2MProcessor {
             tiles_type transposed = tiles.transpose();
             PRINT_MPI("TRANSPOSED BOUNDS: ");  transposed.get_bounds().print();
             PRINT_MPI("TRANSPOSED COUNT: %lu\n", transposed.size());
+            // OKAY   transposed.print();
 
+            // TODO: make a reflect function or something else that avoids processing the diagonal.
             // PRINT_MPI("[pearson ADD] ");
-            tiles_type all_tiles = tiles + transposed;
+            tiles_type all_tiles = tiles.merge(transposed);
             PRINT_MPI("MERGED BOUNDS: ");  all_tiles.get_bounds().print();
             PRINT_MPI("MERGED COUNT: %lu\n", all_tiles.size());
-
+            // OKAY all_tiles.print();
 
             // PRINT_MPI("[pearson ROW_PARTITION] ");
             tiles_type parted_tiles = all_tiles.row_partition(row_part);
             // PRINT_MPI("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.size(), transposed.size(), all_tiles.size(), parted_tiles.size());
             // PRINT_MPI("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.allocated(), transposed.allocated(), all_tiles.allocated(), parted_tiles.allocated());
+            // OKAY  parted_tiles.print();
 
             // get actual bounds.  set up first for MPI.
             bounds = parted_tiles.get_bounds();

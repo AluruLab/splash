@@ -490,6 +490,7 @@ class upper_triangle_filter {
 
 class banded_diagonal_filter {
     // columns is even or odd, need columns/2 +1 per row.
+    // 2x2 tile matrix would result in nothing filtered.
     protected:
         template <typename T>
         inline T get_linear_id(T const & r, T const & c, T const & w, T const & bw) const {
