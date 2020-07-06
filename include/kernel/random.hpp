@@ -95,6 +95,9 @@ class RandomVectorGenerator : public splash::kernel::N2VOp<OT> {
         splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
 
 	public:
+        using InputType = void;
+        using OutputType = OT;
+
         RandomVectorGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
 
@@ -157,6 +160,9 @@ class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
         splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
 
 	public:
+        using InputType = void;
+        using OutputType = OT;
+
         RandomMatrixGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
 

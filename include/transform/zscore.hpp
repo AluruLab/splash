@@ -30,6 +30,9 @@ namespace splash { namespace kernel {
 template <typename IT, typename OT = IT, bool SampleStats = true>
 class StandardScore : public splash::kernel::V2VOp<IT, OT> {
     public:
+        using InputType = IT;
+        using OutputType = OT;
+        
         inline void operator()(IT const * __restrict__ in_vec, 
             size_t const & count,
             OT * __restrict__ out_vec) const {

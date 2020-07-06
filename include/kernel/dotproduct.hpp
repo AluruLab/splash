@@ -22,6 +22,9 @@ template<typename IT, typename OT>
 class DotProductKernel : public splash::kernel::VV2SOp<IT, OT> {
 
 	public:
+		using InputType = IT;
+		using OutputType = OT;
+
 		inline OT operator()(IT const * first, IT const * second, size_t const & count) const  {
 			OT prod = 0;
 #if defined(__INTEL_COMPILER)

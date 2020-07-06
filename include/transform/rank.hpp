@@ -91,6 +91,7 @@ struct RankElemType {
 template <typename IT, typename RT = IT>
 class Rank : public splash::kernel::V2VOp<IT, RT>, public splash::kernel::Sort<IT> {
     public:
+		using InputType = IT;
         using OutputType = RT;
 		static_assert(std::is_arithmetic<OutputType>::value, "Rank type must be numeric");
 
@@ -131,6 +132,7 @@ class Rank<IT, RankElemType<RT>> :  public splash::kernel::V2VOp<IT, RankElemTyp
         using RankType = RT;
 		static_assert(std::is_arithmetic<RankType>::value, "Rank type must be numeric");
 
+		using InputType = IT;
 	    using OutputType = RankElemType<RT>;
 
 	protected:	
