@@ -22,6 +22,9 @@ class M2MProcessor {
         int rank;
 
     public:
+        using InputType = IN;
+        using OutputType = OUT;
+
 #ifdef USE_MPI
         M2MProcessor(MPI_Comm comm = MPI_COMM_WORLD) {
             MPI_Comm_size(comm, &procs);
@@ -81,6 +84,9 @@ class MM2MProcessor {
         int rank;
 	
     public:
+        using InputType = IN;
+        using OutputType = OUT;
+
 #ifdef USE_MPI
         MM2MProcessor(MPI_Comm comm = MPI_COMM_WORLD) {
             MPI_Comm_size(comm, &procs);
