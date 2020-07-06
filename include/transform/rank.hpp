@@ -35,18 +35,24 @@ class Sort {
 			sort_buffer = reinterpret_cast<PairType* >(splash::utils::aalloc(_count * sizeof(PairType)));
 		}
 		~Sort() {
-			splash::utils::afree(sort_buffer);
+			if (sort_buffer) {
+				splash::utils::afree(sort_buffer);
+				sort_buffer = nullptr;
+			}
 		}
 
 		inline void resize_buffer(size_t const & _count) const {
 			if (_count > this->vecSize) {
-				splash::utils::afree(sort_buffer);
+				if (sort_buffer) splash::utils::afree(sort_buffer);
 				sort_buffer = reinterpret_cast<PairType* >(splash::utils::aalloc( _count * sizeof(PairType)));
 				this->vecSize = _count;
 			}
 		}
 
 		inline void sort(IT const * __restrict__ in_vec, size_t const & count) const {
+
+			this->resize_buffer(count);
+
 			/*get the rank vector*/
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned
@@ -112,9 +118,6 @@ class Rank : public splash::kernel::V2VOp<IT, RT>, public splash::kernel::Sort<I
 
         inline void operator()(IT const * __restrict__ in_vec, size_t const & count,
             OutputType * __restrict__ out_vec) const {
-
-			this->resize_buffer(count);
-
 			this->sort(in_vec, count);
 			this->rank(count, out_vec);
         }
@@ -159,8 +162,6 @@ class Rank<IT, RankElemType<RT>> :  public splash::kernel::V2VOp<IT, RankElemTyp
 
         inline void operator()(IT const * __restrict__ in_vec, size_t const & count,
             OutputType * __restrict__ out_vec) const {
-
-			this->resize_buffer(count);
 
 			this->sort(in_vec, count);
 			this->rank(count, out_vec);
