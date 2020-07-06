@@ -18,12 +18,12 @@
 namespace splash { namespace kernel { 
 
 
-template<typename IT>
-class DotProductKernel : public splash::kernel::VV2SOp<IT, IT> {
+template<typename IT, typename OT>
+class DotProductKernel : public splash::kernel::VV2SOp<IT, OT> {
 
 	public:
-		inline IT operator()(IT const * first, IT const * second, size_t const & count) const  {
-			IT prod = 0;
+		inline OT operator()(IT const * first, IT const * second, size_t const & count) const  {
+			OT prod = 0;
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned
 #endif
@@ -32,7 +32,7 @@ class DotProductKernel : public splash::kernel::VV2SOp<IT, IT> {
 #endif
 			// MAJORITY OF TIME HERE.  slowdown: O3 + omp simd (1x).  O3 (5x).  sanitizer + omp simd (11x), sanitizer (5.5x) 
 			for (size_t j = 0; j < count; ++j) {
-				prod += first[j] * second[j];
+				prod += static_cast<OT>(first[j] * second[j]);
 			}
 			return prod;
 		};
