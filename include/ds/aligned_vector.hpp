@@ -12,6 +12,9 @@
 #include "utils/memory.hpp"
 #include <cstring>  // memset, memcpy
 
+// TODO 
+// [ ] MPI gather, scatter, allgather, etc.
+
 namespace splash { namespace ds { 
 
 // NOTE: this is a STRICTLY LOCAL data structure.
@@ -47,8 +50,8 @@ class aligned_vector {
         aligned_vector(size_type const & cols, size_t const & align = 0,
                         void* data = nullptr, bool const & copy=true) :
             _cols(cols), _align(align == 0 ? splash::utils::get_cacheline_size() : align),
-            bytes(splash::utils::get_aligned_size(cols * sizeof(FloatType), _align)),
-            manage(copy)
+            manage(copy),
+            bytes(splash::utils::get_aligned_size(cols * sizeof(FloatType), _align))
         {
             if (manage) {
                 _data = reinterpret_cast<unsigned char*>(splash::utils::aalloc(bytes, _align));  // total size is multiple of alignment.
@@ -83,7 +86,7 @@ class aligned_vector {
         }
         // move constructor.  take ownership.
         aligned_vector(aligned_vector && other) : _data(other._data),
-            _cols(other._cols), _align(other._align), bytes(other.bytes), manage(other.manage) {
+            _cols(other._cols), _align(other._align), manage(other.manage), bytes(other.bytes) {
                 other._data = nullptr;
                 other._cols = 0;
                 other.bytes = 0;
