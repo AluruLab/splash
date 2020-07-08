@@ -20,6 +20,18 @@ class VV2SOp {
         inline OT operator()(IT const * first, IT const * second, size_t const & count) const {};
 };
 
+// (vector, scalar) + (vector, scalar) -> scalar operator.
+template <typename IT, typename OT>
+class VSVS2SOp {
+    public:
+        using InputType = IT;
+        using OutputType = OT;
+        inline OT operator()(IT const * first, IT const & first_aux,
+             IT const * second, IT const & second_aux, 
+             size_t const & count) const {};
+};
+
+
 
 // Vector generator.
 template <typename OT>
@@ -42,6 +54,16 @@ class V2VOp {
         inline void operator()(IT const * in_vector, 
             size_t const & count,
             OT * out_vector) const {};
+};
+
+// vector -> scalar operator
+template <typename IT, typename OT>
+class V2SOp {
+    public:
+        using InputType = IT;
+        using OutputType = OT;
+        inline OT operator()(IT const * in_vector, 
+            size_t const & count) const {};
 };
 
 // Matrix generator.
