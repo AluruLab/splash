@@ -28,7 +28,7 @@ namespace splash { namespace kernel {
 // current:
 //      compute the regular standard score.
 template <typename IT, typename OT = IT, bool SampleStats = true>
-class StandardScore : public splash::kernel::V2VOp<IT, OT> {
+class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::DEGREE::VECTOR> {
     public:
         using InputType = IT;
         using OutputType = OT;

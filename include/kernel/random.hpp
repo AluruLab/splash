@@ -87,7 +87,7 @@ class random_number_generator {
 
 
 template<typename OT, typename Distribution, typename Generator>
-class RandomVectorGenerator : public splash::kernel::N2VOp<OT> {
+class RandomVectorGenerator : public splash::kernel::generate<OT, splash::kernel::DEGREE::VECTOR> {
     protected:
         random_number_generator<Generator> & generators;
         OT mn;
@@ -152,7 +152,7 @@ using NormalRandomVectorGenerator =
 
 
 template<typename OT, typename Distribution, typename Generator>
-class RandomMatrixGenerator : public splash::kernel::N2MOp<OT> {
+class RandomMatrixGenerator : public splash::kernel::generate<OT, splash::kernel::DEGREE::MATRIX> {
     protected:
         random_number_generator<Generator> & generators;
         OT mn;

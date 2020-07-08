@@ -19,7 +19,7 @@ namespace splash { namespace kernel {
 
 
 template<typename IT, typename OT>
-class DotProductKernel : public splash::kernel::VV2SOp<IT, OT> {
+class DotProductKernel : public splash::kernel::inner_product<IT, OT, splash::kernel::DEGREE::VECTOR> {
 
 	public:
 		using InputType = IT;

@@ -8,8 +8,9 @@ namespace splash { namespace kernel {
 
 
 template<typename Op1, typename Op2>
-class CompositeTransformKernel : public splash::kernel::V2VOp<
-    typename Op1::InputType, typename Op2::OutputType> {
+class CompositeTransformKernel : public splash::kernel::transform<
+    typename Op1::InputType, typename Op2::OutputType,
+    splash::kernel::DEGREE::VECTOR> {
 
     protected:
         using MT = typename Op2::InputType; 
@@ -37,7 +38,6 @@ class CompositeTransformKernel : public splash::kernel::V2VOp<
                 vecSize = count;
             }
         }
-
 
 		inline void operator()(InputType const * in, size_t const & count, OutputType * out) const  {
             this->resize(count);

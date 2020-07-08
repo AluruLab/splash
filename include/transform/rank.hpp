@@ -89,7 +89,7 @@ struct RankElemType {
 
 
 template <typename IT, typename RT = IT>
-class Rank : public splash::kernel::V2VOp<IT, RT>, public splash::kernel::Sort<IT> {
+class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT> {
     public:
 		using InputType = IT;
         using OutputType = RT;
@@ -127,7 +127,7 @@ class Rank : public splash::kernel::V2VOp<IT, RT>, public splash::kernel::Sort<I
 
 
 template <typename IT, typename RT>
-class Rank<IT, RankElemType<RT>> :  public splash::kernel::V2VOp<IT, RankElemType<RT>>, public splash::kernel::Sort<IT> {
+class Rank<IT, RankElemType<RT>> :  public splash::kernel::transform<IT, RankElemType<RT>, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT> {
     public:
         using RankType = RT;
 		static_assert(std::is_arithmetic<RankType>::value, "Rank type must be numeric");
