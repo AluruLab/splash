@@ -5,6 +5,8 @@
 #include "ds/aligned_vector.hpp"
 #include "ds/aligned_matrix.hpp"
 
+#include <cassert>
+
 #ifdef USE_MPI
 #include <mpi.h>
 #endif
@@ -51,11 +53,12 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
         Reduce(int const & _procs, int const & _rank) :
             procs(_procs), rank(_rank) {};
 
-        OutputType operator()(InputType const & input, Op const & op) const {
+        void operator()(InputType const & input, Op const & op, OutputType & output) const {
+            assert((output.size() == input.rows()) && "Reduce requires output vector size to be same as input row count.");
+
             int threads = 1;
             int thread_id = 0;
 
-            OutputType output(input.rows());
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
@@ -76,7 +79,6 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
 #ifdef USE_OPENMP
             }
 #endif
-            return output;
         }
 };
 
@@ -110,11 +112,12 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
         Transform(int const & _procs, int const & _rank) :
             procs(_procs), rank(_rank) {};
 
-        OutputType operator()(InputType const & input, Op const & op) const {
+        void operator()(InputType const & input, Op const & op, OutputType & output) const {
+            assert((output.rows() == input.rows()) && "Transform requires output and input to have same number of rows.");
+
             int threads = 1;
             int thread_id = 0;
 
-            OutputType output(input.rows(), input.columns());
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
@@ -135,7 +138,6 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
 #ifdef USE_OPENMP
             }
 #endif
-            return output;
         }
 
 };
@@ -176,7 +178,9 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
         InnerProduct(int const & _procs, int const & _rank) :
             procs(_procs), rank(_rank) {};
 
-        OutputType operator()(InputType const & input1, InputType const & input2, Op const & op) const {
+        void operator()(InputType const & input1, InputType const & input2, Op const & op, OutputType & output) const {
+            assert(((output.rows() == input1.rows()) && (output.columns() == input2.rows())) && "InnerProduct requires output rows and input1 rows to be same, and output columns and input2 rows to be same.");
+
             // ---- fixed-size partiton input and filter for tiles t
             auto stime = getSysTime();
             std::vector<part2D_type> all_tile_parts = partitioner2d.divide(input1.rows(), input2.rows(), 
@@ -305,7 +309,8 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             PRINT_MPI("REPARTED BOUNDS: "); bounds.print();
             PRINT_MPI("REPARTED COUNT: %lu\n", parted_tiles.size());
 
-            OutputType output(bounds.r.size, input2.rows());
+            assert((output.rows() >= bounds.r.size) && "Output rows have to be at least equal to the bounds row size" );
+            // OutputType output(bounds.r.size, input2.rows());
 	        parted_tiles.copy_to(output, bounds.r.offset, 0);
             // TODO: fix copy to - we are partitioning rows equally and allocating output in the same way.
             //       however, a tile may straddle a boundary since we partition the tiles by offset and do not split tiles.
@@ -313,9 +318,6 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 	
         	etime = getSysTime();
 	        PRINT_MPI("Reorder tiles in %f sec\n", get_duration_s(stime, etime));
-
-            return output;
-
         }
 
 };
