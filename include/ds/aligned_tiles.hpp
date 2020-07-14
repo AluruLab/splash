@@ -262,21 +262,26 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         }
 
         splash::utils::partition2D<S> get_bounds() {
-            S rmin = std::numeric_limits<S>::max();
-            S cmin = std::numeric_limits<S>::max();
-            S rmax = std::numeric_limits<S>::lowest();
-            S cmax = std::numeric_limits<S>::lowest();
-            
-            for (size_t i = 0; i < parts.size(); ++i) {
-                rmin = std::min(rmin, parts[i].r.offset);
-                cmin = std::min(cmin, parts[i].c.offset);
-                rmax = std::max(rmax, parts[i].r.offset + parts[i].r.size);
-                cmax = std::max(cmax, parts[i].c.offset + parts[i].c.size);
+            if (parts.size() > 0) {
+                S rmin = std::numeric_limits<S>::max();
+                S cmin = std::numeric_limits<S>::max();
+                S rmax = std::numeric_limits<S>::lowest();
+                S cmax = std::numeric_limits<S>::lowest();
+                
+                for (size_t i = 0; i < parts.size(); ++i) {
+                    rmin = std::min(rmin, parts[i].r.offset);
+                    cmin = std::min(cmin, parts[i].c.offset);
+                    rmax = std::max(rmax, parts[i].r.offset + parts[i].r.size);
+                    cmax = std::max(cmax, parts[i].c.offset + parts[i].c.size);
+                }
+                PRINT_MPI("rmin %lu rmax %lu, cmin %lu cmax %lu\n", rmin, rmax, cmin, cmax);
+                return splash::utils::partition2D<S>(
+                    splash::utils::partition<S>(rmin, rmax-rmin, 0),
+                    splash::utils::partition<S>(cmin, cmax-cmin, 0),
+                    0, 1);
+            } else { 
+                return splash::utils::partition2D<S>(); 
             }
-            return splash::utils::partition2D<S>(
-                splash::utils::partition<S>(rmin, rmax-rmin, 0),
-                splash::utils::partition<S>(cmin, cmax-cmin, 0),
-                0, 1);
         }
 
         // fill dense matrix
@@ -446,11 +451,11 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             splash::utils::mpi::datatype<int> int_dt;
             MPI_Allgather(MPI_IN_PLACE, 1, int_dt.value, upper_bounds, 1, int_dt.value, comm);
 
-            PRINT("UPPER_BOUNDS [");
-            for (int i = 0; i < procs; ++i) {
-                PRINT("%d ", upper_bounds[i]);
-            }
-            PRINT("]\n");
+            // PRINT("UPPER_BOUNDS [");
+            // for (int i = 0; i < procs; ++i) {
+            //     PRINT("%d ", upper_bounds[i]);
+            // }
+            // PRINT("]\n");
 
             
             // PRINT("aligned_tiles ROW_PARTITION sort DONE\n");
@@ -486,26 +491,26 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 // should not get segv here.
                 elem_counts[i] = sorted.offsets[part_id] - elem_offsets[i];
             } 
-            PRINT("PART count [");
-            for (int i = 0; i < procs; ++i) {
-                PRINT("%d ", part_counts[i]);
-            }
-            PRINT("]\n");
-            PRINT("PART offset [");
-            for (int i = 0; i < procs; ++i) {
-                PRINT("%d ", part_offsets[i]);
-            }
-            PRINT("]\n");
-            PRINT("ELEM count [");
-            for (int i = 0; i < procs; ++i) {
-                PRINT("%d ", elem_counts[i]);
-            }
-            PRINT("]\n");
-            PRINT("ELEM offset [");
-            for (int i = 0; i < procs; ++i) {
-                PRINT("%d ", elem_offsets[i]);
-            }
-            PRINT("]\n");
+            // PRINT("PART count [");
+            // for (int i = 0; i < procs; ++i) {
+            //     PRINT("%d ", part_counts[i]);
+            // }
+            // PRINT("]\n");
+            // PRINT("PART offset [");
+            // for (int i = 0; i < procs; ++i) {
+            //     PRINT("%d ", part_offsets[i]);
+            // }
+            // PRINT("]\n");
+            // PRINT("ELEM count [");
+            // for (int i = 0; i < procs; ++i) {
+            //     PRINT("%d ", elem_counts[i]);
+            // }
+            // PRINT("]\n");
+            // PRINT("ELEM offset [");
+            // for (int i = 0; i < procs; ++i) {
+            //     PRINT("%d ", elem_offsets[i]);
+            // }
+            // PRINT("]\n");
 
             delete [] upper_bounds;
 
@@ -523,26 +528,26 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 recv_part_offsets[i + 1] = recv_part_offsets[i] + recv_parts[i];
                 recv_elem_offsets[i + 1] = recv_elem_offsets[i] + recv_elems[i];
             }
-            PRINT("RECV PART count [");
-            for (int i = 0; i < procs; ++i) {
-                PRINT("%d ", recv_parts[i]);
-            }
-            PRINT("]\n");
-            PRINT("RECV PART offset [");
-            for (int i = 0; i <= procs; ++i) {
-                PRINT("%d ", recv_part_offsets[i]);
-            }
-            PRINT("]\n");
-            PRINT("RECV ELEM count [");
-            for (int i = 0; i < procs; ++i) {
-                PRINT("%d ", recv_elems[i]);
-            }
-            PRINT("]\n");
-            PRINT("RECV ELEM offset [");
-            for (int i = 0; i <= procs; ++i) {
-                PRINT("%d ", recv_elem_offsets[i]);
-            }
-            PRINT("]\n");
+            // PRINT("RECV PART count [");
+            // for (int i = 0; i < procs; ++i) {
+            //     PRINT("%d ", recv_parts[i]);
+            // }
+            // PRINT("]\n");
+            // PRINT("RECV PART offset [");
+            // for (int i = 0; i <= procs; ++i) {
+            //     PRINT("%d ", recv_part_offsets[i]);
+            // }
+            // PRINT("]\n");
+            // PRINT("RECV ELEM count [");
+            // for (int i = 0; i < procs; ++i) {
+            //     PRINT("%d ", recv_elems[i]);
+            // }
+            // PRINT("]\n");
+            // PRINT("RECV ELEM offset [");
+            // for (int i = 0; i <= procs; ++i) {
+            //     PRINT("%d ", recv_elem_offsets[i]);
+            // }
+            // PRINT("]\n");
 
             // --------- allocate
             // PRINT("aligned_tiles ROW_PARTITION out ");

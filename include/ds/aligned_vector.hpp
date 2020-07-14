@@ -119,6 +119,35 @@ class aligned_vector {
             _data = nullptr;
         }
 
+        // resizes. copy data.
+        inline void resize(size_type const  & cols)  {
+            if (cols == _cols) return;
+            // allocate new data.
+            unsigned char* data = nullptr;
+            size_type b = splash::utils::get_aligned_size(cols * sizeof(FloatType), _align);
+            if (cols > 0)
+                data = reinterpret_cast<unsigned char*>(splash::utils::aalloc(b, _align));  // total size is multiple of alignment.
+
+            // copy data if any.
+            if (_data) {
+                size_type bmin = std::min(b, bytes);
+                memcpy(data, _data, bmin);
+            }
+  
+            // swap.
+            std::swap(_data, data);
+            _cols = cols;
+            bytes = b;
+
+            // if not managing, then okay to replace the pointer..  else need to free old data.
+            if (data && manage) {
+                splash::utils::afree(data);
+            }
+            // if was not managing, now is.
+            manage = true;
+        }
+
+
 
         inline size_type size() const { return _cols; }
         inline size_type allocated() const { return bytes; }

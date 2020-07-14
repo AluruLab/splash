@@ -177,6 +177,39 @@ class aligned_matrix {
         inline size_type allocated() const {
             return _rows * _bytes_per_row;
         }
+        // resizes. copy data.
+        inline void resize(size_type const  & rows, size_type const & cols)  {
+            if ((rows == _rows)  && (cols == _cols)) return;
+            // allocate new data.
+            unsigned char* data = nullptr;
+            if ((rows > 0) && (cols > 0))
+                data = reinterpret_cast<unsigned char*>(splash::utils::aalloc_2D(rows, cols * sizeof(FloatType), _align));  // total size is multiple of alignment.
+            size_type bytes_per_row = splash::utils::get_aligned_size(cols * sizeof(FloatType), _align);
+
+            // copy data if any.
+            if (_data) {
+                size_type rmin = std::min(rows, _rows);
+                size_type bmin = std::min(bytes_per_row, _bytes_per_row);
+                unsigned char* src = _data;
+                unsigned char* dest = data;
+                for (size_type r = 0; r < rmin; ++r, src+=_bytes_per_row, dest+= bytes_per_row) {
+                    memcpy(dest, src, bmin);
+                }
+            }
+            // swap.
+            std::swap(_data, data);
+            _rows = rows;
+            _cols = cols;
+            _bytes_per_row = bytes_per_row;
+
+            // if not managing, then okay to replace the pointer..  else need to free old data.
+            if (data && manage) {
+                splash::utils::afree(data);
+            }
+            // if was not managing, now is.
+            manage = true;
+        }
+
 
         inline size_type rows() const {  return _rows; }
         inline size_type columns() const {  return _cols; }
