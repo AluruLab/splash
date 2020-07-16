@@ -67,8 +67,8 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 part1D_type omp_tile_parts = partitioner.get_partition(output.size(), threads, thread_id);
-                // PRINT_MPI("NORM thread %d partition: ", thread_id);
-                // omp_tile_parts.print();
+                // PRINT_RT("NORM thread %d partition: ", thread_id);
+                // omp_tile_parts.print("OMP TILES: ");
 
                 // iterate over rows.
                 size_t rid = omp_tile_parts.offset;
@@ -113,7 +113,7 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
             procs(_procs), rank(_rank) {};
 
         void operator()(InputType const & input, Op const & op, OutputType & output) const {
-            assert((output.rows() == input.rows()) && "Transform requires output and input to have same number of rows.");
+            assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
 
             int threads = 1;
             int thread_id = 0;
@@ -126,8 +126,7 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 part1D_type omp_tile_parts = partitioner.get_partition(output.rows(), threads, thread_id);
-                // PRINT_MPI("NORM thread %d partition: ", thread_id);
-                // omp_tile_parts.print();
+                omp_tile_parts.print("NORM");
 
                 // iterate over rows.
                 size_t rid = omp_tile_parts.offset;
@@ -180,7 +179,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 
         void operator()(InputType const & input1, InputType const & input2, Op const & op, OutputType & output) const {
             if ((output.rows() != input1.rows()) || (output.columns() != input2.rows())) 
-                PRINT("InnerProduct: input1 rows:  %lu, input2 rows: %lu, output rows: %lu, columns %lu\n",
+                PRINT_RT("InnerProduct: input1 rows:  %lu, input2 rows: %lu, output rows: %lu, columns %lu\n",
                     input1.rows(), input2.rows(), output.rows(), output.columns());
             assert(((output.rows() == input1.rows()) && (output.columns() == input2.rows())) && "InnerProduct requires output rows and input1 rows to be same, and output columns and input2 rows to be same.");
 
@@ -190,22 +189,23 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                     static_cast<typename OutputType::size_type>(PARTITION_TILE_DIM), 
                     static_cast<typename OutputType::size_type>(PARTITION_TILE_DIM) );
             std::vector<part2D_type> tile_parts = part_filter.filter( all_tile_parts );
-            // PRINT_MPI("Partitions: 2D %lu -> filtered %lu\n", all_tile_parts.size(), tile_parts.size());
+            // PRINT_RT("Partitions: 2D %lu -> filtered %lu\n", all_tile_parts.size(), tile_parts.size());
 
             // ---- partition the partitions for MPI
             part1D_type mpi_tile_parts = partitioner.get_partition(tile_parts.size(), this->procs, this->rank);
-            // PRINT_MPI("MPI Rank %d partition: ", this->rank);
-            // mpi_tile_parts.print();
+            // PRINT_RT("MPI Rank %d partition: ", this->rank);
+            // mpi_tile_parts.print("MPI TILEs: ");
 
             auto etime = getSysTime();
-            PRINT_MPI_ROOT("Correlation Partitioned in %f sec\n", get_duration_s(stime, etime));
+            ROOT_PRINT("Correlation Partitioned in %f sec\n", get_duration_s(stime, etime));
 
             // ---- compute correlation
             stime = getSysTime();
 
         	// ---- set up the temporary output, tiled, contains the partitions to process.
-	        // PRINT_MPI("[pearson TILES] ");
+	        // PRINT_RT("[pearson TILES] ");
 	        tiles_type tiles(tile_parts.data() + mpi_tile_parts.offset, mpi_tile_parts.size);
+            input1.print("INPUT: ");
 
             // OpenMP stuff.
             int threads = 1;
@@ -219,12 +219,12 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
 		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
-		        // PRINT_MPI("thread %d partition: ", thread_id);
-		        // omp_tile_parts.print();
+		        // PRINT_RT("thread %d partition: ", thread_id);
+		        // omp_tile_parts.print("OMP PARTITION: ");
 
                 // run
                 // get range of global partitions for this thread.
-                // tiles.part(omp_tile_parts.offset).print();
+                // tiles.part(omp_tile_parts.offset).print("OMP START PART");
 
                 // size_t rmin = std::numeric_limits<size_t>::max();
                 // size_t cmin = std::numeric_limits<size_t>::max();
@@ -238,7 +238,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                 for (i = 0; i < omp_tile_parts.size; ++i, ++id) {
                     auto part = tiles.part(id);  // id is a linear id.  tiles are filled sequentially within each proc-thread.
                     auto data = tiles.data(id);
-                    // part.print();
+                    // part.print("PART: ");
 
                     // work on 1 tile
                     row = part.r.offset;
@@ -265,52 +265,51 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                         }
                     }
                 }
-        		// PRINT_MPI("CORR BOUNDS r: %lu %lu, c %lu %lu\n", rmin, rmax-rmin, cmin, cmax-cmin);
+        		// PRINT_RT("CORR BOUNDS r: %lu %lu, c %lu %lu\n", rmin, rmax-rmin, cmin, cmax-cmin);
 
 #ifdef USE_OPENMP
         	}
 #endif
         	etime = getSysTime();
-	        PRINT_MPI_ROOT("Computed in %f sec\n", get_duration_s(stime, etime));
+	        ROOT_PRINT("Computed in %f sec\n", get_duration_s(stime, etime));
 
 
         	// ============= repartition output
 	        stime = getSysTime();
-	        part2D_type bounds;
 
-            // PRINT_MPI("TILES BOUNDS: ");  tiles.get_bounds().print();
-            // PRINT_MPI("TILES COUNT: %lu\n", tiles.size());
-            // OKAY    tiles.print();
+            tiles.get_bounds().print("TILES BOUNDS: ");
+            PRINT_RT("TILES COUNT: %lu\n", tiles.size());
+            tiles.print("TILES: ");
 
         	part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
-            // row_part.print();
+            row_part.print("ROW PARTITIONS: ");
             // with transpose.
-            // PRINT_MPI("[pearson TRANSPOSE] ");
+            // PRINT_RT("[pearson TRANSPOSE] ");
             tiles_type transposed = tiles.transpose();
-            // PRINT_MPI("TRANSPOSED BOUNDS: ");  transposed.get_bounds().print();
-            // PRINT_MPI("TRANSPOSED COUNT: %lu\n", transposed.size());
-            // OKAY   transposed.print();
+            // transposed.get_bounds().print("TRANSPOSED BOUNDS: ");
+            // PRINT_RT("TRANSPOSED COUNT: %lu\n", transposed.size());
+            // OKAY   transposed.print("TRANSPOSED TILES: ");
 
             // TODO: make a reflect function or something else that avoids processing the diagonal.
-            // PRINT_MPI("[pearson ADD] ");
+            // PRINT_RT("[pearson ADD] ");
             tiles_type all_tiles = tiles.merge(transposed);
-            // PRINT_MPI("MERGED BOUNDS: ");  all_tiles.get_bounds().print();
-            // PRINT_MPI("MERGED COUNT: %lu\n", all_tiles.size());
-            // OKAY all_tiles.print();
+            // all_tiles.get_bounds().print("MERGED BOUNDS: ");
+            // PRINT_RT("MERGED COUNT: %lu\n", all_tiles.size());
+            // OKAY all_tiles.print("ALL TILES: ");
 
-            // PRINT_MPI("[pearson ROW_PARTITION] ");
+            // PRINT_RT("[pearson ROW_PARTITION] ");
             tiles_type parted_tiles = all_tiles.row_partition(row_part);
-            // PRINT_MPI("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.size(), transposed.size(), all_tiles.size(), parted_tiles.size());
-            // PRINT_MPI("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.allocated(), transposed.allocated(), all_tiles.allocated(), parted_tiles.allocated());
-            // parted_tiles.print();
+            // PRINT_RT("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.size(), transposed.size(), all_tiles.size(), parted_tiles.size());
+            // PRINT_RT("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.allocated(), transposed.allocated(), all_tiles.allocated(), parted_tiles.allocated());
+            // parted_tiles.print("PARTED TILES: ");
 
             // get actual bounds.  set up first for MPI.
-            bounds = parted_tiles.get_bounds();
+            part2D_type bounds = parted_tiles.get_bounds();
 // #else
 //  		bounds = part2D_type(part1D_type(0, input1.rows(), 0), part1D_type(0, input2.columns(), 0), 0, 1); 
 // #endif
-            // PRINT_MPI("REPARTED BOUNDS: "); bounds.print();
-            // PRINT_MPI("REPARTED COUNT: %lu\n", parted_tiles.size());
+            // bounds.print("REPARTED BOUNDS: ");
+            // PRINT_RT("REPARTED COUNT: %lu\n", parted_tiles.size());
 
             assert((output.rows() >= bounds.r.size) && "Output rows have to be at least equal to the bounds row size" );
             output.resize(bounds.r.size, input2.rows());
@@ -320,7 +319,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             // the output size needs to be allocated after tile partitioning to get the bounds properly.
 	
         	etime = getSysTime();
-	        PRINT_MPI("Reorder tiles in %f sec\n", get_duration_s(stime, etime));
+	        PRINT_RT("Reorder tiles in %f sec\n", get_duration_s(stime, etime));
         }
 
 };
@@ -366,21 +365,21 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 //                     static_cast<typename OutputType::size_type>(PARTITION_TILE_DIM), 
 //                     static_cast<typename OutputType::size_type>(PARTITION_TILE_DIM) );
 //             std::vector<part2D_type> tile_parts = part_filter.filter( all_tile_parts );
-//             PRINT_MPI("Partitions: 2D %lu -> filtered %lu\n", all_tile_parts.size(), tile_parts.size());
+//             PRINT_RT("Partitions: 2D %lu -> filtered %lu\n", all_tile_parts.size(), tile_parts.size());
 
 //             // ---- partition the partitions for MPI
 //             part1D_type mpi_tile_parts = partitioner.get_partition(tile_parts.size(), this->procs, this->rank);
-//             PRINT_MPI("MPI Rank %d partition: ", this->rank);
-//             mpi_tile_parts.print();
+//             PRINT_RT("MPI Rank %d partition: ", this->rank);
+//             mpi_tile_parts.print("MPI PARTITION: ");
 
 //             auto etime = getSysTime();
-//             PRINT_MPI_ROOT("Correlation Partitioned in %f sec\n", get_duration_s(stime, etime));
+//             ROOT_PRINT("Correlation Partitioned in %f sec\n", get_duration_s(stime, etime));
 
 //             // ---- compute correlation
 //             stime = getSysTime();
 
 //         	// ---- set up the temporary output, tiled, contains the partitions to process.
-// 	        // PRINT_MPI("[pearson TILES] ");
+// 	        // PRINT_RT("[pearson TILES] ");
 // 	        tiles_type tiles(tile_parts.data() + mpi_tile_parts.offset, mpi_tile_parts.size);
 
 //             // OpenMP stuff.
@@ -395,12 +394,12 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 // #endif
 //                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
 // 		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
-// 		        PRINT_MPI("thread %d partition: ", thread_id);
-// 		        omp_tile_parts.print();
+// 		        PRINT_RT("thread %d partition: ", thread_id);
+// 		        omp_tile_parts.print(" OMP PARTITION");
 
 //                 // run
 //                 // get range of global partitions for this thread.
-//                 // tiles.part(omp_tile_parts.offset).print();
+//                 // tiles.part(omp_tile_parts.offset).print("");
 
 //                 // size_t rmin = std::numeric_limits<size_t>::max();
 //                 // size_t cmin = std::numeric_limits<size_t>::max();
@@ -414,7 +413,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 //                 for (i = 0; i < omp_tile_parts.size; ++i, ++id) {
 //                     auto part = tiles.part(id);  // id is a linear id.  tiles are filled sequentially within each proc-thread.
 //                     auto data = tiles.data(id);
-//                     // part.print();
+//                     // part.print("OMP PART: ");
 
 //                     // work on 1 tile
 //                     row = part.r.offset;
@@ -442,52 +441,52 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 //                         }
 //                     }
 //                 }
-//         		// PRINT_MPI("CORR BOUNDS r: %lu %lu, c %lu %lu\n", rmin, rmax-rmin, cmin, cmax-cmin);
+//         		// PRINT_RT("CORR BOUNDS r: %lu %lu, c %lu %lu\n", rmin, rmax-rmin, cmin, cmax-cmin);
 
 // #ifdef USE_OPENMP
 //         	}
 // #endif
 //         	etime = getSysTime();
-// 	        PRINT_MPI_ROOT("Computed in %f sec\n", get_duration_s(stime, etime));
+// 	        ROOT_PRINT("Computed in %f sec\n", get_duration_s(stime, etime));
 
 
 //         	// ============= repartition output
 // 	        stime = getSysTime();
 // 	        part2D_type bounds;
 
-//             PRINT_MPI("TILES BOUNDS: ");  tiles.get_bounds().print();
-//             PRINT_MPI("TILES COUNT: %lu\n", tiles.size());
-//             // OKAY    tiles.print();
+//             PRINT_RT("TILES BOUNDS: ");  tiles.get_bounds().print("TILES BOUNDS: ");
+//             PRINT_RT("TILES COUNT: %lu\n", tiles.size());
+//             // OKAY    tiles.print("TILES: ");
 
 //         	part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
-//             // row_part.print();
+//             // row_part.print("ROW PARTITION: ");
 //             // with transpose.
-//             // PRINT_MPI("[pearson TRANSPOSE] ");
+//             // PRINT_RT("[pearson TRANSPOSE] ");
 //             tiles_type transposed = tiles.transpose();
-//             PRINT_MPI("TRANSPOSED BOUNDS: ");  transposed.get_bounds().print();
-//             PRINT_MPI("TRANSPOSED COUNT: %lu\n", transposed.size());
-//             // OKAY   transposed.print();
+//             PRINT_RT("TRANSPOSED BOUNDS: ");  transposed.get_bounds().print("TRANSPOSED BOUNDS: ");
+//             PRINT_RT("TRANSPOSED COUNT: %lu\n", transposed.size());
+//             // OKAY   transposed.print("TRANSPOSE: ");
 
 //             // TODO: make a reflect function or something else that avoids processing the diagonal.
-//             // PRINT_MPI("[pearson ADD] ");
+//             // PRINT_RT("[pearson ADD] ");
 //             tiles_type all_tiles = tiles.merge(transposed);
-//             PRINT_MPI("MERGED BOUNDS: ");  all_tiles.get_bounds().print();
-//             PRINT_MPI("MERGED COUNT: %lu\n", all_tiles.size());
-//             // OKAY all_tiles.print();
+//             PRINT_RT("MERGED BOUNDS: ");  all_tiles.get_bounds().print("MERGED BOUNDS: ");
+//             PRINT_RT("MERGED COUNT: %lu\n", all_tiles.size());
+//             // OKAY all_tiles.print("ADD: ");
 
-//             // PRINT_MPI("[pearson ROW_PARTITION] ");
+//             // PRINT_RT("[pearson ROW_PARTITION] ");
 //             tiles_type parted_tiles = all_tiles.row_partition(row_part);
-//             // PRINT_MPI("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.size(), transposed.size(), all_tiles.size(), parted_tiles.size());
-//             // PRINT_MPI("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.allocated(), transposed.allocated(), all_tiles.allocated(), parted_tiles.allocated());
-//             // OKAY  parted_tiles.print();
+//             // PRINT_RT("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.size(), transposed.size(), all_tiles.size(), parted_tiles.size());
+//             // PRINT_RT("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.allocated(), transposed.allocated(), all_tiles.allocated(), parted_tiles.allocated());
+//             // OKAY  parted_tiles.print("ROW PART: ");
 
 //             // get actual bounds.  set up first for MPI.
 //             bounds = parted_tiles.get_bounds();
 // // #else
 // //  		bounds = part2D_type(part1D_type(0, input1.rows(), 0), part1D_type(0, input2.columns(), 0), 0, 1); 
 // // #endif
-//             PRINT_MPI("REPARTED BOUNDS: "); bounds.print();
-//             PRINT_MPI("REPARTED COUNT: %lu\n", parted_tiles.size());
+//             bounds.print("REPARTED BOUNDS: ");
+//             PRINT_RT("REPARTED COUNT: %lu\n", parted_tiles.size());
 
 //             output.resize(bounds.r.size, input2.rows());
 // 	        parted_tiles.copy_to(output, bounds.r.offset, 0);
@@ -496,7 +495,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 //             // the output size needs to be allocated after tile partitioning to get the bounds properly.
 	
 //         	etime = getSysTime();
-// 	        PRINT_MPI("Reorder tiles in %f sec\n", get_duration_s(stime, etime));
+// 	        PRINT_RT("Reorder tiles in %f sec\n", get_duration_s(stime, etime));
 
 //             return output;
 

@@ -7,6 +7,10 @@
  *  			Georgia Institute of Technology, Atlanta, GA 30332
  */
 
+/* TODO:
+ * [ ] use a partition object as dimension descriptor
+ */
+
 #pragma once  // instead of #ifndef ...
 
 #include "utils/memory.hpp"
@@ -184,12 +188,12 @@ class aligned_matrix {
             unsigned char* data = nullptr;
             size_type bytes_per_row = splash::utils::get_aligned_size(cols * sizeof(FloatType), _align);
             if ((rows > 0) && (cols > 0)) {
-                data = reinterpret_cast<unsigned char*>(splash::utils::aalloc_2D(rows, cols * sizeof(FloatType), _align));  // total size is multiple of alignment.
+                data = reinterpret_cast<unsigned char*>(splash::utils::aalloc_2D(rows, bytes_per_row, _align));  // total size is multiple of alignment.
                 memset(data, 0, rows * bytes_per_row);
             }
 
             // copy data if any.
-            if (_data) {
+            if (_data && data) {
                 size_type rmin = std::min(rows, _rows);
                 size_type bmin = std::min(bytes_per_row, _bytes_per_row);
                 unsigned char* src = _data;
@@ -547,26 +551,29 @@ class aligned_matrix {
         // aligned_matrix<FloatType> transpose(MPI_Comm comm = MPI_COMM_WORLD) {}
 
         template <typename TT = FloatType, typename std::enable_if<std::is_arithmetic<TT>::value, int>::type = 1>
-        void print() const {
+        void print(const char* prefix) const {
             const_pointer d;
+
             for (size_type row = 0; row < _rows; ++row){
                 d = this->_get_row(row);
+                PRINT_RT("%s: ", prefix);
                 for (size_type col = 0; col < _cols; ++col) {
-                    printf("%f,", d[col]);
+                    PRINT("%f,", d[col]);
                 }
-                printf("\n");
+                PRINT("\n");
             }
         }
         template <typename TT = FloatType, typename std::enable_if<(!std::is_arithmetic<TT>::value), int>::type = 1>
-        void print() const {
+        void print(const char* prefix) const {
             const_pointer d;
             for (size_type row = 0; row < _rows; ++row){
                 d = this->_get_row(row);
+                PRINT_RT("%s:", prefix);
                 for (size_type col = 0; col < _cols; ++col) {
-                    d[col].print();
-                    printf(", ");
+                    d[col].print("");
+                    PRINT(", ");
                 }
-                printf("\n");
+                PRINT("\n");
             }
         }
 

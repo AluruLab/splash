@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <vector>
 #include <algorithm>
 #include <type_traits>
@@ -47,8 +48,8 @@ struct partition {
     partition& operator=(partition const & other) = default;
     partition& operator=(partition && other) = default;
 
-    void print() {
-        PRINT("Partition: offset: %ld, size: %ld, id: %ld\n", offset, size, id);
+    void print(const char * prefix) {
+        PRINT_RT("%s Partition: offset: %ld, size: %ld, id: %ld\n", prefix, offset, size, id);
     }  
 
 
@@ -220,12 +221,14 @@ struct partition2D {
     partition2D& operator=(partition2D && other) = default;
 
 
-    void print() {
-        PRINT("Partition2D row part: "); 
-        r.print();
-        PRINT("Partition2D col part: ");
-        c.print();
-        PRINT("Partition2D id: %lu, id row width %lu\n", id, id_cols);
+    void print(const char * prefix) {
+        char pre[1024];
+        strcpy(pre, prefix);
+        strcpy(pre + strlen(prefix), " ROW ");
+        r.print(pre);
+        strcpy(pre + strlen(prefix), " COL ");
+        c.print(pre);
+        PRINT_RT("%s Partition2D id: %lu, id row width %lu\n", prefix, id, id_cols);
     }  
 };
 
@@ -499,7 +502,7 @@ class banded_diagonal_filter {
 
             T id = ((c_id < 0) || (c_id >= bw)) ? -1 : (r * bw + c_id);
 
-            // PRINT("r, c->cid = %ld, %ld->%ld, id = %ld\n", r, c, c_id, id);
+            // PRINT_RT("r, c->cid = %ld, %ld->%ld, id = %ld\n", r, c, c_id, id);
             return id;
         }
         size_t band_width;
@@ -522,7 +525,7 @@ class banded_diagonal_filter {
             // if even, need 1 + cols/2 in order to cover full matrix
             id_type w = parts.front().id_cols;
             id_type bw = (band_width == 0) ? (w / 2 + 1) : band_width;
-            PRINT("Banded Diagnonal Filter for tiles: width = %ld,  bandwidth = %ld\n", w, bw);
+            ROOT_PRINT("Banded Diagnonal Filter for tiles: width = %ld,  bandwidth = %ld\n", w, bw);
             
             for (auto part : parts) {
                 id = get_linear_id(part.r.id, part.c.id, w, bw);

@@ -36,6 +36,10 @@ inline size_t get_aligned_size(size_t const & bytes) {
     return splash::utils::get_aligned_size(bytes, splash::utils::get_cacheline_size());
 }
 
+
+// alloc, free, realloc.  need to make threadsafe.
+
+
 // default is cache line size.
 inline void* aalloc(size_t const & bytes, size_t const & alignment) {
     void* data = aligned_alloc(alignment, splash::utils::get_aligned_size(bytes, alignment));
@@ -58,6 +62,7 @@ inline void* aalloc_2D(size_t const & rows, size_t const & col_bytes, size_t con
 inline void* aalloc_2D(size_t const & rows, size_t const & col_bytes) {
     return splash::utils::aalloc_2D(rows, col_bytes, splash::utils::get_cacheline_size());    
 }
+
 
 
 inline void afree(void* data) {

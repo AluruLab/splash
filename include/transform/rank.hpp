@@ -84,8 +84,8 @@ struct RankElemType {
 	RT rank;   		// rank of value in sorted array. 
 	//  note: rank can repeat. pos are unique and order follows sorting method (i.e. stable sort or not)
 
-	void print() const {
-		PRINT("%ld", rank);
+	void print(const char* prefix) const {
+		PRINT_RT("%s %d", prefix, rank);
 	}
 };
 

@@ -6,7 +6,9 @@
  *  Affiliation: Institute for Data Engineering and Science
  *  			Georgia Institute of Technology, Atlanta, GA 30332
  */
-
+/* TODO:
+ * [ ] use a partition object as dimension descriptor
+ */
 #pragma once
 
 #include "utils/memory.hpp"
@@ -175,7 +177,8 @@ class aligned_vector {
         }
 
 
-        void print() {
+        void print(const char* prefix) {
+            PRINT_RT("%s ", prefix);
             for (size_type i = 0; i < _cols; ++i){
                 printf("%f ", data(i));
             }
