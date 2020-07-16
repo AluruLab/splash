@@ -66,9 +66,10 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
                 thread_id = omp_get_thread_num();
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
+                ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", output.size(), threads, thread_id);
                 part1D_type omp_tile_parts = partitioner.get_partition(output.size(), threads, thread_id);
                 // PRINT_RT("NORM thread %d partition: ", thread_id);
-                // omp_tile_parts.print("OMP TILES: ");
+                omp_tile_parts.print("OMP TILES: ");
 
                 // iterate over rows.
                 size_t rid = omp_tile_parts.offset;
@@ -125,7 +126,8 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
                 thread_id = omp_get_thread_num();
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                part1D_type omp_tile_parts = partitioner.get_partition(output.rows(), threads, thread_id);
+                ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
+                part1D_type omp_tile_parts = partitioner.get_partition(input.rows(), threads, thread_id);
                 omp_tile_parts.print("NORM");
 
                 // iterate over rows.
@@ -218,9 +220,10 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                 thread_id = omp_get_thread_num();
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
+                ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", mpi_tile_parts.size, threads, thread_id);
 		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
 		        // PRINT_RT("thread %d partition: ", thread_id);
-		        // omp_tile_parts.print("OMP PARTITION: ");
+		        omp_tile_parts.print("OMP PARTITION: ");
 
                 // run
                 // get range of global partitions for this thread.

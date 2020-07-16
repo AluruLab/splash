@@ -108,14 +108,14 @@ class RandomVectorGenerator : public splash::kernel::generate<OT, splash::kernel
 		inline void operator()(size_t const & count, OT * out_vector) const {
             Distribution distribution(mn, mx);
 
+            size_t thread_id = 0;
+            size_t num_threads = 1;
+
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
             size_t thread_id = omp_get_thread_num();
             size_t num_threads = omp_get_num_threads();
-#else       
-            size_t thread_id = 0;
-            size_t num_threads = 1;
 #endif
 
             // get the per-thread generator
