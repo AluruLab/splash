@@ -33,6 +33,7 @@ class Sort {
 	public:
 		Sort(size_t const & _count) : vecSize(_count) {
 			sort_buffer = reinterpret_cast<PairType* >(splash::utils::aalloc(_count * sizeof(PairType)));
+			memset(sort_buffer, 0, _count * sizeof(PairType));
 		}
 		~Sort() {
 			if (sort_buffer) {
@@ -45,6 +46,7 @@ class Sort {
 			if (_count > this->vecSize) {
 				if (sort_buffer) splash::utils::afree(sort_buffer);
 				sort_buffer = reinterpret_cast<PairType* >(splash::utils::aalloc( _count * sizeof(PairType)));
+				memset(sort_buffer, 0, _count * sizeof(PairType));
 				this->vecSize = _count;
 			}
 		}

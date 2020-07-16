@@ -27,6 +27,7 @@ class CompositeTransformKernel : public splash::kernel::transform<
         CompositeTransformKernel(Op1 const & _op1, Op2 const & _op2, size_t const & _vecSize) : 
             op1(_op1), op2(_op2), vecSize(_vecSize) {
             buffer = reinterpret_cast<MT* >(splash::utils::aalloc(_vecSize * sizeof(MT)));
+            memset(buffer, 0, _vecSize * sizeof(MT));
         }
         ~CompositeTransformKernel() {
             if (buffer) splash::utils::afree(buffer);
@@ -35,6 +36,7 @@ class CompositeTransformKernel : public splash::kernel::transform<
             if (count > vecSize) {
                 if (buffer) splash::utils::afree(buffer);
                 buffer = reinterpret_cast<MT* >(splash::utils::aalloc(count * sizeof(MT)));
+                memset(buffer, 0, count * sizeof(MT));
                 vecSize = count;
             }
         }

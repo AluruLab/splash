@@ -182,9 +182,11 @@ class aligned_matrix {
             if ((rows == _rows)  && (cols == _cols)) return;
             // allocate new data.
             unsigned char* data = nullptr;
-            if ((rows > 0) && (cols > 0))
-                data = reinterpret_cast<unsigned char*>(splash::utils::aalloc_2D(rows, cols * sizeof(FloatType), _align));  // total size is multiple of alignment.
             size_type bytes_per_row = splash::utils::get_aligned_size(cols * sizeof(FloatType), _align);
+            if ((rows > 0) && (cols > 0)) {
+                data = reinterpret_cast<unsigned char*>(splash::utils::aalloc_2D(rows, cols * sizeof(FloatType), _align));  // total size is multiple of alignment.
+                memset(data, 0, rows * bytes_per_row);
+            }
 
             // copy data if any.
             if (_data) {

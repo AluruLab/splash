@@ -179,6 +179,9 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             procs(_procs), rank(_rank) {};
 
         void operator()(InputType const & input1, InputType const & input2, Op const & op, OutputType & output) const {
+            if ((output.rows() != input1.rows()) || (output.columns() != input2.rows())) 
+                PRINT("InnerProduct: input1 rows:  %lu, input2 rows: %lu, output rows: %lu, columns %lu\n",
+                    input1.rows(), input2.rows(), output.rows(), output.columns());
             assert(((output.rows() == input1.rows()) && (output.columns() == input2.rows())) && "InnerProduct requires output rows and input1 rows to be same, and output columns and input2 rows to be same.");
 
             // ---- fixed-size partiton input and filter for tiles t

@@ -125,9 +125,10 @@ class aligned_vector {
             // allocate new data.
             unsigned char* data = nullptr;
             size_type b = splash::utils::get_aligned_size(cols * sizeof(FloatType), _align);
-            if (cols > 0)
+            if (cols > 0) {
                 data = reinterpret_cast<unsigned char*>(splash::utils::aalloc(b, _align));  // total size is multiple of alignment.
-
+                memset(data, 0, b);
+            }
             // copy data if any.
             if (_data) {
                 size_type bmin = std::min(b, bytes);

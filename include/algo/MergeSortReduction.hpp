@@ -193,6 +193,7 @@ class MergeSortAndReduce {
     public:
         MergeSortAndReduce(size_t const & count) : vecSize(count) {
             buffer = reinterpret_cast<ElemType*>(splash::utils::aalloc(count * sizeof(ElemType)));
+            memset(buffer, 0, count * sizeof(ElemType));
         }
         ~MergeSortAndReduce() {
             splash::utils::afree(buffer);
@@ -202,6 +203,7 @@ class MergeSortAndReduce {
             if (count > vecSize) {
                 splash::utils::afree(buffer);
                 buffer = reinterpret_cast<ElemType*>(splash::utils::aalloc(count * sizeof(ElemType)));
+                memset(buffer, 0, count * sizeof(ElemType));
                 this->vecSize = count;
             }
         }
