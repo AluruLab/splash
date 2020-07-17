@@ -56,14 +56,14 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
         void operator()(InputType const & input, Op const & op, OutputType & output) const {
             assert((output.size() == input.rows()) && "Reduce requires output vector size to be same as input row count.");
 
-            int threads = 1;
-            int thread_id = 0;
-
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
-                threads = omp_get_num_threads();
-                thread_id = omp_get_thread_num();
+            int threads = omp_get_num_threads();
+            int thread_id = omp_get_thread_num();
+#else 
+            int threads = 1;
+            int thread_id = 0;
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", output.size(), threads, thread_id);
@@ -116,14 +116,14 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
         void operator()(InputType const & input, Op const & op, OutputType & output) const {
             assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
 
-            int threads = 1;
-            int thread_id = 0;
-
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
-                threads = omp_get_num_threads();
-                thread_id = omp_get_thread_num();
+            int threads = omp_get_num_threads();
+            int thread_id = omp_get_thread_num();
+#else 
+            int threads = 1;
+            int thread_id = 0;
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
@@ -210,14 +210,15 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             input1.print("INPUT: ");
 
             // OpenMP stuff.
-            int threads = 1;
-            int thread_id = 0;
 
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
-                threads = omp_get_num_threads();
-                thread_id = omp_get_thread_num();
+            int threads = omp_get_num_threads();
+            int thread_id = omp_get_thread_num();
+#else 
+            int threads = 1;
+            int thread_id = 0;
 #endif
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", mpi_tile_parts.size, threads, thread_id);
@@ -386,14 +387,14 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 // 	        tiles_type tiles(tile_parts.data() + mpi_tile_parts.offset, mpi_tile_parts.size);
 
 //             // OpenMP stuff.
-//             int threads = 1;
-//             int thread_id = 0;
-
 // #ifdef USE_OPENMP
 // #pragma omp parallel
 //             {
-//                 threads = omp_get_num_threads();
-//                 thread_id = omp_get_thread_num();
+//             int threads = omp_get_num_threads();
+//             int thread_id = omp_get_thread_num();
+// #else 
+//             int threads = 1;
+//             int thread_id = 0;
 // #endif
 //                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
 // 		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
