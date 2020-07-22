@@ -48,7 +48,7 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
 #pragma vector aligned
 #endif
 #if defined(USE_SIMD)
-#pragma omp simd reduction(+:meanX)
+#pragma omp simd reduction(+:meanX, meanX2)
 #endif
             for (size_t j = 0; j < count; ++j) {
                 x = static_cast<OT>(in_vec[j]);

@@ -108,6 +108,7 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
                 }
 
 #ifdef USE_OPENMP
+#pragma omp barrier
             }
 #endif
         }
@@ -181,6 +182,7 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
                 }
 
 #ifdef USE_OPENMP
+#pragma omp barrier
             }
 #endif
         }
@@ -329,6 +331,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
         		// PRINT_RT("CORR BOUNDS r: %lu %lu, c %lu %lu\n", rmin, rmax-rmin, cmin, cmax-cmin);
 
 #ifdef USE_OPENMP
+#pragma omp barrier
         	}
 #endif
         	etime = getSysTime();

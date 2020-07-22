@@ -102,7 +102,7 @@ class RandomVectorGenerator : public splash::kernel::generate<OT, splash::kernel
         RandomVectorGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
         virtual ~RandomVectorGenerator() {}
-        virtual void copy_parameters(RandomVectorGenerator const & other) {
+        void copy_parameters(RandomVectorGenerator const & other) {
             generators = other.generators;
             mn = other.mn;
             mx = other.mx;
@@ -136,6 +136,7 @@ class RandomVectorGenerator : public splash::kernel::generate<OT, splash::kernel
             std::generate_n(out_vector + part.offset, part.size, [&generator, &distribution](){ return distribution(generator); });
 
 #ifdef USE_OPENMP
+#pragma omp barrier
             }
 #endif
 		};
@@ -174,7 +175,7 @@ class RandomMatrixGenerator : public splash::kernel::generate<OT, splash::kernel
         RandomMatrixGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
         virtual ~RandomMatrixGenerator() {}
-        virtual void copy_parameters(RandomMatrixGenerator const & other) {
+        void copy_parameters(RandomMatrixGenerator const & other) {
             generators = other.generators;
             mn = other.mn;
             mx = other.mx;

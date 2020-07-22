@@ -92,6 +92,7 @@ class buffered_printf {
         
         // destruction should be hidden from general calling as well. 
         ~buffered_printf() {
+            this->flush();
             fflush(stream);
             free(this->_data);
             this->_data = nullptr;

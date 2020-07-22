@@ -46,7 +46,7 @@ class paramed_kernel {
     public:
         paramed_kernel() {}
         virtual ~paramed_kernel() {}
-        virtual void copy_parameters(paramed_kernel const & other)  {}
+        void copy_parameters(paramed_kernel const & other)  {}
 };
 
 

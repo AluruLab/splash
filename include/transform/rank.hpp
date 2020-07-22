@@ -101,7 +101,7 @@ class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VE
 		Rank(OutputType const & first = 1) : firstRank(first) {}
 		virtual ~Rank() {}
 
-		virtual void copy_parameters(Rank const & other) {
+		void copy_parameters(Rank const & other) {
 			firstRank = other.firstRank;
 		}
 
@@ -149,7 +149,7 @@ class Rank<IT, RankElemType<RT>> :  public splash::kernel::transform<IT, RankEle
 		Rank(RankType const & first = 1) :  firstRank(first) {}
 		virtual ~Rank() {}
 
-		virtual void copy_parameters(Rank const & other) {
+		void copy_parameters(Rank const & other) {
 			firstRank = other.firstRank;
 		}
 

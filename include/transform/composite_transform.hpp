@@ -30,7 +30,7 @@ class CompositeTransformKernel : public splash::kernel::transform<
         CompositeTransformKernel(Op1 const & _op1, Op2 const & _op2) : op1(_op1), op2(_op2) {} 
         virtual ~CompositeTransformKernel() { }
 
-        virtual void copy_parameters(CompositeTransformKernel const & other) {
+        void copy_parameters(CompositeTransformKernel const & other) {
             op1.copy_parameters(other.op1);
             op2.copy_parameters(other.op2);
         }
