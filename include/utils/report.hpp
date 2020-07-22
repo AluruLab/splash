@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <sstream>
 #include <atomic>
+#include <cstring>
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -30,7 +31,7 @@ class buffered_printf {
         static std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>> instances;
         
     protected:
-        char * _data;
+        char * _data;  // local per thread.
         size_t _capacity;
         std::atomic<size_t> _size;
         FILE * stream;
@@ -51,9 +52,31 @@ class buffered_printf {
 
     public:
         static buffered_printf& get_instance(int const & tid, FILE * stream) {
-            if (instances.find(tid) == instances.end()) {
-                instances[tid] = std::unordered_map<FILE*, buffered_printf>();
+// data race likely since single data structure.  use omp single to initialize.
+#ifdef USE_OPENMP
+#pragma omp critical  // have to use critical instead of single.  Singles does not appear to block  the other threads  so may cause hang at fprintf line.
+            {
+#endif
+
+            if (instances.empty()) {
+#ifdef USE_OPENMP
+                int max = omp_get_max_threads();
+                fprintf(stdout, "thread = %d, curr %d, empty %lu\n", max, omp_get_thread_num(), instances.size());  fflush(stdout);
+#else
+                int max = 1;
+#endif
+                for (int p = 0; p < max; ++p) {
+                    instances.emplace(p, std::unordered_map<FILE*, buffered_printf>());
+                }
+                fprintf(stdout, "thread = %d, result  %lu\n", max, instances.size());  fflush(stdout);
             }
+            // if (instances.find(tid) == instances.end()) {
+            //     instances.emplace(tid, std::unordered_map<FILE*, buffered_printf>());
+            // }
+#ifdef USE_OPENMP
+            }
+#endif
+            // following should be per thread.
             if (instances[tid].find(stream) == instances[tid].end()) {
                 instances[tid].emplace(stream, buffered_printf(stream));
             }
@@ -134,6 +157,12 @@ class buffered_printf {
         inline size_t size() { return _size; }
         inline size_t capacity() { return _capacity; }
 };
+// #ifdef USE_OPENMP
+// // initialize with sufficient size so it's never resized, which could cause race condition.
+// std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>> buffered_printf::instances = std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>>(omp_get_max_threads() * 2);
+// #else
+// std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>> buffered_printf::instances = std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>>(2);
+// #endif
 std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>> buffered_printf::instances = std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>>();
 
 // goal: want to keep per thread /processs output as separated as possible in the stdout or stderr.
@@ -157,7 +186,8 @@ std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>> buffered_pr
 #endif
 
 #define BUFFERED_PRINT(tid, stream, ...) do {\
-    ssize_t count = snprintf(NULL, 0, __VA_ARGS__);  \
+    ssize_t count = 0; \
+    count = snprintf(NULL, 0, __VA_ARGS__);  \
     size_t pos = buffered_printf::get_instance(tid, stream).reserve(count); \
     count = sprintf(buffered_printf::get_instance(tid, stream).data(pos), __VA_ARGS__); \
 } while (0) 
