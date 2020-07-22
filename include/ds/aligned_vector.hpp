@@ -180,9 +180,9 @@ class aligned_vector {
         void print(const char* prefix) {
             PRINT_RT("%s ", prefix);
             for (size_type i = 0; i < _cols; ++i){
-                printf("%f ", data(i));
+                PRINT("%f ", data(i));
             }
-            printf("\n");
+            PRINT("\n");
         }
 
 

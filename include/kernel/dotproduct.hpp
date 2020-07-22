@@ -25,7 +25,7 @@ class DotProductKernel : public splash::kernel::inner_product<IT, OT, splash::ke
 		using InputType = IT;
 		using OutputType = OT;
 
-		inline OT operator()(IT const * first, IT const * second, size_t const & count) const  {
+		inline virtual OT operator()(IT const * first, IT const * second, size_t const & count) const  {
 			OT prod = 0;
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned

@@ -12,6 +12,10 @@
 #include "utils/memory.hpp"
 #include <cstring>  //memset
 
+/* TODO
+ * [ ] make threadsafe
+ */
+
 #define DC_MERGESORT_ASCEND_CONCORDANT  0
 #define DC_MERGESORT_ASCEND_DISCORDANT  2
 
@@ -27,7 +31,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
     public:
         inline size_t merge(ElemType const * in,
 			size_t const & start, size_t const & middle, size_t const & end,
-			ElemType * out, bool print = false) const {
+			ElemType * out) const {
 
             // prefix is exclusive, with size count+1.
             // start, middle, and end are indices for in, and starts with 0.
@@ -116,7 +120,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
     public:
         inline size_t merge(ElemType const * in,
 			size_t const & start, size_t const & middle, size_t const & end,
-			ElemType * out, bool print = false)  const {
+			ElemType * out)  const {
 
             // suffix is exclusive, not counting equal part, and only the higher part of left half.
             // start, middle, and end are indices for in, and starts with 0.
@@ -184,29 +188,13 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
 //    scan_update(ScanElemType const &, ElemType const &): for inclusive scan using plus operator.
 //    merge_update(ElemType const &, ElemType const &, ElemType &): for updating the inverted elements during merge. (otherwise merge is just selecting left and right.)
 template <typename ElemType, int Type>
-class MergeSortAndReduce {
+class MergeSortAndReduce : public splash::kernel::buffered_kernel<ElemType> {
     protected:
-        mutable size_t vecSize;
-        mutable ElemType * buffer;
 
         splash::algo::impl::MergeAndReduce<ElemType, Type> merger;
     public:
-        MergeSortAndReduce(size_t const & count) : vecSize(count) {
-            buffer = reinterpret_cast<ElemType*>(splash::utils::aalloc(count * sizeof(ElemType)));
-            memset(buffer, 0, count * sizeof(ElemType));
-        }
-        ~MergeSortAndReduce() {
-            splash::utils::afree(buffer);
-        }
-
-        inline void resize_buffer(size_t const & count) const {
-            if (count > vecSize) {
-                splash::utils::afree(buffer);
-                buffer = reinterpret_cast<ElemType*>(splash::utils::aalloc(count * sizeof(ElemType)));
-                memset(buffer, 0, count * sizeof(ElemType));
-                this->vecSize = count;
-            }
-        }
+        MergeSortAndReduce() { }
+        virtual ~MergeSortAndReduce() {}
 
         inline void clear(ElemType* data, size_t const & count) const {
             memset(data, 0, count * sizeof(ElemType));
@@ -218,14 +206,15 @@ class MergeSortAndReduce {
         }
         
         // sorted_block_size is for later - when we integrate insertion sort for small size.
-		void sort(ElemType* data, size_t const & count, bool print=false, size_t sorted_block_size = 1) const {
-            
+		void sort(ElemType* data, size_t const & count, size_t sorted_block_size = 1) const {
+            this->resize(count);  // make sure we have enough space.
+
 			// if an insertion sort step, do it here.
 			this->initialize(data, count);
-            this->clear(buffer, count);
+            this->clear(this->buffer, count);
 
 			ElemType* temp = data;
-			ElemType* temp2 = buffer;
+			ElemType* temp2 = this->buffer;
 
 			size_t gap;
 			size_t start, middle, end;
@@ -244,7 +233,7 @@ class MergeSortAndReduce {
                     merger.merge(
                         temp,
                         start, middle, end,
-                        temp2, print);
+                        temp2);
                 }
                 std::swap(temp, temp2);  // switch the 2.  up-to-date result is now in temp again.
             }

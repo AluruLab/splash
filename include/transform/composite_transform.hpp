@@ -6,44 +6,38 @@
 
 namespace splash { namespace kernel { 
 
+/* TODO:
+ * [ ] make buffer thread safe
+ */
 
 template<typename Op1, typename Op2>
 class CompositeTransformKernel : public splash::kernel::transform<
     typename Op1::InputType, typename Op2::OutputType,
-    splash::kernel::DEGREE::VECTOR> {
+    splash::kernel::DEGREE::VECTOR>, 
+    public splash::kernel::buffered_kernel<typename Op2::InputType> {
 
     protected:
         using MT = typename Op2::InputType; 
 
-        Op1  const & op1;
-        Op2  const & op2; 
-        mutable MT * buffer; 
-        mutable size_t vecSize;
+        Op1 op1;
+        Op2 op2; 
 
 	public:
         using InputType = typename Op1::InputType;
         using OutputType = typename Op2::OutputType;
 
-        CompositeTransformKernel(Op1 const & _op1, Op2 const & _op2, size_t const & _vecSize) : 
-            op1(_op1), op2(_op2), vecSize(_vecSize) {
-            buffer = reinterpret_cast<MT* >(splash::utils::aalloc(_vecSize * sizeof(MT)));
-            memset(buffer, 0, _vecSize * sizeof(MT));
-        }
-        ~CompositeTransformKernel() {
-            if (buffer) splash::utils::afree(buffer);
-        }
-        void resize(size_t const & count) const {
-            if (count > vecSize) {
-                if (buffer) splash::utils::afree(buffer);
-                buffer = reinterpret_cast<MT* >(splash::utils::aalloc(count * sizeof(MT)));
-                memset(buffer, 0, count * sizeof(MT));
-                vecSize = count;
-            }
+        CompositeTransformKernel() {}        
+        CompositeTransformKernel(Op1 const & _op1, Op2 const & _op2) : op1(_op1), op2(_op2) {} 
+        virtual ~CompositeTransformKernel() { }
+
+        virtual void copy_parameters(CompositeTransformKernel const & other) {
+            op1.copy_parameters(other.op1);
+            op2.copy_parameters(other.op2);
         }
 
-		inline void operator()(InputType const * in, size_t const & count, OutputType * out) const  {
-            this->resize(count);
-            op1(in, count,this->buffer);
+		inline virtual void operator()(InputType const * in, size_t const & count, OutputType * out) const  {
+            this->resize(count);  // ensure sufficient space.
+            op1(in, count, this->buffer);
             op2(this->buffer, count, out);
 		};
 };

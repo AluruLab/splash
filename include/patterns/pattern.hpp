@@ -5,6 +5,7 @@
 #include "ds/aligned_vector.hpp"
 #include "ds/aligned_matrix.hpp"
 
+#include <vector>
 #include <cassert>
 
 #ifdef USE_MPI
@@ -13,12 +14,25 @@
 
 namespace splash { namespace pattern { 
 
+/**
+ * DATA ACCESS AND PROCESSING PATTERNS
+ * note that any resources used by OMP parallel regions should be threadsafe.
+ * This  includes kernel objects that may have internal buffers. - may be enough to just replicate these.
+ */
 // differs from kernel in that kernel is meant to be single thread, these account for distributed.
+
+
+// OMP ISSUE:   making private operators in OMP by copy constructor does not actually call copy constructor.
+//                       the reason may be: OMP thread makes a shallow copy because buffers are pointers and value copied. 
+//                       OMP's op instances are temporary objects, which with compiler optimization were made as the thread private objects without actually calling the copy constructor.
+//   firstprivate and private tags are not enough because they do not appear to be invoking the copy constructor.
+//  alternative - create an array of ops outside of the parallel region, 1 per thread.  using vector for this, must use push_back which enforces copy construction.
 
 // TODO:
 // [ ] change  IN, OUT to element type instead of container types. Op is operating on pointers.
 // [ ] combine the MM2M and MVMV2M patterns.  
 // [ ] work with partitioned input. and use shift when computing.
+
 
 enum DIM_INDEX : int { ROW = 1, COLUMN = 2 };
 
@@ -53,18 +67,34 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
         Reduce(int const & _procs, int const & _rank) :
             procs(_procs), rank(_rank) {};
 
-        void operator()(InputType const & input, Op const & op, OutputType & output) const {
+        void operator()(InputType const & input, Op const & _op, OutputType & output) const {
             assert((output.size() == input.rows()) && "Reduce requires output vector size to be same as input row count.");
+
+            // make local copies.
+
+
+// #ifdef USE_OPENMP
+//             size_t threads = omp_get_max_threads();
+// #else
+//             size_t threads = 1;
+// #endif
+//             std::vector<Op> ops(threads);
+//             for (size_t i = 0; i < threads; ++i) {
+//                 ops.push_back(Op(op));
+//             }
 
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
-            int threads = omp_get_num_threads();
-            int thread_id = omp_get_thread_num();
+                int threads = omp_get_num_threads();
+                int thread_id = omp_get_thread_num();
 #else 
-            int threads = 1;
-            int thread_id = 0;
+                int threads = 1;
+                int thread_id = 0;
 #endif
+                Op op;
+                op.copy_parameters(_op);
+
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", output.size(), threads, thread_id);
                 part1D_type omp_tile_parts = partitioner.get_partition(output.size(), threads, thread_id);
@@ -88,7 +118,7 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
 template <typename IN, typename Op, typename OUT>
 class Transform;
 
-
+// FIX: [ ] non determinism, and at times segv.
 template <typename IT, typename Op, typename OT>
 class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<OT>> {
 
@@ -113,20 +143,34 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
         Transform(int const & _procs, int const & _rank) :
             procs(_procs), rank(_rank) {};
 
-        void operator()(InputType const & input, Op const & op, OutputType & output) const {
+        void operator()(InputType const & input, Op const & _op, OutputType & output) const {
             assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
+
+// #ifdef USE_OPENMP
+//             size_t threads = omp_get_max_threads();
+// #else
+//             size_t threads = 1;
+// #endif
+//             std::vector<Op> ops(threads);
+//             for (size_t i = 0; i < threads; ++i) {
+//                 ops.push_back(Op(op));
+//             }
 
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
-            int threads = omp_get_num_threads();
-            int thread_id = omp_get_thread_num();
+                int threads = omp_get_num_threads();
+                int thread_id = omp_get_thread_num();
 #else 
-            int threads = 1;
-            int thread_id = 0;
+                int threads = 1;
+                int thread_id = 0;
 #endif
+                // fprintf(stdout, "make Op copy: thread %d\n", omp_get_thread_num());
+                Op op;
+                op.copy_parameters(_op);
+
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
+                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
                 part1D_type omp_tile_parts = partitioner.get_partition(input.rows(), threads, thread_id);
                 omp_tile_parts.print("NORM");
 
@@ -179,7 +223,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
         InnerProduct(int const & _procs, int const & _rank) :
             procs(_procs), rank(_rank) {};
 
-        void operator()(InputType const & input1, InputType const & input2, Op const & op, OutputType & output) const {
+        void operator()(InputType const & input1, InputType const & input2, Op const & _op, OutputType & output) const {
             if ((output.rows() != input1.rows()) || (output.columns() != input2.rows())) 
                 PRINT_RT("InnerProduct: input1 rows:  %lu, input2 rows: %lu, output rows: %lu, columns %lu\n",
                     input1.rows(), input2.rows(), output.rows(), output.columns());
@@ -207,19 +251,32 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
         	// ---- set up the temporary output, tiled, contains the partitions to process.
 	        // PRINT_RT("[pearson TILES] ");
 	        tiles_type tiles(tile_parts.data() + mpi_tile_parts.offset, mpi_tile_parts.size);
-            input1.print("INPUT: ");
+            // input1.print("NORMED: ");
 
             // OpenMP stuff.
+// #ifdef USE_OPENMP
+//             size_t threads = omp_get_max_threads();
+// #else
+//             size_t threads = 1;
+// #endif
+//             std::vector<Op> ops(threads);
+//             for (size_t i = 0; i < threads; ++i) {
+//                 ops.push_back(Op(op));
+//             }
 
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
-            int threads = omp_get_num_threads();
-            int thread_id = omp_get_thread_num();
+                int threads = omp_get_num_threads();
+                int thread_id = omp_get_thread_num();
 #else 
-            int threads = 1;
-            int thread_id = 0;
+                int threads = 1;
+                int thread_id = 0;
 #endif
+                // Op op(_op);
+                Op op;
+                op.copy_parameters(_op);
+
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", mpi_tile_parts.size, threads, thread_id);
 		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
@@ -283,7 +340,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 
             tiles.get_bounds().print("TILES BOUNDS: ");
             PRINT_RT("TILES COUNT: %lu\n", tiles.size());
-            tiles.print("TILES: ");
+            // tiles.print("TILES: ");
 
         	part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
             row_part.print("ROW PARTITIONS: ");
@@ -362,7 +419,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 //             procs(_procs), rank(_rank) {};
 
 //         OutputType operator()(INM const & input1, INV const & input1_aux, 
-//             INM const & input2, INV const & input2_aux, Op const & op) const {
+//             INM const & input2, INV const & input2_aux, Op const & _op) const {
 //             // ---- fixed-size partiton input and filter for tiles t
 //             auto stime = getSysTime();
 //             std::vector<part2D_type> all_tile_parts = partitioner2d.divide(input1.rows(), input2.rows(), 
@@ -390,12 +447,16 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 // #ifdef USE_OPENMP
 // #pragma omp parallel
 //             {
-//             int threads = omp_get_num_threads();
-//             int thread_id = omp_get_thread_num();
-// #else 
-//             int threads = 1;
-//             int thread_id = 0;
+//                 int threads = omp_get_num_threads();
+//                 int thread_id = omp_get_thread_num();
+// #else     
+//                 int threads = 1;
+//                 int thread_id = 0;
 // #endif
+                // Op op(_op);
+                // Op op;
+                // op.copy_parameters(_op);
+//
 //                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
 // 		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
 // 		        PRINT_RT("thread %d partition: ", thread_id);

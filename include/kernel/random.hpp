@@ -74,6 +74,7 @@ class random_number_generator {
             }
         }
         ~random_number_generator() {}
+        random_number_generator(random_number_generator const & other) : generators(other.generators) {};
 
         Generator& get_generator(size_t const & thread_id = 0) {
             if (thread_id > generators.size()) {
@@ -100,12 +101,18 @@ class RandomVectorGenerator : public splash::kernel::generate<OT, splash::kernel
 
         RandomVectorGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
+        virtual ~RandomVectorGenerator() {}
+        virtual void copy_parameters(RandomVectorGenerator const & other) {
+            generators = other.generators;
+            mn = other.mn;
+            mx = other.mx;
+        }
 
 		inline void operator()(splash::ds::aligned_vector<OT> & output) const {
             this->operator()(output.size(), output.data());
         }
 
-		inline void operator()(size_t const & count, OT * out_vector) const {
+		inline virtual void operator()(size_t const & count, OT * out_vector) const {
             Distribution distribution(mn, mx);
 
 #ifdef USE_OPENMP
@@ -158,7 +165,7 @@ class RandomMatrixGenerator : public splash::kernel::generate<OT, splash::kernel
         random_number_generator<Generator> & generators;
         OT mn;
         OT mx;
-        splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
+        splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;  // row partitioned.
 
 	public:
         using InputType = void;
@@ -166,6 +173,12 @@ class RandomMatrixGenerator : public splash::kernel::generate<OT, splash::kernel
 
         RandomMatrixGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
             generators(_gen), mn(min), mx(max) {}
+        virtual ~RandomMatrixGenerator() {}
+        virtual void copy_parameters(RandomMatrixGenerator const & other) {
+            generators = other.generators;
+            mn = other.mn;
+            mx = other.mx;
+        }
 
         inline void operator()(splash::ds::aligned_matrix<OT> & matrix) const {
             splash::utils::partition<size_t> part(0, matrix.rows(), 0);
@@ -176,7 +189,7 @@ class RandomMatrixGenerator : public splash::kernel::generate<OT, splash::kernel
             this->operator()(part, matrix.columns(), matrix.column_bytes(), matrix.data());
         }
 
-		inline void operator()(size_t const & rows, size_t const & cols, size_t const & stride_bytes,
+		inline virtual void operator()(size_t const & rows, size_t const & cols, size_t const & stride_bytes,
             OT * out_matrix) const {
             splash::utils::partition<size_t> part(0, rows, 0);
             this->operator()(part, cols, stride_bytes, out_matrix);

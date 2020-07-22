@@ -33,9 +33,9 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
         using InputType = IT;
         using OutputType = OT;
         
-        inline void operator()(IT const * __restrict__ in_vec, 
+        inline virtual void operator()(IT const *  in_vec, 
             size_t const & count,
-            OT * __restrict__ out_vec) const {
+            OT *  out_vec) const {
 
             const OT avg = 1.0L / static_cast<OT>(count);
             const OT sample_avg = 1.0L / static_cast<OT>(count - SampleStats);

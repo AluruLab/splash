@@ -21,40 +21,24 @@
 #endif
 
 namespace splash { namespace kernel { 
-
+/* TODO:
+ * [ ] make buffer threadsafe
+ */
 template <typename IT>
-class Sort {
+class Sort : public splash::kernel::buffered_kernel<std::pair<IT, size_t>> {
 	protected:
+		using base_type = splash::kernel::buffered_kernel<std::pair<IT, size_t>>;
 		using PairType = std::pair<IT, size_t>;
 
-		mutable PairType* sort_buffer;
-		mutable size_t vecSize;
-
 	public:
-		Sort(size_t const & _count) : vecSize(_count) {
-			sort_buffer = reinterpret_cast<PairType* >(splash::utils::aalloc(_count * sizeof(PairType)));
-			memset(sort_buffer, 0, _count * sizeof(PairType));
-		}
-		~Sort() {
-			if (sort_buffer) {
-				splash::utils::afree(sort_buffer);
-				sort_buffer = nullptr;
-			}
-		}
 
-		inline void resize_buffer(size_t const & _count) const {
-			if (_count > this->vecSize) {
-				if (sort_buffer) splash::utils::afree(sort_buffer);
-				sort_buffer = reinterpret_cast<PairType* >(splash::utils::aalloc( _count * sizeof(PairType)));
-				memset(sort_buffer, 0, _count * sizeof(PairType));
-				this->vecSize = _count;
-			}
-		}
+		inline void sort(IT const * in_vec, size_t const & count) const {
+			// fprintf(stdout, "thread %d, in %p, buffer %p, count %lu\n", omp_get_thread_num(), in_vec, this->buffer, count);
 
-		inline void sort(IT const * __restrict__ in_vec, size_t const & count) const {
+			this->resize(count);  // ensure sufficient space.
 
-			this->resize_buffer(count);
-
+			// fprintf(stdout, "thread %d, in %p, resized %p, count %lu\n", omp_get_thread_num(), in_vec, this->buffer, count);
+			// fflush(stdout);
 			/*get the rank vector*/
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned
@@ -63,17 +47,17 @@ class Sort {
 #pragma omp simd
 #endif
 			for(size_t j = 0; j < count; ++j){
-				sort_buffer[j].first = in_vec[j];
-				sort_buffer[j].second = j;
+				this->buffer[j].first = in_vec[j];
+				this->buffer[j].second = j;
 			}
 
+			PRINT_RT("SORT: sorting %p, count %lu, thread %d of %d\n", this->buffer, count, omp_get_thread_num(), omp_get_num_threads());
 			// sort to get rank.
-			std::stable_sort(sort_buffer, sort_buffer + count, [](PairType const & x, PairType const & y){
+			std::stable_sort(this->buffer, this->buffer + count, [](PairType const & x, PairType const & y){
 				return x.first < y.first;
 			});
 
 		}
-
 
 };
 
@@ -85,7 +69,7 @@ struct RankElemType {
 	//  note: rank can repeat. pos are unique and order follows sorting method (i.e. stable sort or not)
 
 	void print(const char* prefix) const {
-		PRINT_RT("%s %d", prefix, rank);
+		PRINT("%s(%ld %ld)", prefix, pos, rank);
 	}
 };
 
@@ -100,27 +84,29 @@ class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VE
 	protected:	
         OutputType firstRank;
 
-		inline void rank(size_t const & count, OutputType * __restrict__ out_vec) const {
+		inline void rank(size_t const & count, OutputType * out_vec) const {
 			// unsort with rank.  can't vectorize either because of random memory access or because of forward dependency.
 			OutputType rank = firstRank;
 
 			for(size_t j = 0; j < count - 1; ++j){
-				out_vec[this->sort_buffer[j].second] = rank;
-				rank += (this->sort_buffer[j].first != this->sort_buffer[j + 1].first);  // branchless
+				out_vec[this->buffer[j].second] = rank;
+				rank += (this->buffer[j].first != this->buffer[j + 1].first);  // branchless
 			}
-			out_vec[this->sort_buffer[count-1].second] = rank;
+			out_vec[this->buffer[count-1].second] = rank;
 			// would a sort be faster here?  NO.  sort is much more expensive than random memory access.
 // 			/*do we need to normalize the out_vec to avoid overflow? NO.  pearson convert to standard score anyway.*/
-
 		}
 
     public:
-  
-		Rank(size_t const & _count, OutputType const & first = 1) :  splash::kernel::Sort<IT>(_count), firstRank(first) {}
-		~Rank() {}
+		Rank(OutputType const & first = 1) : firstRank(first) {}
+		virtual ~Rank() {}
 
-        inline void operator()(IT const * __restrict__ in_vec, size_t const & count,
-            OutputType * __restrict__ out_vec) const {
+		virtual void copy_parameters(Rank const & other) {
+			firstRank = other.firstRank;
+		}
+
+        inline virtual void operator()(IT const * in_vec, size_t const & count,
+            OutputType * out_vec) const {
 			this->sort(in_vec, count);
 			this->rank(count, out_vec);
         }
@@ -140,18 +126,18 @@ class Rank<IT, RankElemType<RT>> :  public splash::kernel::transform<IT, RankEle
 	protected:	
         RankType firstRank;
 
-		inline void rank(size_t const & count, OutputType * __restrict__ out_vec) const {
+		inline void rank(size_t const & count, OutputType * out_vec) const {
 
 			// unsort with rank.  can't vectorize either because of random memory access or because of forward dependency.
 			RankType rank = firstRank;
 			RankType id;
 			for(size_t j = 0; j < count - 1; ++j){
-				id = this->sort_buffer[j].second;
+				id = this->buffer[j].second;
 				out_vec[id].pos = j;
 				out_vec[id].rank = rank;
-				rank += (this->sort_buffer[j].first != this->sort_buffer[j + 1].first);  // branchless
+				rank += (this->buffer[j].first != this->buffer[j + 1].first);  // branchless
 			}
-			id = this->sort_buffer[count - 1L].second;
+			id = this->buffer[count - 1L].second;
 			out_vec[id].pos = count - 1L;
 			out_vec[id].rank = rank;
 			
@@ -160,12 +146,15 @@ class Rank<IT, RankElemType<RT>> :  public splash::kernel::transform<IT, RankEle
 		}
 
     public:
-  
-		Rank(size_t const & _count, RankType const & first = 1) :  splash::kernel::Sort<IT>(_count), firstRank(first) {}
-		~Rank() {}
+		Rank(RankType const & first = 1) :  firstRank(first) {}
+		virtual ~Rank() {}
 
-        inline void operator()(IT const * __restrict__ in_vec, size_t const & count,
-            OutputType * __restrict__ out_vec) const {
+		virtual void copy_parameters(Rank const & other) {
+			firstRank = other.firstRank;
+		}
+
+        inline virtual void operator()(IT const * in_vec, size_t const & count,
+            OutputType * out_vec) const {
 
 			this->sort(in_vec, count);
 			this->rank(count, out_vec);
