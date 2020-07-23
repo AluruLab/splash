@@ -63,9 +63,9 @@ class buffered_kernel<T, 2> {
 
     public:
         buffered_kernel() : buffer(nullptr), aux(nullptr), vecSize(0) {
-#ifdef USE_OPENMP
-			fprintf(stdout, "construct BUFFERED_KERNEL, thread %d\n", omp_get_thread_num());
-#endif  
+// #ifdef USE_OPENMP
+// 			fprintf(stdout, "construct BUFFERED_KERNEL, thread %d\n", omp_get_thread_num());
+// #endif  
 		}
 		virtual ~buffered_kernel() {
 			if (buffer) {
@@ -122,9 +122,9 @@ class buffered_kernel<T, 1> {
 
     public:
         buffered_kernel() : buffer(nullptr), vecSize(0) {
-#ifdef USE_OPENMP
-			fprintf(stdout, "construct BUFFERED_KERNEL, thread %d\n", omp_get_thread_num());
-#endif  
+// #ifdef USE_OPENMP
+// 			fprintf(stdout, "construct BUFFERED_KERNEL, thread %d\n", omp_get_thread_num());
+// #endif  
 		}
 		virtual ~buffered_kernel() {
 			if (buffer) {

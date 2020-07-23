@@ -96,7 +96,7 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
                 op.copy_parameters(_op);
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", output.size(), threads, thread_id);
+                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", output.size(), threads, thread_id);
                 part1D_type omp_tile_parts = partitioner.get_partition(output.size(), threads, thread_id);
                 // PRINT_RT("NORM thread %d partition: ", thread_id);
                 omp_tile_parts.print("OMP TILES: ");
@@ -158,7 +158,7 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
 //             }
 
 #ifdef USE_OPENMP
-#pragma omp parallel
+#pragma omp parallel 
             {
                 int threads = omp_get_num_threads();
                 int thread_id = omp_get_thread_num();
@@ -231,6 +231,9 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                     input1.rows(), input2.rows(), output.rows(), output.columns());
             assert(((output.rows() == input1.rows()) && (output.columns() == input2.rows())) && "InnerProduct requires output rows and input1 rows to be same, and output columns and input2 rows to be same.");
 
+                PRINT_RT("InnerProduct: input1 %lu X %lu, input2 %lu X %lu, output %lu X %lu\n",
+                    input1.rows(), input1.columns(), input2.rows(), input2.columns(), output.rows(), output.columns());
+
             // ---- fixed-size partiton input and filter for tiles t
             auto stime = getSysTime();
             std::vector<part2D_type> all_tile_parts = partitioner2d.divide(input1.rows(), input2.rows(), 
@@ -280,7 +283,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                 op.copy_parameters(_op);
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", mpi_tile_parts.size, threads, thread_id);
+                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", mpi_tile_parts.size, threads, thread_id);
 		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
 		        // PRINT_RT("thread %d partition: ", thread_id);
 		        omp_tile_parts.print("OMP PARTITION: ");

@@ -51,7 +51,6 @@ class Sort : public splash::kernel::buffered_kernel<std::pair<IT, size_t>> {
 				this->buffer[j].second = j;
 			}
 
-			PRINT_RT("SORT: sorting %p, count %lu, thread %d of %d\n", this->buffer, count, omp_get_thread_num(), omp_get_num_threads());
 			// sort to get rank.
 			std::stable_sort(this->buffer, this->buffer + count, [](PairType const & x, PairType const & y){
 				return x.first < y.first;
