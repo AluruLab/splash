@@ -149,10 +149,18 @@ class buffered_printf {
         // per thread flush.
         inline void flush() {
             if (this->_size == 0) return;
-            
+
+#ifdef USE_OPENMP
+#pragma omp critical
+            {            
+#endif
             fprintf(stream, "%s", this->_data);
-            memset(this->_data, 0, this->_size);
+ #ifdef USE_OPENMP
+            }
+#endif
+           memset(this->_data, 0, this->_size);
             this->_size = 0;
+        
         }
 
         inline size_t size() { return _size; }
@@ -175,57 +183,57 @@ std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>> buffered_pr
 
 // has to use macro. format string will become variable instead of literal. 
 #ifdef USE_MPI
-#define GET_RANK()  int rank;  MPI_Comm_rank(MPI_COMM_WORLD, &rank)
+#define GET_RANK()  int ___bp__rank;  MPI_Comm_rank(MPI_COMM_WORLD, &___bp__rank)
 #else
-#define GET_RANK() int rank = 0
+#define GET_RANK() int ___bp__rank = 0
 #endif
 
 #ifdef USE_OPENMP
-#define GET_THREAD_ID() int tid = omp_get_thread_num()
+#define GET_THREAD_ID() int ___bp__tid = omp_get_thread_num()
 #else
-#define GET_THREAD_ID() int tid = 0
+#define GET_THREAD_ID() int ___bp__tid = 0
 #endif
 
-#define BUFFERED_PRINT(tid, stream, ...) do {\
-    ssize_t count = 0; \
-    count = snprintf(NULL, 0, __VA_ARGS__);  \
-    size_t pos = buffered_printf::get_instance(tid, stream).reserve(count); \
-    count = sprintf(buffered_printf::get_instance(tid, stream).data(pos), __VA_ARGS__); \
+#define BUFFERED_PRINT(___bp__tid, ___bp__stream, ...) do {\
+    ssize_t ___bp__count = snprintf(NULL, 0, __VA_ARGS__);  \
+    auto ___bp__buf = buffered_printf::get_instance(___bp__tid, ___bp__stream); \
+    size_t ___bp__pos = ___bp__buf.reserve(___bp__count); \
+    ___bp__count = sprintf(___bp__buf.data(___bp__pos), __VA_ARGS__); \
 } while (0) 
 
 
 #define PRINT_ERR(...)  do {\
     GET_RANK(); \
     GET_THREAD_ID(); \
-    BUFFERED_PRINT(tid, stderr, "[R%dT%d] ", rank, tid); \
-    BUFFERED_PRINT(tid, stderr, __VA_ARGS__); \
-    buffered_printf::get_instance(tid, stderr).flush(); \
+    BUFFERED_PRINT(___bp__tid, stderr, "[R%dT%d] ", ___bp__rank, ___bp__tid); \
+    BUFFERED_PRINT(___bp__tid, stderr, __VA_ARGS__); \
+    buffered_printf::get_instance(___bp__tid, stderr).flush(); \
 } while(false)
 
 #define PRINT_RT(...)  do {\
     GET_RANK(); \
     GET_THREAD_ID(); \
-    BUFFERED_PRINT(tid, stdout, "[R%dT%d] ", rank, tid); \
-    BUFFERED_PRINT(tid, stdout, __VA_ARGS__); \
-    buffered_printf::get_instance(tid, stdout).flush(); \
+    BUFFERED_PRINT(___bp__tid, stdout, "[R%dT%d] ", ___bp__rank, ___bp__tid); \
+    BUFFERED_PRINT(___bp__tid, stdout, __VA_ARGS__); \
+    buffered_printf::get_instance(___bp__tid, stdout).flush(); \
 } while(false)
 
 #define ROOT_PRINT(...) do {\
     GET_RANK(); \
-    if (rank == 0) {\
+    if (___bp__rank == 0) {\
         GET_THREAD_ID(); \
-        BUFFERED_PRINT(tid, stdout,  __VA_ARGS__); \
-        buffered_printf::get_instance(tid, stdout).flush(); \
+        BUFFERED_PRINT(___bp__tid, stdout,  __VA_ARGS__); \
+        buffered_printf::get_instance(___bp__tid, stdout).flush(); \
     } \
 } while(false)
 
 #define ROOT_PRINT_RT(...) do {\
     GET_RANK(); \
-    if (rank == 0) {\
+    if (___bp__rank == 0) {\
         GET_THREAD_ID(); \
-        BUFFERED_PRINT(tid, stdout, "[R%dT%d] ", rank, tid); \
-        BUFFERED_PRINT(tid, stdout, __VA_ARGS__); \
-        buffered_printf::get_instance(tid, stdout).flush(); \
+        BUFFERED_PRINT(___bp__tid, stdout, "[R%dT%d] ", ___bp__rank, ___bp__tid); \
+        BUFFERED_PRINT(___bp__tid, stdout, __VA_ARGS__); \
+        buffered_printf::get_instance(___bp__tid, stdout).flush(); \
     } \
 } while(false)
 
