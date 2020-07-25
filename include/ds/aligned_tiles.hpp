@@ -330,7 +330,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             for (size_t r = 0; r < parts[id].r.size; ++r) {
                 PRINT_RT("%s ", prefix);
                 for (size_t c = 0; c < parts[id].c.size; ++c, ++ptr) {
-                    PRINT("%f, ", *ptr);
+                    PRINT("%.17lf, ", *ptr);
                 }
                 PRINT("\n");
             }

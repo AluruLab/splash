@@ -563,6 +563,19 @@ class aligned_matrix {
                 PRINT("\n");
             }
         }
+
+        // print with newline to facilitate diff.
+        template <typename TT = FloatType, typename std::enable_if<std::is_arithmetic<TT>::value, int>::type = 1>
+        void print(const char* prefix, size_t const & row) const {
+            const_pointer d;
+
+            d = this->_get_row(row);
+            PRINT_RT("%s row %lu: ", prefix, row);
+            for (size_type col = 0; col < _cols; ++col) {
+                PRINT("%f\n", d[col]);
+            }
+            PRINT("\n");
+        }
         template <typename TT = FloatType, typename std::enable_if<(!std::is_arithmetic<TT>::value), int>::type = 1>
         void print(const char* prefix) const {
             const_pointer d;
@@ -575,6 +588,19 @@ class aligned_matrix {
                 }
                 PRINT("\n");
             }
+        }
+
+        // print with newline to facilitate diff.
+        template <typename TT = FloatType, typename std::enable_if<(!std::is_arithmetic<TT>::value), int>::type = 1>
+        void print(const char* prefix, size_t const & row) const {
+            const_pointer d;
+            d = this->_get_row(row);
+            PRINT_RT("%s row %lu:", prefix, row);
+            for (size_type col = 0; col < _cols; ++col) {
+                d[col].print("");
+                PRINT("\n");
+            }
+            PRINT("\n");
         }
 
 };
