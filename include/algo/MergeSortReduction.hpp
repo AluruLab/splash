@@ -67,7 +67,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
 
 					out[k] = in[st2];
 
-                    out[k].merge_update(pre);  // uses exscan
+                    out[k].combine(pre);  // uses exscan
                     swap_count += middle - st1;
 
                     // if (print) fprintf(stderr, "ASC_C, %lu, %lu, %lu, R, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
@@ -80,7 +80,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
 					out[k] = in[st1];  // select left.
 
                     // this computes the current prefix.
-                    curr += in[st1];   // update current prefix sum
+                    curr.add(in[st1]);   // update current prefix sum
                     // curr.count = ++L;  // increment the left count, including self, and overwrite the current count = L+in[st1].count
                     
                     // if (print) fprintf(stderr, "ASC_C, %lu, %lu, %lu, L, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
@@ -106,7 +106,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
                     pre = curr;
 
                 out[k] = in[st2];
-                out[k].merge_update(pre);
+                out[k].combine(pre);
                 // if (print) fprintf(stderr, "ASC_C, %lu, %lu, %lu, RE, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
             }
 
@@ -132,7 +132,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
             // prefix of entire left side.
             ElemType suffix; // prefix sum of all left element that are strictly smaller.
             for (; st1 < middle; ++st1) {
-                suffix += in[st1]; 
+                suffix.add(in[st1]); 
             }
             st1 = start;
 
@@ -140,7 +140,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
                 if (in[st2] < in[st1]) { // Right smaller, update d
 
 					out[k] = in[st2];
-                    out[k].merge_update(suffix);    // we update with suffix, and exclude any ties on the left side.  ties on right side all receive the same suffix.
+                    out[k].combine(suffix);    // we update with suffix, and exclude any ties on the left side.  ties on right side all receive the same suffix.
                     swap_count += (middle - st1);
                     // if (print) fprintf(stderr, "ASC_D, %lu, %lu, %lu, R, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
 					++st2;
@@ -148,7 +148,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
 					out[k] = in[st1];  // select left.
 
                     // reduce the suffix by current.
-                    suffix -= in[st1];   // update current suffix sum, including the ties.
+                    suffix.subtract(in[st1]);   // update current suffix sum, including the ties.
                                         
                     // if (print) fprintf(stderr, "ASC_D, %lu, %lu, %lu, L, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
     				++st1;
