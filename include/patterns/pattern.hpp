@@ -306,28 +306,79 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                     auto data = tiles.data(id);
                     // part.print("PART: ");
 
-                    // work on 1 tile
-                    row = part.r.offset;
-                    row_end = row + part.r.size;
+                    // if this tile is on the diagonal, do 1/2 comput.
+                    // if it is not on the diagonal, then do full compute.
 
-                    // rmin = std::min(rmin, row);
-                    // cmin = std::min(cmin, part.c.offset);
-                    // rmax = std::max(rmax, row_end);
-                    // cmax = std::max(cmax, part.c.offset + part.c.size);
+                    if (part.r.offset != part.c.offset) {
+                        // off major diagonal.
 
-                    // work on 1 row
-                    for (; row < row_end; ++row) {
-                        // for row in tile
-                        col = part.c.offset;
-                        col_end = col + part.c.size;
+                        // work on 1 tile
+                        row = part.r.offset;
+                        row_end = row + part.r.size;
 
-                        // work on 1 column
-                        for (; col < col_end; ++col) {
-                            // no skipping entries within a tile, otherwise downstream copy into matrix would have missing entries. 
+                        // rmin = std::min(rmin, row);
+                        // cmin = std::min(cmin, part.c.offset);
+                        // rmax = std::max(rmax, row_end);
+                        // cmax = std::max(cmax, part.c.offset + part.c.size);
 
-                            // compute correlation
-                            *data = op(input1.data(row), input2.data(col), input1.columns());
-                            ++data;
+                        // work on 1 row
+                        for (; row < row_end; ++row) {
+                            // for row in tile
+                            col = part.c.offset;
+                            col_end = col + part.c.size;
+
+                            // work on 1 column
+                            for (; col < col_end; ++col) {
+                                // no skipping entries within a tile, otherwise downstream copy into matrix would have missing entries. 
+
+                                // compute correlation
+                                // auto xy = op(input1.data(row), input2.data(col), input1.columns());
+                                // auto yx = op(input2.data(col), input1.data(row), input2.columns());
+                                // if (xy != yx)  printf("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
+                                *data = op(input1.data(row), input2.data(col), input1.columns());
+                                ++data;
+                            }
+                        }
+                    } else {
+                        // on major diagonal
+                        // work on 1 tile
+                        row = part.r.offset;
+                        row_end = row + part.r.size;
+                        auto data2c = data;   // transposed position.  addressed by data2[col, row]
+                        auto data2 = data;
+
+                        // rmin = std::min(rmin, row);
+                        // cmin = std::min(cmin, part.c.offset);
+                        // rmax = std::max(rmax, row_end);
+                        // cmax = std::max(cmax, part.c.offset + part.c.size);
+
+                        // work on 1 row
+                        for (; row < row_end; ++row) {
+                            // for row in tile
+                            col = part.c.offset;
+                            col_end = col + part.c.size;
+                            data2 = data2c;
+
+                            // work on 1 column
+                            for (; col < col_end; ++col) {
+                                // within a tile on the diagonal, skip compute if lower half.
+                                if (row == col) {
+                                    *data = 1.0;
+                                } else if (row < col) {
+                                    // upper.  so fill in.
+                                    auto xy = op(input1.data(row), input2.data(col), input1.columns());
+                                    *data = xy; 
+                                    *data2 = xy;
+                                }  // else lower half.  skip.
+
+                                // compute correlation
+                                // auto xy = op(input1.data(row), input2.data(col), input1.columns());
+                                // auto yx = op(input2.data(col), input1.data(row), input2.columns());
+                                // if (xy != yx)  printf("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
+                                ++data;  // advance 1 col
+                                data2 += part.c.size;  // advance 1 row
+                            }
+                            ++data2c;  // next column
                         }
                     }
                 }
@@ -350,19 +401,20 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 
         	part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
             row_part.print("ROW PARTITIONS: ");
-            // with transpose.
-            // PRINT_RT("[pearson TRANSPOSE] ");
-            tiles_type transposed = tiles.transpose();
-            // transposed.get_bounds().print("TRANSPOSED BOUNDS: ");
-            // PRINT_RT("TRANSPOSED COUNT: %lu\n", transposed.size());
-            // OKAY   transposed.print("TRANSPOSED TILES: ");
+            // // with transpose.
+            // // PRINT_RT("[pearson TRANSPOSE] ");
+            // tiles_type transposed = tiles.transpose();
+            // // transposed.get_bounds().print("TRANSPOSED BOUNDS: ");
+            // // PRINT_RT("TRANSPOSED COUNT: %lu\n", transposed.size());
+            // // OKAY   transposed.print("TRANSPOSED TILES: ");
 
-            // TODO: make a reflect function or something else that avoids processing the diagonal.
-            // PRINT_RT("[pearson ADD] ");
-            tiles_type all_tiles = tiles.merge(transposed);
-            // all_tiles.get_bounds().print("MERGED BOUNDS: ");
-            // PRINT_RT("MERGED COUNT: %lu\n", all_tiles.size());
-            // OKAY all_tiles.print("ALL TILES: ");
+            // // TODO: make a reflect function or something else that avoids processing the diagonal.
+            // // PRINT_RT("[pearson ADD] ");
+            // tiles_type all_tiles = tiles.merge(transposed);
+            // // all_tiles.get_bounds().print("MERGED BOUNDS: ");
+            // // PRINT_RT("MERGED COUNT: %lu\n", all_tiles.size());
+            // // OKAY all_tiles.print("ALL TILES: ");
+            tiles_type all_tiles = tiles.reflect_diagonally();
 
             // PRINT_RT("[pearson ROW_PARTITION] ");
             tiles_type parted_tiles = all_tiles.row_partition(row_part);

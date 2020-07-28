@@ -265,6 +265,49 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             return output;
         }
 
+        // transpose.  offsets don't change.  id and id_cols do not change.  r and c are swapped.
+        aligned_tiles reflect_diagonally() const {
+            // first count non-diagonal.
+            size_t non_diag = 0;
+            size_t non_diag_elements = 0;
+            size_t i = 0;
+            for (i = 0; i < parts.size(); ++i)  {
+                if (parts[i].r.offset != parts[i].c.offset) {
+                    ++non_diag;
+                    non_diag_elements += parts[i].r.size * parts[i].c.size;
+                }
+            }
+
+            // allocate
+            aligned_tiles output(parts.size() + non_diag, offsets.back() + non_diag_elements, _align);
+            
+            // copy over the old.
+            memcpy(output.parts.data(), parts.data(), sizeof(splash::utils::partition2D<S>) * parts.size());
+            memcpy(output.offsets.data(), offsets.data(), sizeof(size_t) * parts.size());
+            memcpy(output._data, _data, allocated() );
+
+            // copy the rest and transpose.
+            size_t j = 0;
+            size_t off = offsets.back();
+            for (j = 0; j < parts.size(); ++j)  {
+                if (parts[j].r.offset != parts[j].c.offset) {
+                    output.parts[i].r = parts[j].c;
+                    output.parts[i].c = parts[j].r;
+                    output.offsets[i] = off;
+                    
+                    transpose_tile(_data + offsets[j], 
+                        parts[j].r.size, parts[j].c.size, 
+                        output._data + off);
+
+                    off += parts[j].r.size * parts[j].c.size;
+                    ++i;
+                }
+            }
+
+            return output;
+        }
+
+
         splash::utils::partition2D<S> get_bounds() {
             if (parts.size() > 0) {
                 S rmin = std::numeric_limits<S>::max();
