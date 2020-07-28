@@ -12,6 +12,7 @@
 #include <cmath>  // sqrt
 
 #include "kernel/kernel_base.hpp"
+#include "utils/precise_float.hpp"
 
 #if defined(USE_SIMD)
 #include <omp.h>
@@ -32,6 +33,7 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
     public:
         using InputType = IT;
         using OutputType = OT;
+        using FT = splash::utils::widened<OT>;
         
         inline virtual void operator()(IT const *  in_vec, 
             size_t const & count,
@@ -41,8 +43,8 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
             const OT sample_avg = 1.0L / static_cast<OT>(count - SampleStats);
             
             // compute mean
-            OT meanX = 0;
-            OT meanX2 = 0;
+            FT meanX = 0;
+            FT meanX2 = 0;
             OT x;
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned
@@ -59,9 +61,9 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
             /*compute the variance*/
             OT stdevX;
             if (SampleStats) 
-                stdevX = sqrt(meanX2 - (static_cast<OT>(count) * sample_avg) * meanX * meanX );
+                stdevX = std::sqrt(meanX2 - (static_cast<OT>(count) * sample_avg) * meanX * meanX );
             else
-                stdevX = sqrt(meanX2 - meanX * meanX);
+                stdevX = std::sqrt(meanX2 - meanX * meanX);
 
             OT invStdevX = 1.0L / stdevX;
 
