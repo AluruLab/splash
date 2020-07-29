@@ -42,131 +42,19 @@ enum DEGREE : int { SCALAR = 0, VECTOR = 1, MATRIX = 2};
 // do:  define parameterized constructor, default constructor, and copy_parameters.
 //    create template instance with the correct paramater (e.g. in main thread)
 //    in thread, create with default constructor and copy_parameters.
-class paramed_kernel {
+class kernel_base {
     public:
-        paramed_kernel() {}
-        virtual ~paramed_kernel() {}
-        void copy_parameters(paramed_kernel const & other)  {}
+        kernel_base() {}
+        virtual ~kernel_base() {}
+        void copy_parameters(kernel_base const & other)  {}
 };
-
-
-
-template <typename T, int NUM_BUFFERS = 1>
-class buffered_kernel;
-
-template <typename T>
-class buffered_kernel<T, 2> {
-    protected:
-        mutable T * buffer;
-        mutable T * aux;
-        mutable size_t vecSize;
-
-    public:
-        buffered_kernel() : buffer(nullptr), aux(nullptr), vecSize(0) {
-// #ifdef USE_OPENMP
-// 			fprintf(stdout, "construct BUFFERED_KERNEL, thread %d\n", omp_get_thread_num());
-// #endif  
-		}
-		virtual ~buffered_kernel() {
-			if (buffer) {
-				splash::utils::afree(buffer);
-				buffer = nullptr;
-			}
-			if (aux) {
-				splash::utils::afree(aux);
-				aux = nullptr;
-			}
-            vecSize = 0;
-		}
-		buffered_kernel(buffered_kernel const & other) : vecSize(other.vecSize)  {
-            buffer = reinterpret_cast<T*>(splash::utils::aalloc(vecSize * sizeof(T)));
-            if (other.buffer && other.vecSize) {
-                memcpy(buffer, other.buffer, other.vecSize * sizeof(T));
-            }
-            aux = reinterpret_cast<T*>(splash::utils::aalloc(vecSize * sizeof(T)));
-            if (other.aux && other.vecSize) {
-                memcpy(aux, other.aux, other.vecSize * sizeof(T));
-            }
-        }
-		buffered_kernel& operator=(buffered_kernel const & other) {
-            std::tie(buffer, vecSize) = splash::utils::acresize(buffer, vecSize, other.vecSize);
-            std::tie(aux, vecSize) = splash::utils::acresize(aux, vecSize, other.vecSize);
-            if (buffer && other.buffer) memcpy(buffer, other.buffer, vecSize * sizeof(T));
-            if (aux && other.aux) memcpy(aux, other.aux, vecSize * sizeof(T));
-        }
-		buffered_kernel(buffered_kernel && other) : buffer(std::move(other.buffer)), aux(std::move(other.aux)), vecSize(other.vecSize) {
-            other.buffer = nullptr;
-            other.aux = nullptr;
-            other.vecSize = 0;
-        } 
-		buffered_kernel& operator=(buffered_kernel && other) {
-            if (buffer) splash::utils::afree(buffer);
-            buffer = other.buffer; other.buffer = nullptr;
-            if (aux) splash::utils::afree(aux);
-            aux = other.aux; other.aux = nullptr;
-            vecSize = other.vecSize; other.vecSize = 0;
-        }
-
-		virtual void resize(size_t const & size) const {
-            std::tie(buffer, vecSize) = splash::utils::arecalloc(buffer, vecSize, size);
-            std::tie(aux, vecSize) = splash::utils::arecalloc(aux, vecSize, size);
-		}
-};
-
-// default constructor creates a null buffer.   allocate during run, by first calling resize.
-template <typename T>
-class buffered_kernel<T, 1> {
-    protected:
-        mutable T * buffer;
-        mutable size_t vecSize;
-
-    public:
-        buffered_kernel() : buffer(nullptr), vecSize(0) {
-// #ifdef USE_OPENMP
-// 			fprintf(stdout, "construct BUFFERED_KERNEL, thread %d\n", omp_get_thread_num());
-// #endif  
-		}
-		virtual ~buffered_kernel() {
-			if (buffer) {
-				splash::utils::afree(buffer);
-				buffer = nullptr;
-                vecSize = 0;
-			}
-		}
-		buffered_kernel(buffered_kernel const & other) : vecSize(other.vecSize)  {
-            buffer = reinterpret_cast<T*>(splash::utils::aalloc(vecSize * sizeof(T)));
-            if (other.buffer && other.vecSize) {
-                memcpy(buffer, other.buffer, other.vecSize * sizeof(T));
-            }
-        }
-		buffered_kernel& operator=(buffered_kernel const & other) {
-            std::tie(buffer, vecSize) = splash::utils::acresize(buffer, vecSize, other.vecSize);
-            if (buffer && other.buffer)
-                memcpy(buffer, other.buffer, vecSize * sizeof(T));
-        }
-		buffered_kernel(buffered_kernel && other) : buffer(std::move(other.buffer)), vecSize(other.vecSize) {
-            other.buffer = nullptr;
-            other.vecSize = 0;
-        } 
-		buffered_kernel& operator=(buffered_kernel && other) {
-            if (buffer) splash::utils::afree(buffer);
-            buffer = other.buffer; other.buffer = nullptr;
-            vecSize = other.vecSize; other.vecSize = 0;
-        }
-
-		virtual void resize(size_t const & size) const {
-            std::tie(buffer, vecSize) = splash::utils::arecalloc(buffer, vecSize, size);
-		}
-};
-
-
 
 // vector + vector -> scalar operator.
 template <typename IT, typename OT, int DEG>
 class inner_product;
 
 template <typename IT, typename OT>
-class inner_product<IT, OT, DEGREE::VECTOR> : public paramed_kernel {
+class inner_product<IT, OT, DEGREE::VECTOR> : public kernel_base {
     public:
         
         using InputType = IT;
@@ -198,7 +86,7 @@ template <typename OT, int DEG>
 class generate;
 
 template <typename OT>
-class generate<OT, DEGREE::VECTOR>  : public paramed_kernel {
+class generate<OT, DEGREE::VECTOR>  : public kernel_base {
     public:
         using InputType = void;
         using OutputType = OT;
@@ -210,7 +98,7 @@ class generate<OT, DEGREE::VECTOR>  : public paramed_kernel {
 
 // Matrix generator.
 template <typename OT>
-class generate<OT, DEGREE::MATRIX>  : public paramed_kernel {
+class generate<OT, DEGREE::MATRIX>  : public kernel_base {
     public:
         using InputType = void;
         using OutputType = OT;
@@ -229,7 +117,7 @@ template <typename IT, typename OT, int DEG>
 class transform;
 
 template <typename IT, typename OT>
-class transform<IT, OT, DEGREE::VECTOR>  : public paramed_kernel {
+class transform<IT, OT, DEGREE::VECTOR>  : public kernel_base {
     public:
         using InputType = IT;
         using OutputType = OT;
@@ -244,7 +132,7 @@ class transform<IT, OT, DEGREE::VECTOR>  : public paramed_kernel {
 
 // matrix -> matrix operator.
 template <typename IT, typename OT>
-class transform<IT, OT, DEGREE::MATRIX>  : public paramed_kernel {
+class transform<IT, OT, DEGREE::MATRIX>  : public kernel_base {
     public:
         using InputType = IT;
         using OutputType = OT;
@@ -262,7 +150,7 @@ template <typename IT, typename OT, int DEG>
 class reduce; 
 
 template <typename IT, typename OT>
-class reduce<IT, OT, DEGREE::VECTOR>  : public paramed_kernel {
+class reduce<IT, OT, DEGREE::VECTOR>  : public kernel_base {
     public:
         using InputType = IT;
         using OutputType = OT;

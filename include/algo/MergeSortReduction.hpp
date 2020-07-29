@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "utils/memory.hpp"
 #include <cstring>  //memset
+#include "ds/buffer.hpp"
 
 /* TODO
  * [ ] make threadsafe
@@ -188,9 +188,9 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
 //    scan_update(ScanElemType const &, ElemType const &): for inclusive scan using plus operator.
 //    merge_update(ElemType const &, ElemType const &, ElemType &): for updating the inverted elements during merge. (otherwise merge is just selecting left and right.)
 template <typename ElemType, int Type>
-class MergeSortAndReduce : public splash::kernel::buffered_kernel<ElemType> {
+class MergeSortAndReduce {
     protected:
-
+        mutable splash::ds::buffer<ElemType> __buffer;
         splash::algo::impl::MergeAndReduce<ElemType, Type> merger;
     public:
         MergeSortAndReduce() { }
@@ -207,14 +207,14 @@ class MergeSortAndReduce : public splash::kernel::buffered_kernel<ElemType> {
         
         // sorted_block_size is for later - when we integrate insertion sort for small size.
 		void sort(ElemType* data, size_t const & count, size_t sorted_block_size = 1) const {
-            this->resize(count);  // make sure we have enough space.
+            __buffer.resize(count);  // make sure we have enough space.
 
 			// if an insertion sort step, do it here.
 			this->initialize(data, count);
-            this->clear(this->buffer, count);
+            this->clear(__buffer.data, count);
 
 			ElemType* temp = data;
-			ElemType* temp2 = this->buffer;
+			ElemType* temp2 = __buffer.data;
 
 			size_t gap;
 			size_t start, middle, end;

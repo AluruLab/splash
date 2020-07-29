@@ -2,7 +2,7 @@
 
 
 #include "kernel/kernel_base.hpp"
-#include "utils/memory.hpp"
+#include "ds/buffer.hpp"
 
 namespace splash { namespace kernel { 
 
@@ -13,10 +13,10 @@ namespace splash { namespace kernel {
 template<typename Op1, typename Op2>
 class CompositeTransformKernel : public splash::kernel::transform<
     typename Op1::InputType, typename Op2::OutputType,
-    splash::kernel::DEGREE::VECTOR>, 
-    public splash::kernel::buffered_kernel<typename Op2::InputType> {
+    splash::kernel::DEGREE::VECTOR> {
 
     protected:
+        mutable splash::ds::buffer<typename Op2::InputType> __buffer;
         using MT = typename Op2::InputType; 
 
         Op1 op1;
@@ -36,9 +36,9 @@ class CompositeTransformKernel : public splash::kernel::transform<
         }
 
 		inline virtual void operator()(InputType const * in, size_t const & count, OutputType * out) const  {
-            this->resize(count);  // ensure sufficient space.
-            op1(in, count, this->buffer);
-            op2(this->buffer, count, out);
+            __buffer.resize(count);  // ensure sufficient space.
+            op1(in, count, __buffer.data);
+            op2(__buffer.data, count, out);
 		};
 };
 
