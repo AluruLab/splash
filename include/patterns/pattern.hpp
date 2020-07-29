@@ -259,16 +259,6 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             // input1.print("NORMED: ");
 
             // OpenMP stuff.
-// #ifdef USE_OPENMP
-//             size_t threads = omp_get_max_threads();
-// #else
-//             size_t threads = 1;
-// #endif
-//             std::vector<Op> ops(threads);
-//             for (size_t i = 0; i < threads; ++i) {
-//                 ops.push_back(Op(op));
-//             }
-
 #ifdef USE_OPENMP
 #pragma omp parallel
             {
@@ -402,18 +392,8 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
         	part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
             row_part.print("ROW PARTITIONS: ");
             // // with transpose.
-            // // PRINT_RT("[pearson TRANSPOSE] ");
             // tiles_type transposed = tiles.transpose();
-            // // transposed.get_bounds().print("TRANSPOSED BOUNDS: ");
-            // // PRINT_RT("TRANSPOSED COUNT: %lu\n", transposed.size());
-            // // OKAY   transposed.print("TRANSPOSED TILES: ");
-
-            // // TODO: make a reflect function or something else that avoids processing the diagonal.
-            // // PRINT_RT("[pearson ADD] ");
             // tiles_type all_tiles = tiles.merge(transposed);
-            // // all_tiles.get_bounds().print("MERGED BOUNDS: ");
-            // // PRINT_RT("MERGED COUNT: %lu\n", all_tiles.size());
-            // // OKAY all_tiles.print("ALL TILES: ");
             tiles_type all_tiles = tiles.reflect_diagonally();
 
             // PRINT_RT("[pearson ROW_PARTITION] ");
