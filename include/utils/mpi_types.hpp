@@ -49,6 +49,31 @@ struct datatype<std::vector<T>, false> {
 };
 
 
+template <typename T1, typename T2> 
+struct datatype<std::pair<T1, T2>, false> {
+    datatype() {
+        splash::utils::mpi::datatype<T1> dt1;
+        splash::utils::mpi::datatype<T2> dt2;
+
+        MPI_Datatype types[2] = {
+            dt1.value,
+            dt2.value
+        };
+        int blocklen[2] = {1, 1};
+        std::pair<T1, T2> test {};
+        MPI_Aint disp[2]; 
+        disp[0] = reinterpret_cast<unsigned char *>(&test.first) - reinterpret_cast<unsigned char *>(&test);
+        disp[1] = reinterpret_cast<unsigned char *>(&test.second) - reinterpret_cast<unsigned char *>(&test);
+        MPI_Type_create_struct(2, blocklen, disp, types, &value);
+        MPI_Type_commit(&value);
+    }
+    ~datatype() {
+        MPI_Type_free(&value);
+    }
+    MPI_Datatype value;
+};
+
+
 //  using structs and method
 // NOTE: cannot use static variables - they are initialized before program starts, so before MPI runtime is initialized.
 // struct so that we can construct commit and release complex types, and allow reuse.
