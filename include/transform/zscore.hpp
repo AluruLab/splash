@@ -21,6 +21,45 @@
 namespace splash { namespace kernel { 
 
 
+template <typename IT, typename OT = std::pair<IT, IT>, bool SampleStats = true>
+class GaussianParams : public splash::kernel::reduce<IT, OT, splash::kernel::DEGREE::VECTOR, splash::kernel::DEGREE::SCALAR> {
+    public:
+        using InputType = IT;
+        using OutputType = OT;
+        using FT = splash::utils::widened<IT>;
+
+        inline virtual OT operator()(IT const * in_vec,
+            size_t const & count) const {
+
+            const FT avg = 1.0L / static_cast<FT>(count);
+            const FT sample_avg = 1.0L / static_cast<FT>(count - SampleStats);
+            
+            // compute mean
+            FT mean = 0;
+            FT meanX2 = 0;
+            FT x;
+#if defined(__INTEL_COMPILER)
+#pragma vector aligned
+#endif
+#if defined(USE_SIMD)
+#pragma omp simd reduction(+:mean, meanX2)
+#endif
+            for (size_t j = 0; j < count; ++j) {
+                x = static_cast<FT>(in_vec[j]);
+                mean += x * avg;
+                meanX2 += x * sample_avg * x;
+            }
+
+            /*compute the stdev*/
+            FT stdev;
+            if (SampleStats) 
+                stdev = std::sqrt(meanX2 - (static_cast<FT>(count) * sample_avg) * mean * mean );
+            else
+                stdev = std::sqrt(meanX2 - mean * mean);
+
+			return {mean, stdev};
+        }
+};
 
 // for sample standard score.  
 // Original code does not do 1/(N-1) in the standard deviation calculation, but
@@ -30,6 +69,9 @@ namespace splash { namespace kernel {
 //      compute the regular standard score.
 template <typename IT, typename OT = IT, bool SampleStats = true>
 class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::DEGREE::VECTOR> {
+    protected:
+        GaussianParams<IT, std::pair<OT, OT>, SampleStats> stats;
+
     public:
         using InputType = IT;
         using OutputType = OT;
@@ -39,34 +81,11 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
             size_t const & count,
             OT *  out_vec) const {
 
-            const OT avg = 1.0L / static_cast<OT>(count);
-            const OT sample_avg = 1.0L / static_cast<OT>(count - SampleStats);
-            
-            // compute mean
-            FT meanX = 0;
-            FT meanX2 = 0;
-            OT x;
-#if defined(__INTEL_COMPILER)
-#pragma vector aligned
-#endif
-#if defined(USE_SIMD)
-#pragma omp simd reduction(+:meanX, meanX2)
-#endif
-            for (size_t j = 0; j < count; ++j) {
-                x = static_cast<OT>(in_vec[j]);
-                meanX += x * avg;
-                meanX2 += x * sample_avg * x;
-            }
-
-            /*compute the variance*/
-            OT stdevX;
-            if (SampleStats) 
-                stdevX = std::sqrt(meanX2 - (static_cast<OT>(count) * sample_avg) * meanX * meanX );
-            else
-                stdevX = std::sqrt(meanX2 - meanX * meanX);
+            OT meanX, stdevX;
+            std::tie(meanX, stdevX) = stats(in_vec, count);
 
             OT invStdevX = 1.0L / stdevX;
-
+            OT x;
             /*normalize the data*/
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned
