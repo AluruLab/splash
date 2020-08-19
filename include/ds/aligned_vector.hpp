@@ -186,6 +186,113 @@ class aligned_vector {
         }
 
 
+#ifdef USE_MPI
+        aligned_vector<FloatType> allgather(MPI_Comm comm = MPI_COMM_WORLD) const {
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            if (procs == 1) return *this;
+
+            // get total col count
+            int cols = _cols;
+            int *col_counts = new int[procs];
+            splash::utils::mpi::datatype<int> i_dt;
+            MPI_Allgather(&cols, 1, i_dt.value, 
+                col_counts, 1, i_dt.value, 
+                comm);
+            
+            int *col_offsets = new int[procs + 1];
+            col_offsets[0] = 0;
+            for (int i = 0; i < procs; ++i) {
+                col_offsets[i+1] = col_offsets[i] + col_counts[i];
+            }
+
+            // allocate output
+            aligned_vector<FloatType> output(col_offsets[procs], _align);
+
+            // gatherv.
+            splash::utils::mpi::datatype<aligned_vector<FloatType>> col_dt;
+            MPI_Allgatherv(_data, _cols, col_dt.value, 
+                output.data(), col_counts, col_offsets, col_dt.value, 
+                comm);
+
+            delete [] col_counts;
+            delete [] col_offsets;
+
+            // return
+            return output;
+        }
+#else
+        aligned_vector<FloatType> allgather() const {
+            return *this;
+        }
+#endif
+
+#ifdef USE_MPI
+        void allgather_inplace(splash::utils::partition<size_type> const & part, MPI_Comm comm = MPI_COMM_WORLD) {
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            if (procs == 1) return;
+
+            // get counts and offsets
+            int cols = part.size;
+            int *col_counts = new int[procs];
+            splash::utils::mpi::datatype<int> i_dt;
+            MPI_Allgather(&cols, 1, i_dt.value, 
+                col_counts, 1, i_dt.value, 
+                comm);
+            
+            int *col_offsets = new int[procs + 1];
+            col_offsets[0] = 0;
+            for (int i = 0; i < procs; ++i) {
+                col_offsets[i+1] = col_offsets[i] + col_counts[i];
+            }
+
+            // check for consistent col counts
+            if (col_offsets[procs] != static_cast<int>(_cols)) {
+                throw std::logic_error("col count does not match between MPI processes.\n");
+            }
+
+            // gatherv.
+            splash::utils::mpi::datatype<FloatType> col_dt;
+            MPI_Allgatherv(MPI_IN_PLACE, col_counts[rank], col_dt.value, 
+                _data, col_counts, col_offsets, col_dt.value, 
+                comm);
+
+            delete [] col_counts;
+            delete [] col_offsets;
+
+            // return
+        }
+#else
+        void allgather_inplace(splash::utils::partition<size_type> const & part) {
+        }
+#endif
+
+
+// #ifdef USE_MPI
+//         void allreduce(MPI_Comm comm = MPI_COMM_WORLD) {
+//             int procs;
+//             int rank;
+//             MPI_Comm_size(comm, &procs);
+//             MPI_Comm_rank(comm, &rank);
+
+//             // set up MPI Allreduce with operator.
+//             // return
+//         }
+// #else
+//         void allreduce() {
+//         }
+// #endif
+
+
+
+
 };
 
 }}
