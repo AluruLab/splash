@@ -18,6 +18,7 @@
 namespace splash { namespace kernel { 
 
 enum DEGREE : int { SCALAR = 0, VECTOR = 1, MATRIX = 2};
+enum DIM    : int { ROW = 0, COLUMN = 1};
 
 /**
  * KERNEL BASE CLASSES.
@@ -50,11 +51,11 @@ class kernel_base {
 };
 
 // vector + vector -> scalar operator.
-template <typename IT, typename OT, int DEG>
+template <typename IT, typename OT, int DEG1, int DEG2 = DEG1>
 class inner_product;
 
 template <typename IT, typename OT>
-class inner_product<IT, OT, DEGREE::VECTOR> : public kernel_base {
+class inner_product<IT, OT, DEGREE::VECTOR, DEGREE::VECTOR> : public kernel_base {
     public:
         
         using InputType = IT;
@@ -65,6 +66,37 @@ class inner_product<IT, OT, DEGREE::VECTOR> : public kernel_base {
     protected:
         inline virtual void initialize(size_t const & count) {};
 };
+
+
+// template <typename IT, typename OT>
+// class inner_product<IT, OT, DEGREE::MATRIX, DEGREE::VECTOR> : public kernel_base {
+//     public:
+        
+//         using InputType = IT;
+//         using OutputType = OT;
+
+//         virtual ~inner_product() {};
+//         inline virtual void operator()(IT const * first, IT const * second, size_t const & row, size_t const & col,
+//             size_t const & stride_bytes1, OT * out) const = 0;
+//     protected:
+//         inline virtual void initialize(size_t const & row, size_t const & col) {};
+// };
+
+
+// template <typename IT, typename OT>
+// class inner_product<IT, OT, DEGREE::MATRIX, DEGREE::MATRIX> : public kernel_base {
+//     public:
+        
+//         using InputType = IT;
+//         using OutputType = OT;
+
+//         virtual ~inner_product() {};
+//         inline virtual void operator()(IT const * first, IT const * second, size_t const & row, size_t const & rc, size_t const & col,
+//             size_t const & stride_bytes1, size_t const & stride_bytes2, OT * out) const = 0;
+//     protected:
+//         inline virtual void initialize(size_t const & row, size_t const & rc, size_t const & col) {};
+// };
+
 
 /*
  * TODO: COMMENTED OUT FOR NOW BECAUSE NO GREAT WAY TO  PATTERN THIS YET.
@@ -107,8 +139,20 @@ class generate<OT, DEGREE::MATRIX>  : public kernel_base {
             size_t const & rows, size_t const & cols, size_t const & stride_bytes,
             OT * out_matrix) const = 0;
     protected:
-        inline virtual void initialize(size_t const & cols) {};
+        inline virtual void initialize(size_t const & rows, size_t const & cols) {};
 
+};
+
+// binary operations
+template <typename IT, typename IT1, typename IT2, typename OT, int DEG>
+class ternary_op;
+
+template <typename IT, typename IT1, typename IT2, typename OT>
+class ternary_op<IT, IT1, IT2, OT, DEGREE::SCALAR> : public kernel_base {
+    public:
+        using OutputType = OT;
+        virtual ~ternary_op() {};
+        inline virtual OT operator()(IT const & in, IT1 const & aux1, IT2 const & aux2) const = 0;
 };
 
 
@@ -127,7 +171,6 @@ class transform<IT, OT, DEGREE::VECTOR>  : public kernel_base {
             OT * out_vector) const = 0;
     protected:
         inline virtual void initialize(size_t const & count) {};
-
 };
 
 // matrix -> matrix operator.
@@ -141,16 +184,17 @@ class transform<IT, OT, DEGREE::MATRIX>  : public kernel_base {
             size_t const & rows, size_t const & cols, size_t const & stride_bytes,
             OT * out_matrix) const = 0;
     protected:
-        inline virtual void initialize(size_t const & cols) {};
+        inline virtual void initialize(size_t const & rows, size_t const & cols) {};
 
 };
 
-// vector -> scalar operator
-template <typename IT, typename OT, int DEG>
+// general reduction template
+// REDUC_PER indicates which dimenion to preserve.  reduction is done across the other dims.
+template <typename IT, typename OT, int IN_DEG, int REDUC_PER = DIM::ROW>
 class reduce; 
 
 template <typename IT, typename OT>
-class reduce<IT, OT, DEGREE::VECTOR>  : public kernel_base {
+class reduce<IT, OT, DEGREE::VECTOR, DIM::ROW>  : public kernel_base {
     public:
         using InputType = IT;
         using OutputType = OT;
@@ -161,6 +205,45 @@ class reduce<IT, OT, DEGREE::VECTOR>  : public kernel_base {
         inline virtual void initialize(size_t const & count) {};
 };
 
+template <typename IT, typename OT>
+class reduce<IT, OT, DEGREE::VECTOR, DIM::COLUMN>  : public kernel_base {
+    public:
+        using InputType = IT;
+        using OutputType = OT;
+         virtual ~reduce() {};
+        inline virtual void operator()(IT const * in, 
+            size_t const & count,
+            OT * aux) const = 0;
+    protected:
+        inline virtual void initialize(size_t const & count) {};
+};
+
+
+// // this will always be row-wise reduction.
+// template <typename IT, typename OT>
+// class reduce<IT, OT, DEGREE::MATRIX, DEGREE::VECTOR>  : public kernel_base {
+//     public:
+//         using InputType = IT;
+//         using OutputType = OT;
+//          virtual ~reduce() {};
+//        inline virtual void operator()(IT const * in, 
+//             size_t const & row, size_t const & col, OT * out) const = 0;
+//     protected:
+//         inline virtual void initialize(size_t const & row, size_t const & col) {};
+// };
+
+
+// template <typename IT, typename OT>
+// class reduce<IT, OT, DEGREE::MATRIX, DEGREE::SCALAR>  : public kernel_base {
+//     public:
+//         using InputType = IT;
+//         using OutputType = OT;
+//          virtual ~reduce() {};
+//        inline virtual OT operator()(IT const * in_vector, 
+//             size_t const & row, size_t const & col) const = 0;
+//     protected:
+//         inline virtual void initialize(size_t const & row, size_t const & col) {};
+// };
 
 
 
