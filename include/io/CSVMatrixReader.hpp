@@ -700,8 +700,10 @@ bool CSVMatrixReader<FloatType>::loadMatrixData_impl(
 		token = this->get_token_or_empty(line, FileReader::COMMA);		  
 		for (; (token.start != nullptr) && (numSamples < vectorSize); 
 			token = this->get_token_or_empty(line, FileReader::COMMA), ++numSamples, ++vec) {
-			std::string s(token.start, token.size);
-			*(vec) = atof(s.c_str()); // will read until a non-numeric char is encountered.
+			// std::string s(token.start, token.size);
+			// *(vec) = atof(s.c_str()); // will read until a non-numeric char is encountered.
+			if (token.size > 0)
+				*(vec) = atof(token.start); // will read until a non-numeric char is encountered.
 		}
 		// NOTE: missing entries are treated as 0.
 	}
