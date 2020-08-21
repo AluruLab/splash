@@ -1,27 +1,25 @@
 /*
- * CSVMatrixReader.hpp
+ *  CSVMatrixReader.hpp
  *
- *  Created on: Mar 25, 2016
- *  Author: Liu, Yongchao
- *  Affiliation: School of Computational Science & Engineering
+ *  Created on: Aug 21, 2020
+ *  Author: Tony Pan
+ *  Affiliation: Institute for Data Engineering and Science
  *  						Georgia Institute of Technology, Atlanta, GA 30332
- *  URL: www.liuyc.org
+ *  
  */
 
 #pragma once
 
-#include <string>
-#include <algorithm>
+#include <string>  // string
+#include <algorithm> 
 #include <vector>
-#include "ds/aligned_matrix.hpp"
-#include <sys/mman.h>  // mmap
-#include <fcntl.h>  // open
-#include <sys/stat.h> //stat
-#include <iostream>
-#include <fstream>
+#include "ds/aligned_matrix.hpp"  // matrix
+#include "ds/char_array.hpp"  // char_array
+#include "io/FileReader.hpp"  // char_array
 
 #include "utils/benchmark.hpp"
 #include "utils/report.hpp"
+#include "utils/string_utils.hpp"  // atof
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -29,697 +27,200 @@
 
 namespace splash { namespace io { 
 
-struct char_array {
-	char * start;
-	size_t size;
-};
-
-class FileReader {
-	protected:
-
-		// strtok modifies the buffer in memory.  avoid.
-
-		static const char EOL[];
-		static constexpr char CR = '\r';
-		static constexpr char COMMA = ',';
-		static constexpr size_t EMPTY = 0;
-
-		char_array data;
-		bool mapped;
-
-		inline char_array load(const char * filename) {
-			auto stime = getSysTime();
-
-			char_array output = {nullptr, 0};
-			
-			std::ifstream file(filename, std::ios::binary | std::ios::in | std::ios::ate);
-			output.size = file.tellg();
-			file.seekg(0, std::ios::beg);
-
-			output.start = reinterpret_cast<char *>(splash::utils::aalloc(output.size));
-			file.read(output.start, output.size);
-
-			auto etime = getSysTime();
-			ROOT_PRINT("read file in %f sec\n", get_duration_s(stime, etime));
-			return output;
-		}
-
-
-		inline char_array map(const char * filename) {
-			auto stime = getSysTime();
-			char_array output = {nullptr, 0};
-
-			int fd = ::open(filename, O_RDONLY);
-			struct stat st;
-			int res = 0;
-			if (fd != -1) {
-				res = fstat(fd, &st);
-			}
-
-			if (res != -1) {
-				output.start = reinterpret_cast<char*>(mmap(NULL, st.st_size, PROT_READ,
-							MAP_PRIVATE, fd, 0));
-				if (output.start != MAP_FAILED) {
-					output.size = st.st_size;
-				} else {
-					output.start = nullptr;
-				}
-			}
-			auto etime = getSysTime();
-			ROOT_PRINT("map file in %f sec\n", get_duration_s(stime, etime));
-			return output;
-		}
-
-		inline void unmap(char_array & buffer) {
-#ifndef NDEBUG
-			int rc = 
-#endif
-			munmap(reinterpret_cast<void *>(buffer.start), buffer.size);
-			buffer.start = nullptr;
-			buffer.size = 0;
-			assert((rc == 0) && "failed to memunmap file");
-		}
-
-#ifdef USE_MPI
-		inline char_array open(const char * filename, MPI_Comm comm) {
-			char_array output = {nullptr, 0};
-
-			// MPI stuff.
-			ssize_t filesize;
-			int rank, procs;
-			MPI_Comm_rank(comm, &rank);
-			MPI_Comm_size(comm, &procs);
-			int result;
-
-			// -------- open file
-			MPI_File fh;
-			result = MPI_File_open(comm, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
-			if(result != MPI_SUCCESS) 
-				fprintf(stderr, "ERROR: MPI_File_open failed for %s\n", filename);
-			else {
-				// --------- get file size
-				if (rank == 0) {
-					MPI_Offset temp;
-					result = MPI_File_get_size(fh, &temp);
-					filesize = temp;
-				}
-				MPI_Bcast(&filesize, 1, MPI_LONG, 0, comm);
-
-				// next partition
-				output.size = filesize / procs;
-				size_t bytes_rem = filesize % procs;
-				MPI_Offset offset = output.size * rank;
-				if (static_cast<size_t>(rank) < bytes_rem) {
-					offset += rank;
-					output.size += 1;
-				} else {
-					offset += bytes_rem;
-				}
-				
-				// allocate buffer. 
-				output.start = reinterpret_cast<char *>(splash::utils::aalloc((output.size + 2) * sizeof(char)));
-				// read
-				MPI_Status status;
-				result = MPI_File_read_at_all(fh, offset, output.start, output.size, MPI_BYTE, &status);
-				if(result != MPI_SUCCESS) 
-					fprintf(stderr, "ERROR: MPI_File_read_at failed for rank %d at offset %lld for length %lu\n", rank, offset, output.size);
-				int bytes_read;
-				result = MPI_Get_elements(&status, MPI_BYTE, &bytes_read);
-				if(result != MPI_SUCCESS)
-					fprintf(stderr, "MPI_Get_elements failed to get bytes_read\n");
-				output.size = bytes_read;
-				MPI_File_close(&fh);
-
-				// move 1 byte to the left.  for data with 
-				char send = output.start[0];
-				if (rank == 0) {
-					// add an '\n' in case the files has missing \n
-					send = '\n';
-				}
-				int left = (rank + procs - 1) % procs;
-				int right = (rank + 1) % procs;
-
-				// move data
-				MPI_Sendrecv(&send, 1, MPI_BYTE, left, 1,
-							output.start + output.size, 1, MPI_BYTE, right, 1, comm, &status);
-				// terminate with 0
-				output.start[output.size + 1] = 0;
-			}
-			return output;
-		}
-#endif
-
-	public:
-
-#ifdef USE_MPI
-		// memmap the whole file on rank 1 only  NOT using MPI_File
-		FileReader(const char * filename, MPI_Comm comm = MPI_COMM_WORLD, bool _map = true) {
-			int rank;
-			MPI_Comm_rank(comm, &rank);
-
-			if (rank == 0) {  // rank 0 read the file and broadcast.
-				if (_map)
-					data = this->map(filename);
-				else
-					data = this->load(filename);			
-				mapped = _map;
-				MPI_Bcast(&(data.size), 1, MPI_UNSIGNED_LONG, 0, comm);
-				MPI_Bcast(data.start, data.size, MPI_BYTE, 0, comm);
-			} else {
-				MPI_Bcast(&(data.size), 1, MPI_UNSIGNED_LONG, 0, comm);
-				data.start = reinterpret_cast<char *>(splash::utils::aalloc((data.size) * sizeof(char)));
-				mapped = false;
-				MPI_Bcast(data.start, data.size, MPI_BYTE, 0, comm);
-			}
-
-		}
-#else
-		// memmap the whole file
-		FileReader(const char * filename, bool _map = true) : mapped(_map) {
-			if (_map)
-				data = this->map(filename);
-			else
-				data = this->load(filename);			
-		}
-#endif
-		virtual ~FileReader() {
-			if (mapped && (data.start != nullptr) && (data.size != 0)) {
-				this->unmap(data);
-			} else if (!mapped && (data.start != nullptr)) {
-				splash::utils::afree(data.start);
-			}
-		}
-
-
-
-		// search buffer to get to the first non-delim character, and return size.
-		template <size_t N>
-		char_array trim_left(char_array & buffer, const char (&delim)[N]) {
-			// auto stime = getSysTime();	
-
-			char_array output = {buffer.start, EMPTY};
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return output;  // buffer is empty, short circuit.
-			auto delim_end = delim + N;
-
-			// find first entry that is NOT in delim
-			buffer.start = std::find_if(buffer.start, buffer.start + buffer.size,
-				[&delim, &delim_end](char const & c) {
-					// by failing to find a match
-					for (size_t i = 0; i < N; ++i) {
-						if (delim[i] == c) return false;
-					}
-					return true;
-					// return (std::find(delim, delim_end, c) == delim_end);
-				});
-			
-			output.size = std::distance(output.start, buffer.start);
-			buffer.size -= output.size;
-
-			// auto etime = getSysTime();
-			// ROOT_PRINT("trim_left x in %f sec\n", get_duration_s(stime, etime));
-			return output;
-		}
-		char_array trim_left(char_array & buffer, const char delim) {
-			// auto stime = getSysTime();	
-			char_array output = {buffer.start, EMPTY};
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return output;  // buffer is empty, short circuit.
-
-			// find first entry that is NOT in delim
-			size_t i;
-			for (i = 0; i < buffer.size; ++i) {
-				if (buffer.start[i] != delim) break;
-			}
-			buffer.start += i;
-			output.size = i;
-			buffer.size -= i;
-
-			// buffer.start = std::find_if(buffer.start, buffer.start + buffer.size,
-			// 	[&delim](char const & c) {
-			// 		// by failing to find a match
-			// 		return delim != c;
-			// 	});
-			// output.size = std::distance(output.start, buffer.start);
-			// buffer.size -= output.size;
-
-			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left in %f sec\n", get_duration_s(stime, etime));
-			return output;
-		}
-
-	protected:
-		// return token (ptr and length). does not treat consecutive delimiters as one.
-		// assumes buffer points to start of token.
-		// if there is no more token, then return nullptr
-		template <size_t N>
-		char_array extract_token(char_array & buffer, const char (&delim)[N]) {
-			// auto stime = getSysTime();	
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return char_array{nullptr, EMPTY};  // buffer is empty, short circuit.
-			char_array output = {buffer.start, EMPTY};
-			
-			auto delim_end = delim + N;
-
-			// search for first match to delim
-			buffer.start = std::find_if(buffer.start, buffer.start + buffer.size,
-			[&delim, &delim_end](char const & c){
-				// by finding a match
-				for (size_t i = 0; i < N; ++i) {
-					if (delim[i] == c) return true;
-				}
-				return false;
-				// return (std::find(delim, delim_end, c) != delim_end);
-			});
-
-			// update the output and buffer sizes.
-			output.size = std::distance(output.start, buffer.start);
-			buffer.size -= output.size;
-			// printf("extract_token: %lu\n", output.size);
-			// auto etime = getSysTime();	
-			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
-			return output;
-		}
-		char_array extract_token(char_array & buffer, const char delim) {
-			// auto stime = getSysTime();	
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return char_array{nullptr, EMPTY};  // buffer is empty, short circuit.
-			char_array output = {buffer.start, EMPTY};
-			
-			// search for first match to delim
-			size_t i;
-			for (i = 0; i < buffer.size; ++i) {
-				if (buffer.start[i] == delim) break;
-			}
-			buffer.start += i;
-			output.size = i;
-			buffer.size -= i;
-
-			// buffer.start = std::find_if(buffer.start, buffer.start + buffer.size,
-			// [&delim](char const & c){
-			// 	return (delim == c);
-			// 	// return (std::find(delim, delim_end, c) != delim_end);
-			// });
-			// // update the output and buffer sizes.
-			// output.size = std::distance(output.start, buffer.start);
-			// buffer.size -= output.size;
-			// printf("extract_token: %lu\n", output.size);
-			// auto etime = getSysTime();	
-			// ROOT_PRINT("extract token in %f sec\n", get_duration_s(stime, etime));
-			return output;
-		}
-		// remove 1 delim character from buffer (or \r\n)
-		template <size_t N>
-		char_array trim_left_1(char_array & buffer, const char (&delim)[N]) {
-			// auto stime = getSysTime();	
-
-			char_array output = {buffer.start, EMPTY};
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return output;  // buffer is empty, short circuit.
-			
-			// check if CR and in delim.  if yes, skip.
-			if ((buffer.start[0] == CR) &&
-				(std::find(delim, delim + N, CR) != delim + N)) {
-				--buffer.size;	
-				++buffer.start;
-			}
-
-			if ((buffer.size > EMPTY) && 
-				(std::find(delim, delim + N, buffer.start[0]) != delim + N)) {
-				--buffer.size;	
-				++buffer.start;
-			}
-			output.size = std::distance(output.start, buffer.start);
-			// printf("trim_left_1: %lu\n", output.size);
-			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
-			return output;
-		}
-		char_array trim_left_1(char_array & buffer, const char delim) {
-			// auto stime = getSysTime();	
-			char_array output = {buffer.start, EMPTY};
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return output;  // buffer is empty, short circuit.
-			
-			if ((buffer.size > EMPTY) && (buffer.start[0] == delim)) {
-				--buffer.size;	
-				++buffer.start;
-			}
-			output.size = std::distance(output.start, buffer.start);
-			// printf("trim_left_1: %lu\n", output.size);
-			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 in %f sec\n", get_duration_s(stime, etime));
-			return output;
-		}
-
-	public:
-		// get a token. does not treat consecutive delimiters as one so output may be empty.
-		template <size_t N>
-		char_array get_token_or_empty(char_array & buffer, const char (&delim)[N]) {
-			char_array output = extract_token(buffer, delim);
-			trim_left_1(buffer, delim);
-			return output;
-		}
-		char_array get_token_or_empty(char_array & buffer, const char delim) {
-			char_array output = extract_token(buffer, delim);
-			trim_left_1(buffer, delim);
-			return output;
-		}
-		// return token (ptr and length). treats consecutive delimiters as one.
-		template <size_t N>
-		char_array get_token(char_array & buffer, const char (&delim)[N]) {
-			char_array output = extract_token(buffer, delim);
-			trim_left(buffer, delim);
-			return output;
-		}		// return token (ptr and length). treats consecutive delimiters as one.
-		char_array get_token(char_array & buffer, const char delim) {
-			char_array output = extract_token(buffer, delim);
-			trim_left(buffer, delim);
-			return output;
-		}
-
-		template <size_t N>
-		size_t count_token_or_empty(char_array & buffer, const char (&delim)[N]) {
-			// auto stime = getSysTime();
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return 0;
-
-			auto delim_end = delim + N;
-			// now count delimiters
-			size_t count = std::count_if(buffer.start, buffer.start + buffer.size,
-				[&delim, &delim_end](const char & c){
-					for (size_t i = 0; i < N; ++i) {
-						if (delim[i] == c) return true;
-					}
-					return false;
-					// return (std::find(delim, delim_end, c) != delim_end);
-				}) + 1;
-
-			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens or empty in %f sec\n", get_duration_s(stime, etime));
-			return count;
-		}
-		size_t count_token_or_empty(char_array & buffer, const char delim) {
-			// auto stime = getSysTime();
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return 0;
-
-			// now count delimiters
-			size_t count = 0;
-			for (size_t i = 0; i < buffer.size; ++i) {
-				if (buffer.start[i] == delim) ++count;
-			}
-			++count;
-			// size_t count = std::count_if(buffer.start, buffer.start + buffer.size,
-			// 	[&delim](const char & c){
-			// 		return (delim == c);
-			// 		// return (std::find(delim, delim_end, c) != delim_end);
-			// 	}) + 1;
-
-			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens or empty in %f sec\n", get_duration_s(stime, etime));
-			return count;
-		}
-		template <size_t N>
-		size_t count_token(char_array & buffer, const char (&delim)[N]) {
-			// auto stime = getSysTime();
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return 0;
-
-			size_t count = 0;
-
-			// set up the adjacent find predicate
-			auto delim_end = delim + N;
-			auto adj_find_pred = [&delim, &delim_end](const char & x, const char & y){
-				// bool x_no_delim = std::find(delim, delim_end, x) == delim_end;
-				// bool y_delim = std::find(delim, delim_end, y) != delim_end;
-				bool x_no_delim = true;
-				bool y_delim = false;
-				for (size_t i = 0; i < N; ++i) {
-					x_no_delim &= (delim[i] != x);
-					y_delim |= (delim[i] == y);
-				}
-				return x_no_delim && y_delim; 
-			};
-
-			// now count non-delimiter to delimiter transitions
-			auto start = buffer.start;
-			auto end = buffer.start + buffer.size;
-			while ((start = std::adjacent_find(start, end, adj_find_pred)) != end) {
-				// found a transition
-				++start; // go to next char
-				++count; // increment count
-			}
-
-			// check the last char to see if we we have a non-delim to null transition.
-			bool z_no_delim = true;
-			for (size_t i = 0; i < N; ++i) {
-				z_no_delim &= (delim[i] != buffer.start[buffer.size - 1]);
-			}
-			count += z_no_delim;
-			
-			// if (std::find(delim, delim_end, buffer.start[buffer.size - 1]) == delim_end) {
-			// 	++count;
-			// }
-			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens in %f sec\n", get_duration_s(stime, etime));
-			return count;
-		}
-
-		size_t count_token(char_array & buffer, const char delim) {
-			// auto stime = getSysTime();
-			if ((buffer.size == EMPTY) || (buffer.start == nullptr)) return 0;
-
-			size_t count = 0;
-
-			// set up the adjacent find predicate
-			// auto adj_find_pred = [&delim](const char & x, const char & y){
-			// 	return (x != delim) && (y == delim); 
-			// };
-
-			// now count non-delimiter to delimiter transitions
-			// auto start = buffer.start;
-			// auto end = buffer.start + buffer.size;
-			// while ((start = std::adjacent_find(start, end, adj_find_pred)) != end) {
-			// 	// found a transition
-			// 	++start; // go to next char
-			// 	++count; // increment count
-			// }
-			// check the last char to see if we we have a non-delim to null transition.
-			// bool z_no_delim = true;
-			// for (size_t i = 0; i < N; ++i) {
-			// 	z_no_delim &= (delim[i] != buffer.start[buffer.size - 1]);
-			// }
-			// count += z_no_delim;
-
-
-			for (size_t i = 1; i < buffer.size; ++i) {
-				if ((buffer.start[i-1] != delim) && (buffer.start[i] == delim)) ++count;
-			}
-			count += (buffer.start[buffer.size - 1] != delim);
-			
-			// if (std::find(delim, delim_end, buffer.start[buffer.size - 1]) == delim_end) {
-			// 	++count;
-			// }
-			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens in %f sec\n", get_duration_s(stime, etime));
-			return count;
-		}
-
-
-};
-const char FileReader::EOL[] = "\r\n";
 
 template<typename FloatType>
 class CSVMatrixReader : public FileReader {
 
 
-public:
+	public:
 
-	CSVMatrixReader(const char* filename) : FileReader(filename) {}
-	virtual ~CSVMatrixReader() {}
+		CSVMatrixReader(const char* filename) : FileReader(filename) {}
+		virtual ~CSVMatrixReader() {}
 
 #ifdef USE_MPI
-	bool getMatrixSize(int& numVectors, int& vectorSize,
-		MPI_Comm comm = MPI_COMM_WORLD) {
-		return getMatrixSize_impl(numVectors, vectorSize, comm);
-	}
-	bool loadMatrixData(vector<string>& genes,
-			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
-			const int stride_bytes, MPI_Comm comm = MPI_COMM_WORLD) {
-		return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes,
-			comm);
-	}
-	bool loadMatrixData(vector<string>& genes,
-			vector<string>& samples, splash::ds::aligned_matrix<FloatType> & output, 
+		bool getMatrixSize(int& numVectors, int& vectorSize,
 			MPI_Comm comm = MPI_COMM_WORLD) {
-		return loadMatrixData_impl( genes, samples, 
-			output.data(), output.rows(), output.columns(), output.column_bytes(), 
-			comm);
-	}
+			return getMatrixSize_impl(numVectors, vectorSize, comm);
+		}
+		bool loadMatrixData(std::vector<std::string>& genes,
+				std::vector<std::string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
+				const int stride_bytes, MPI_Comm comm = MPI_COMM_WORLD) {
+			return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes,
+				comm);
+		}
+		bool loadMatrixData(std::vector<std::string>& genes,
+				std::vector<std::string>& samples, splash::ds::aligned_matrix<FloatType> & output, 
+				MPI_Comm comm = MPI_COMM_WORLD) {
+			return loadMatrixData_impl( genes, samples, 
+				output.data(), output.rows(), output.columns(), output.column_bytes(), 
+				comm);
+		}
 #else
-	/*get gene expression matrix size*/
-	bool getMatrixSize(int& numVectors, int& vectorSize) {
-		return getMatrixSize_impl(numVectors, vectorSize);
-	}
-	bool loadMatrixData(vector<string>& genes,
-			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
-			const int stride_bytes) {
-		return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
-	}
-	bool loadMatrixData(vector<string>& genes,
-			vector<string>& samples, splash::ds::aligned_matrix<FloatType> & output) {
-		return loadMatrixData_impl( genes, samples, 
-			output.data(), output.rows(), output.columns(), output.column_bytes());
-	}
-
-#endif
-
-
-
-protected:
-	/*get gene expression matrix size*/
-	bool getMatrixSize_impl(int& numVectors, int& vectorSize);
-
-	/*get the matrix data*/
-	bool loadMatrixData_impl(vector<string>& genes,
-			vector<string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
-			const int & stride_bytes);
-
-	/*get the matrix data*/
-	// bool loadMatrixData_impl(vector<string>& genes,
-	// 		vector<string>& samples, splash::ds::aligned_matrix<FloatType> & input);
-
-
-#ifdef USE_MPI
-	/*get gene expression matrix size*/
-	bool getMatrixSize_impl(int& numVectors, int& vectorSize, 
-		MPI_Comm comm) {
+		/*get gene expression matrix size*/
+		bool getMatrixSize(int& numVectors, int& vectorSize) {
 			return getMatrixSize_impl(numVectors, vectorSize);
 		}
-
-	bool loadMatrixData_impl(vector<string>& genes,
-			vector<string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
-			const int & stride_bytes, MPI_Comm comm) {
-			return loadMatrixData_impl(genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+		bool loadMatrixData(std::vector<std::string>& genes,
+				std::vector<std::string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
+				const int stride_bytes) {
+			return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+		}
+		bool loadMatrixData(std::vector<std::string>& genes,
+				std::vector<std::string>& samples, splash::ds::aligned_matrix<FloatType> & output) {
+			return loadMatrixData_impl( genes, samples, 
+				output.data(), output.rows(), output.columns(), output.column_bytes());
 		}
 
-	// bool loadMatrixData_impl(vector<string>& genes,
-	// 		vector<string>& samples, splash::ds::aligned_matrix<FloatType> & input, MPI_Comm comm);
+#endif
+
+
+
+	protected:
+		/*get gene expression matrix size*/
+		bool getMatrixSize_impl(int& numVectors, int& vectorSize) {
+				auto stime = getSysTime();
+
+			splash::ds::char_array buffer = this->data;
+			if (buffer.ptr == nullptr) {
+				fprintf(stderr, "File not read\n");
+				return false;
+			}
+
+			numVectors = vectorSize = 0;
+			
+			// get rid of empty lines.
+			buffer.trim_left(EOL);
+
+			/*read the header to get the number of samples*/
+			splash::ds::char_array line = buffer.get_token(EOL);
+			if (line.size <= 0) {
+				fprintf(stderr, "The file is incomplete\n");
+				return false;
+			}
+
+			/*analyze the header on the first row*/
+			fprintf(stderr, "line size = %lu, ptr = %p\n", line.size, line.ptr);
+			vectorSize = line.count_token_or_empty(COMMA) - 1;
+			fprintf(stderr, "Number of samples: %d\n", vectorSize);
+
+			/*get gene expression profiles.  skip empty lines*/ 
+			numVectors = buffer.count_token(EOL);
+			fprintf(stderr, "Number of gene expression profiles: %d\n", numVectors);
+
+			auto etime = getSysTime();
+			ROOT_PRINT("get matrix size in %f sec\n", get_duration_s(stime, etime));
+			return true;
+
+		}
+
+		/*get the matrix data*/
+		bool loadMatrixData_impl(std::vector<std::string>& genes,
+				std::vector<std::string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
+				const int & stride_bytes) {
+			auto stime = getSysTime();
+
+			splash::ds::char_array buffer = this->data;
+			splash::ds::char_array line, token;
+
+			buffer.trim_left(EOL);
+
+			/*read the header to get the names of  samples*/
+			line = buffer.get_token(EOL);
+			if (line.size <= 0) {
+				fprintf(stderr, "The file is incomplete\n");
+				return false;
+			}
+			auto etime = getSysTime();
+			ROOT_PRINT("load 1st line in %f sec\n", get_duration_s(stime, etime));
+
+			stime = getSysTime();
+			/*analyze the header.  first entry is skipped.  save the sample names */
+			int numSamples = 0;
+			token = line.get_token_or_empty(COMMA);  // skip first one.  this is column name
+			token = line.get_token_or_empty(COMMA);  
+			for (; (token.ptr != nullptr) && (numSamples < vectorSize); 
+				token = line.get_token_or_empty(COMMA), ++numSamples) {
+				samples.emplace_back(std::string(token.ptr, token.size));
+			}
+			/*check consistency*/
+			if (numSamples < vectorSize) {
+				fprintf(stderr,
+						"ERROR The number of samples (%d) read is less than vectorSize (%d)\n",
+						numSamples, vectorSize);
+				return false;
+			}
+			etime = getSysTime();
+			ROOT_PRINT("parse column headers %d in %f sec\n", numSamples, get_duration_s(stime, etime));
+
+			stime = getSysTime();
+
+			/*get gene expression profiles*/
+			/*extract gene expression values*/  // WAS READING TRANSPOSED.  NO LONGER.
+			/* input is column major (row is 1 gene).  memory is row major (row is 1 sample) */
+			FloatType * vec;
+			int numGenes = 0;
+			// get just the non-empty lines
+			line = buffer.get_token(EOL);
+			for (; (line.ptr != nullptr)  && (numGenes < numVectors);
+				line = buffer.get_token(EOL),
+				++numGenes) {
+
+				// parse the row name
+				token = line.get_token_or_empty(COMMA);
+				genes.emplace_back(std::string(token.ptr, token.size));
+
+				// parse the rest of data.
+				vec = reinterpret_cast<FloatType*>(reinterpret_cast<unsigned char *>(vectors) + numGenes * stride_bytes);
+				numSamples = 0;
+				token = line.get_token_or_empty(COMMA);		  
+				for (; (token.ptr != nullptr) && (numSamples < vectorSize); 
+					token = line.get_token_or_empty(COMMA), ++numSamples, ++vec) {
+					std::string s(token.ptr, token.size);
+					// *(vec) = ::atof(s.c_str()); // will read until a non-numeric char is encountered.
+					// *(vec) = splash::utils::atof(s.c_str()); // will read until a non-numeric char is encountered.
+
+					if (token.size > 0)
+						*(vec) = splash::utils::atof(token.ptr); // will read until a non-numeric char is encountered.
+					// 	*(vec) = atof(token.ptr); // will read until a non-numeric char is encountered.
+				}
+				// NOTE: missing entries are treated as 0.
+			}
+			/*consistency check*/
+			if (numGenes < numVectors) {
+				fprintf(stderr,
+						"ERROR The number of genes (%d) read is less than numVectors (%d)\n",
+						numGenes, numVectors);
+				return false;
+			}
+			etime = getSysTime();
+			ROOT_PRINT("load values in %f sec\n", get_duration_s(stime, etime));
+
+			return true;
+
+		}
+
+		/*get the matrix data*/
+		// bool loadMatrixData_impl(std::vector<std::string>& genes,
+		// 		std::vector<std::string>& samples, splash::ds::aligned_matrix<FloatType> & input);
+
+
+#ifdef USE_MPI
+		/*get gene expression matrix size*/
+		bool getMatrixSize_impl(int& numVectors, int& vectorSize, 
+			MPI_Comm comm) {
+				return getMatrixSize_impl(numVectors, vectorSize);
+			}
+
+		bool loadMatrixData_impl(std::vector<std::string>& genes,
+				std::vector<std::string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
+				const int & stride_bytes, MPI_Comm comm) {
+				return loadMatrixData_impl(genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+			}
+
+		// bool loadMatrixData_impl(std::vector<std::string>& genes,
+		// 		std::vector<std::string>& samples, splash::ds::aligned_matrix<FloatType> & input, MPI_Comm comm);
 #endif
 };
-
-template<typename FloatType>
-bool CSVMatrixReader<FloatType>::getMatrixSize_impl(
-		int& numVectors, int& vectorSize) {
-	auto stime = getSysTime();
-
-	char_array buffer = this->data;
-	if (buffer.start == nullptr) {
-		fprintf(stderr, "File not read\n");
-		return false;
-	}
-
-	numVectors = vectorSize = 0;
-	
-	// get rid of empty lines.
-	this->trim_left(buffer, FileReader::EOL);
-
-	/*read the header to get the number of samples*/
-	char_array line = this->get_token(buffer, FileReader::EOL);
-	if (line.size <= 0) {
-		fprintf(stderr, "The file is incomplete\n");
-		this->unmap(buffer);
-		return false;
-	}
-
-	/*analyze the header on the first row*/
-	vectorSize = this->count_token_or_empty(line, FileReader::COMMA) - 1;
-	fprintf(stderr, "Number of samples: %d\n", vectorSize);
-
-	/*get gene expression profiles.  skip empty lines*/ 
-	numVectors = FileReader::count_token(buffer, FileReader::EOL);
-	fprintf(stderr, "Number of gene expression profiles: %d\n", numVectors);
-
-	auto etime = getSysTime();
-	ROOT_PRINT("get matrix size in %f sec\n", get_duration_s(stime, etime));
-	return true;
-}
-
-template<typename FloatType>
-bool CSVMatrixReader<FloatType>::loadMatrixData_impl(
-		vector<string>& genes, vector<string>& samples, FloatType* vectors,
-		const int & numVectors, const int & vectorSize, 
-		const int & stride_bytes) {
-	auto stime = getSysTime();
-
-	char_array buffer = this->data;
-	char_array line, token;
-
-	this->trim_left(buffer, FileReader::EOL);
-
-	/*read the header to get the names of  samples*/
-	line = this->get_token(buffer, FileReader::EOL);
-	if (line.size <= 0) {
-		fprintf(stderr, "The file is incomplete\n");
-		return false;
-	}
-	auto etime = getSysTime();
-	ROOT_PRINT("load 1st line in %f sec\n", get_duration_s(stime, etime));
-
-	stime = getSysTime();
-	/*analyze the header.  first entry is skipped.  save the sample names */
-	int numSamples = 0;
-	token = this->get_token_or_empty(line, FileReader::COMMA);  // skip first one.  this is column name
-	token = this->get_token_or_empty(line, FileReader::COMMA);  
-	for (; (token.start != nullptr) && (numSamples < vectorSize); 
-		token = this->get_token_or_empty(line, FileReader::COMMA), ++numSamples) {
-		samples.emplace_back(std::string(token.start, token.size));
-	}
-	/*check consistency*/
-	if (numSamples < vectorSize) {
-		fprintf(stderr,
-				"ERROR The number of samples (%d) read is less than vectorSize (%d)\n",
-				numSamples, vectorSize);
-		return false;
-	}
-	etime = getSysTime();
-	ROOT_PRINT("parse column headers %d in %f sec\n", numSamples, get_duration_s(stime, etime));
-
-	stime = getSysTime();
-
-	/*get gene expression profiles*/
-	/*extract gene expression values*/  // WAS READING TRANSPOSED.  NO LONGER.
-	/* input is column major (row is 1 gene).  memory is row major (row is 1 sample) */
-	FloatType * vec;
-	int numGenes = 0;
-	// get just the non-empty lines
-	line = this->get_token(buffer, FileReader::EOL);
-	for (; (line.start != nullptr)  && (numGenes < numVectors);
-		line = this->get_token(buffer, FileReader::EOL),
-		++numGenes) {
-
-		// parse the row name
-		token = this->get_token_or_empty(line, FileReader::COMMA);
-		genes.emplace_back(std::string(token.start, token.size));
-
-		// parse the rest of data.
-		vec = reinterpret_cast<FloatType*>(reinterpret_cast<unsigned char *>(vectors) + numGenes * stride_bytes);
-		numSamples = 0;
-		token = this->get_token_or_empty(line, FileReader::COMMA);		  
-		for (; (token.start != nullptr) && (numSamples < vectorSize); 
-			token = this->get_token_or_empty(line, FileReader::COMMA), ++numSamples, ++vec) {
-			// std::string s(token.start, token.size);
-			// *(vec) = atof(s.c_str()); // will read until a non-numeric char is encountered.
-			if (token.size > 0)
-				*(vec) = atof(token.start); // will read until a non-numeric char is encountered.
-		}
-		// NOTE: missing entries are treated as 0.
-	}
-	/*consistency check*/
-	if (numGenes < numVectors) {
-		fprintf(stderr,
-				"ERROR The number of genes (%d) read is less than numVectors (%d)\n",
-				numGenes, numVectors);
-		return false;
-	}
-	etime = getSysTime();
-	ROOT_PRINT("load values in %f sec\n", get_duration_s(stime, etime));
-
-	return true;
-}
-
 
 
 // #ifdef USE_MPI
@@ -881,7 +382,7 @@ bool CSVMatrixReader<FloatType>::loadMatrixData_impl(
 
 // template<typename FloatType>
 // bool CSVMatrixReader<FloatType>::loadMatrixData_impl(
-// 		vector<string>& genes, vector<string>& samples, FloatType* vectors,
+// 		std::vector<std::string>& genes, std::vector<std::string>& samples, FloatType* vectors,
 // 		const int numVectors, const int vectorSize, 
 // 		const int stride_bytes, MPI_Comm comm) {	
 // 	char* buffer = NULL, *tok;
