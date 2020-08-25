@@ -564,7 +564,172 @@ class char_array_loop {
 };
 
 
-// TODO: version with templated delimiters.
+// version with templated delimiters.  Goal is avoid iteration of delim, at cost of no delimiter strings.
+// ASSUME "\r\n" always together, and are essentially treated as a single char.
+// performance: 
+//	g++: 		get matrix size in 0.0140s, load fist line in 0.000003s. load values in 0.0840 s.  total 0.0998s
+// 	clang++: 	get matrix size in 0.0149s, load fist line in 0.000003s. load values in 0.0780 s.  total 0.0948s
+class char_array_template {
+	// strtok modifies the buffer in memory.  avoid
+
+	public:
+		static constexpr size_t EMPTY = 0;
+
+		char * ptr;
+		size_t size;
+
+	protected:
+
+		template <char delim, typename = void>
+		inline bool is_delimiter(size_t const & x) const {
+			return ptr[x] == delim;
+		}
+		// assumption:  \r\n always together.
+		template <char delim, typename std::enable_if<delim == LF>::type>
+		inline bool is_delimiter(size_t const & x) const {
+			return (ptr[x] == LF) || (ptr[x] == CR);
+		}
+		template <char delim, typename = void>
+		inline bool is_not_delimiter(size_t const & x) const {
+			return ptr[x] != delim;
+		}
+		// assumption:  \r\n always together.
+		template <char delim, typename std::enable_if<delim == LF>::type>
+		inline bool is_not_delimiter(size_t const & x) const {
+			return (ptr[x] != LF) && (ptr[x] != CR); 
+		}
+		template <char delim, typename = int>
+		inline size_t& advance(size_t & x) const {
+			return ++x;
+		}
+		// assumption:  \r\n always together.
+		template <char delim, typename std::enable_if<delim == LF>::type>
+		inline size_t& advance(size_t & x) const {
+			if (ptr[x] == CR) x += 2;
+			else ++x;
+			return x;
+		}
+		template <char delim>
+		inline bool is_token_end(const size_t & x, const size_t & y) const {
+			return is_not_delimiter<delim>(x) && is_delimiter<delim>(y);
+		}
+
+	public:
+		// search buffer to get to the first non-delim character, and return size.
+		template <char delim>
+		char_array_template trim_left() {
+			// auto stime = getSysTime();
+
+			char_array_template output = {ptr, EMPTY};
+			if ((size == EMPTY) || (ptr == nullptr)) return output;  // buffer is empty, short circuit.
+			
+			// find first entry that is NOT in delim
+			size_t i = 0;
+			for (; (i < size) && is_delimiter<delim>(i); advance<delim>(i));
+			i = std::min(i, size);
+			ptr += i;
+			size -= i;
+			output.size = i;
+
+			// auto etime = getSysTime();
+			// ROOT_PRINT("trim_left x in %f sec\n", get_duration_s(stime, etime));
+			return output;
+		}
+
+
+
+		// return token (ptr and length). does not treat consecutive delimiters as one.
+		// assumes buffer points to start of token.
+		// if there is no more token, then return nullptr
+		template <char delim>
+		char_array_template extract_token() {
+			// auto stime = getSysTime();	
+			if ((size == EMPTY) || (ptr == nullptr)) return char_array_template{nullptr, EMPTY};  // buffer is empty, short circuit.
+			char_array_template output = {ptr, EMPTY};
+			
+			// search for first match to delim
+			size_t i = 0;
+			for (; (i < size) && !is_delimiter<delim>(i); advance<delim>(i));
+			ptr += i;
+			size -= i;
+			output.size = i;
+
+			// printf("extract_token: %lu\n", output.size);
+			// auto etime = getSysTime();	
+			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
+			return output;
+		}
+
+		// remove 1 delim character from buffer (or \r\n)
+		template <char delim>
+		char_array_template trim_left_1() {
+			// auto stime = getSysTime();	
+
+			char_array_template output = {ptr, EMPTY};
+			if ((size == EMPTY) || (ptr == nullptr)) return output;  // buffer is empty, short circuit.
+			
+			// check if CR and in delim.  if yes, skip.
+			size_t i = 0;
+			if (is_delimiter<delim>(i)) {
+				advance<delim>(i);
+				output.size = std::min(size, i);
+				size -= output.size;
+				ptr += output.size;
+			}
+			// printf("trim_left_1: %lu\n", output.size);
+			// auto etime = getSysTime();	
+			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
+			return output;
+		}
+
+		// get a token. does not treat consecutive delimiters as one so output may be empty.
+		template <char delim>
+		char_array_template get_token_or_empty() {
+			char_array_template output = extract_token<delim>();
+			trim_left_1<delim>();
+			return output;
+		}
+		// return token (ptr and length). treats consecutive delimiters as one.
+		template <char delim>
+		char_array_template get_token() {
+			char_array_template output = extract_token<delim>();
+			trim_left<delim>();
+			return output;
+		}		
+
+		template <char delim>
+		size_t count_token_or_empty() const {
+			// auto stime = getSysTime();
+			if ((size == EMPTY) || (ptr == nullptr)) return 0;
+
+			// now count delimiters
+			size_t count = 1;
+			for (size_t i = 0; i < size; advance<delim>(i)) 
+				if (is_delimiter<delim>(i)) ++count;
+
+			// auto etime = getSysTime();
+			// ROOT_PRINT("count tokens or empty in %f sec\n", get_duration_s(stime, etime));
+			return count;
+		}
+		// count non-empty tokens.
+		template <char delim>
+		size_t count_token() const {
+			// auto stime = getSysTime();
+			if ((size == EMPTY) || (ptr == nullptr)) return 0;
+
+			size_t count = 0;
+			// now count non-delimiter to delimiter transitions
+			for (size_t i = 1; i < size; advance<delim>(i))
+				if ( is_token_end<delim>(i-1, i) ) ++count;
+			// check the last char to see if we we have a non-delim to null transition.
+			count += is_not_delimiter<delim>(size - 1);
+			
+			// auto etime = getSysTime();
+			// ROOT_PRINT("count tokens in %f sec\n", get_duration_s(stime, etime));
+			return count;
+		}
+
+};
 
 
 using char_array = char_array_hybrid;
