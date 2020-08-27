@@ -17,7 +17,7 @@
 #include "utils/report.hpp"
 #include "ds/aligned_matrix.hpp"
 
-#include "matrix_io.hpp"
+#include "io/matrix_io.hpp"
 
 #ifdef USE_OPENMP
 #include <omp.h>
