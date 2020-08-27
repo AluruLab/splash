@@ -31,10 +31,12 @@ namespace splash { namespace io {
 template<typename FloatType>
 class CSVMatrixReader2 : public FileReader2 {
 
+	protected:
+		int atof_type;
 
 	public:
 
-		CSVMatrixReader2(const char* filename) : FileReader2(filename) {}
+		CSVMatrixReader2(const char* filename, int const & _atof_type = 1) : FileReader2(filename), atof_type(_atof_type) {}
 		virtual ~CSVMatrixReader2() {}
 
 #ifdef USE_MPI
@@ -63,11 +65,16 @@ class CSVMatrixReader2 : public FileReader2 {
 		bool loadMatrixData(std::vector<std::string>& genes,
 				std::vector<std::string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
 				const int stride_bytes) {
-			return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+			if (atof_type == 0)  // default
+				return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+			else if (atof_type == 2) // fastest but not precise atof
+				return loadMatrixData_impl_faster( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+			else // fast and precise atof
+				return loadMatrixData_impl_fast( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
 		}
 		bool loadMatrixData(std::vector<std::string>& genes,
 				std::vector<std::string>& samples, splash::ds::aligned_matrix<FloatType> & output) {
-			return loadMatrixData_impl( genes, samples, 
+			return loadMatrixData( genes, samples, 
 				output.data(), output.rows(), output.columns(), output.column_bytes());
 		}
 
@@ -175,13 +182,9 @@ class CSVMatrixReader2 : public FileReader2 {
 				token = line.get_token_or_empty<COMMA>();		  
 				for (; (token.ptr != nullptr) && (numSamples < vectorSize); 
 					token = line.get_token_or_empty<COMMA>(), ++numSamples, ++vec) {
-					std::string s(token.ptr, token.size);
-					// *(vec) = ::atof(s.c_str()); // will read until a non-numeric char is encountered.
-					// *(vec) = splash::utils::atof(s.c_str()); // will read until a non-numeric char is encountered.
 
 					if (token.size > 0)
-						*(vec) = splash::utils::atof(token.ptr); // will read until a non-numeric char is encountered.
-					// 	*(vec) = atof(token.ptr); // will read until a non-numeric char is encountered.
+					 	*(vec) = atof(token.ptr); // will read until a non-numeric char is encountered.
 				}
 				// NOTE: missing entries are treated as 0.
 			}
@@ -199,6 +202,171 @@ class CSVMatrixReader2 : public FileReader2 {
 
 		}
 
+
+		/*get the matrix data*/
+		bool loadMatrixData_impl_fast(std::vector<std::string>& genes,
+				std::vector<std::string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
+				const int & stride_bytes) {
+			auto stime = getSysTime();
+
+			splash::ds::char_array_template buffer = this->data;
+			splash::ds::char_array_template line, token;
+
+			buffer.trim_left<LF>();
+
+			/*read the header to get the names of  samples*/
+			line = buffer.get_token<LF>();
+			if (line.size <= 0) {
+				fprintf(stderr, "The file is incomplete\n");
+				return false;
+			}
+			auto etime = getSysTime();
+			ROOT_PRINT("load 1st line in %f sec\n", get_duration_s(stime, etime));
+
+			stime = getSysTime();
+			/*analyze the header.  first entry is skipped.  save the sample names */
+			int numSamples = 0;
+			token = line.get_token_or_empty<COMMA>();  // skip first one.  this is column name
+			token = line.get_token_or_empty<COMMA>();  
+			for (; (token.ptr != nullptr) && (numSamples < vectorSize); 
+				token = line.get_token_or_empty<COMMA>(), ++numSamples) {
+				samples.emplace_back(std::string(token.ptr, token.size));
+			}
+			/*check consistency*/
+			if (numSamples < vectorSize) {
+				fprintf(stderr,
+						"ERROR The number of samples (%d) read is less than vectorSize (%d)\n",
+						numSamples, vectorSize);
+				return false;
+			}
+			etime = getSysTime();
+			ROOT_PRINT("parse column headers %d in %f sec\n", numSamples, get_duration_s(stime, etime));
+
+			stime = getSysTime();
+
+			/*get gene expression profiles*/
+			/*extract gene expression values*/  // WAS READING TRANSPOSED.  NO LONGER.
+			/* input is column major (row is 1 gene).  memory is row major (row is 1 sample) */
+			FloatType * vec;
+			int numGenes = 0;
+			// get just the non-empty lines
+			line = buffer.get_token<LF>();
+			for (; (line.ptr != nullptr)  && (numGenes < numVectors);
+				line = buffer.get_token<LF>(),
+				++numGenes) {
+
+				// parse the row name
+				token = line.get_token_or_empty<COMMA>();
+				genes.emplace_back(std::string(token.ptr, token.size));
+
+				// parse the rest of data.
+				vec = reinterpret_cast<FloatType*>(reinterpret_cast<unsigned char *>(vectors) + numGenes * stride_bytes);
+				numSamples = 0;
+				token = line.get_token_or_empty<COMMA>();		  
+				for (; (token.ptr != nullptr) && (numSamples < vectorSize); 
+					token = line.get_token_or_empty<COMMA>(), ++numSamples, ++vec) {
+
+					if (token.size > 0)
+						*(vec) = splash::utils::p_atof(token.ptr); // will read until a non-numeric char is encountered.
+				}
+				// NOTE: missing entries are treated as 0.
+			}
+			/*consistency check*/
+			if (numGenes < numVectors) {
+				fprintf(stderr,
+						"ERROR The number of genes (%d) read is less than numVectors (%d)\n",
+						numGenes, numVectors);
+				return false;
+			}
+			etime = getSysTime();
+			ROOT_PRINT("load values in %f sec\n", get_duration_s(stime, etime));
+
+			return true;
+
+		}
+		
+		/*get the matrix data*/
+		bool loadMatrixData_impl_faster(std::vector<std::string>& genes,
+				std::vector<std::string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
+				const int & stride_bytes) {
+			auto stime = getSysTime();
+
+			splash::ds::char_array_template buffer = this->data;
+			splash::ds::char_array_template line, token;
+
+			buffer.trim_left<LF>();
+
+			/*read the header to get the names of  samples*/
+			line = buffer.get_token<LF>();
+			if (line.size <= 0) {
+				fprintf(stderr, "The file is incomplete\n");
+				return false;
+			}
+			auto etime = getSysTime();
+			ROOT_PRINT("load 1st line in %f sec\n", get_duration_s(stime, etime));
+
+			stime = getSysTime();
+			/*analyze the header.  first entry is skipped.  save the sample names */
+			int numSamples = 0;
+			token = line.get_token_or_empty<COMMA>();  // skip first one.  this is column name
+			token = line.get_token_or_empty<COMMA>();  
+			for (; (token.ptr != nullptr) && (numSamples < vectorSize); 
+				token = line.get_token_or_empty<COMMA>(), ++numSamples) {
+				samples.emplace_back(std::string(token.ptr, token.size));
+			}
+			/*check consistency*/
+			if (numSamples < vectorSize) {
+				fprintf(stderr,
+						"ERROR The number of samples (%d) read is less than vectorSize (%d)\n",
+						numSamples, vectorSize);
+				return false;
+			}
+			etime = getSysTime();
+			ROOT_PRINT("parse column headers %d in %f sec\n", numSamples, get_duration_s(stime, etime));
+
+			stime = getSysTime();
+
+			/*get gene expression profiles*/
+			/*extract gene expression values*/  // WAS READING TRANSPOSED.  NO LONGER.
+			/* input is column major (row is 1 gene).  memory is row major (row is 1 sample) */
+			FloatType * vec;
+			int numGenes = 0;
+			// get just the non-empty lines
+			line = buffer.get_token<LF>();
+			for (; (line.ptr != nullptr)  && (numGenes < numVectors);
+				line = buffer.get_token<LF>(),
+				++numGenes) {
+
+				// parse the row name
+				token = line.get_token_or_empty<COMMA>();
+				genes.emplace_back(std::string(token.ptr, token.size));
+
+				// parse the rest of data.
+				vec = reinterpret_cast<FloatType*>(reinterpret_cast<unsigned char *>(vectors) + numGenes * stride_bytes);
+				numSamples = 0;
+				token = line.get_token_or_empty<COMMA>();		  
+				for (; (token.ptr != nullptr) && (numSamples < vectorSize); 
+					token = line.get_token_or_empty<COMMA>(), ++numSamples, ++vec) {
+					
+					if (token.size > 0)
+						*(vec) = splash::utils::atof(token.ptr); // will read until a non-numeric char is encountered.
+					
+				}
+				// NOTE: missing entries are treated as 0.
+			}
+			/*consistency check*/
+			if (numGenes < numVectors) {
+				fprintf(stderr,
+						"ERROR The number of genes (%d) read is less than numVectors (%d)\n",
+						numGenes, numVectors);
+				return false;
+			}
+			etime = getSysTime();
+			ROOT_PRINT("load values in %f sec\n", get_duration_s(stime, etime));
+
+			return true;
+
+		}
 		/*get the matrix data*/
 		// bool loadMatrixData_impl(std::vector<std::string>& genes,
 		// 		std::vector<std::string>& samples, splash::ds::aligned_matrix<FloatType> & input);
@@ -206,15 +374,19 @@ class CSVMatrixReader2 : public FileReader2 {
 
 #ifdef USE_MPI
 		/*get gene expression matrix size*/
-		bool getMatrixSize_impl(int& numVectors, int& vectorSize, 
-			MPI_Comm comm) {
+		bool getMatrixSize_impl(int& numVectors, int& vectorSize, MPI_Comm comm) {
 				return getMatrixSize_impl(numVectors, vectorSize);
 			}
 
 		bool loadMatrixData_impl(std::vector<std::string>& genes,
 				std::vector<std::string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
 				const int & stride_bytes, MPI_Comm comm) {
-				return loadMatrixData_impl(genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+			if (atof_type == 0)  // default
+				return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+			else if (atof_type == 2) // fastest but not precise atof
+				return loadMatrixData_impl_faster( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
+			else // fast and precise atof
+				return loadMatrixData_impl_fast( genes, samples, vectors, numVectors, vectorSize, stride_bytes);
 			}
 
 		// bool loadMatrixData_impl(std::vector<std::string>& genes,
