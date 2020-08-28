@@ -25,7 +25,7 @@
 
 class app_parameters : public parameters_base {
 	public:
-		enum atof_type : int { std = 0, fast = 1, imprecise = 2 };
+		enum atof_type : int { std = 0, fast = 1 };
 		enum reader_type : int { lightpcc = 0, delim_str = 1, delim_char = 2 };
 
 		atof_type atof_method;
@@ -35,12 +35,12 @@ class app_parameters : public parameters_base {
 		virtual ~app_parameters() {}
 
 		virtual void config(CLI::App& app) {
-            app.add_option("-a,--atof", atof_method, "atof impl: std=0, fast=1, imprecise=2");
+            app.add_option("-a,--atof", atof_method, "atof impl: std=0, fast=1");
             app.add_option("-m,--method", reader_method, "reader impl: lightpcc=0, delim_str=1, delim_char=2");
 		}
 		virtual void print(const char * prefix) {
             ROOT_PRINT("%s atof method: %s\n", prefix, (atof_method == std ? "std::atof" : 
-				atof_method == fast ? "fast" : "imprecise"));
+				"fast"));
             ROOT_PRINT("%s reader method: %s\n", prefix, (reader_method == lightpcc ? "lightpcc" : 
 				reader_method == delim_str ? "multi-char delim" : "single-char delim"));
 		}

@@ -73,7 +73,7 @@ for c in csv
 do
   for m in 1 2
   do  
-    for a in 0 1 2
+    for a in 0 1
     do
       # single
       echo "[TEST $c input single core]"
@@ -100,7 +100,7 @@ do
 
   for m in 2
   do  
-    for a in 0 1 2
+    for a in 0 1
     do
       # single
       echo "[TEST $c input single core]"
