@@ -111,7 +111,7 @@ inline double atof(const char *p)
     // Get digits before decimal point or exponent, if any.
     whole = 0;
     for (; valid_digit(*p); ++p) {
-        whole = whole * 10 + (*p - '0');
+        whole = (whole << 3) + (whole << 1) + (*p - '0');
     }
 
     // Get digits after decimal point, if any.
@@ -120,7 +120,7 @@ inline double atof(const char *p)
     if (*p == '.') {
         ++p;
         for (; valid_digit(*p); ++frac_digits, ++p) {
-            frac = frac * 10 + (*p - '0');  
+            frac = (frac << 3)  + (frac << 1) + (*p - '0');
         }
     }
 
@@ -128,7 +128,7 @@ inline double atof(const char *p)
     wide scale = 1.0L;
     if ((*p == 'e') || (*p == 'E')) {
         bool neg_exp = false;
-        ssize_t expon = 0;
+        size_t expon = 0;
 
         ++p;
         // Get sign of exponent, if any.
@@ -141,11 +141,10 @@ inline double atof(const char *p)
 
         // Get digits of exponent, if any.
         for (; valid_digit(*p); ++p) {
-            expon = expon * 10 + (*p - '0');
+            expon = (expon << 3) + (expon << 1) + (*p - '0');
         }
         if (expon > 308) expon = 308;
 
-        // if (neg_exp) expon = -expon;
         if (neg_exp) {
             // 25 * (1 + x + x^2) >= 308. -> x = 3
             while (expon >= 100) { scale *= 1E-100L; expon -= 100; }
@@ -158,7 +157,7 @@ inline double atof(const char *p)
         }
 
     }
-    
+
     // using exp10l vs exp10 has a performance impact.  precision is lost with exp10.
     // both frac and exp results need to be wide to be precise, but again, there is a cost for this.
     // may be able to use a lookup table for frac_digits.
@@ -177,5 +176,8 @@ inline double atof(const char *p)
     return neg ? -value : value;
 }
 
+/** multiply has 1 cycle throughput but 2 cycle latency even on coffee lake.
+ * dec 10 is bin 1010.  10x + y = x << 3 + x << 1 + y
+*/
 
 }}
