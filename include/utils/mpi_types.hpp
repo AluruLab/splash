@@ -9,6 +9,7 @@ template <typename T, bool BUILTIN = std::is_arithmetic<T>::value>
 struct datatype;
 
 // template specialized structs.  
+template <> struct datatype<bool, true> {  MPI_Datatype value { MPI_CXX_BOOL }; };
 template <> struct datatype<char, true> {  MPI_Datatype value { MPI_CHAR }; };
 template <> struct datatype<signed char, true> {  MPI_Datatype value { MPI_SIGNED_CHAR }; };
 template <> struct datatype<unsigned char, true> {  MPI_Datatype value { MPI_BYTE }; };
