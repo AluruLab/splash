@@ -67,6 +67,23 @@ class inner_product<IT, OT, DEGREE::VECTOR, DEGREE::VECTOR> : public kernel_base
         inline virtual void initialize(size_t const & count) {};
 };
 
+// vector + vector -> scalar operator.
+template <typename IT, typename OT, int DEG1, int DEG2 = DEG1>
+class inner_product_pos;
+
+template <typename IT, typename OT>
+class inner_product_pos<IT, OT, DEGREE::VECTOR, DEGREE::VECTOR> : public kernel_base {
+    public:
+        
+        using InputType = IT;
+        using OutputType = OT;
+
+        virtual ~inner_product_pos() {};
+        inline virtual OT operator()(size_t const & r, size_t const & c, IT const * first, IT const * second, size_t const & count) const = 0;
+    protected:
+        inline virtual void initialize(size_t const & count) {};
+};
+
 
 // template <typename IT, typename OT>
 // class inner_product<IT, OT, DEGREE::MATRIX, DEGREE::VECTOR> : public kernel_base {
@@ -144,6 +161,19 @@ class generate<OT, DEGREE::MATRIX>  : public kernel_base {
 };
 
 // binary operations
+template <typename IT, typename IT1, typename OT, int DEG>
+class binary_op;
+
+template <typename IT, typename IT1, typename OT>
+class binary_op<IT, IT1, OT, DEGREE::VECTOR> : public kernel_base {
+    public:
+        using OutputType = OT;
+        virtual ~binary_op() {};
+        inline virtual void operator()(IT const * in, IT1 const * aux1, size_t const & count, OT * out) const = 0;
+};
+
+
+// binary operations
 template <typename IT, typename IT1, typename IT2, typename OT, int DEG>
 class ternary_op;
 
@@ -155,10 +185,19 @@ class ternary_op<IT, IT1, IT2, OT, DEGREE::SCALAR> : public kernel_base {
         inline virtual OT operator()(IT const & in, IT1 const & aux1, IT2 const & aux2) const = 0;
 };
 
-
 // vector -> vector operator.
 template <typename IT, typename OT, int DEG>
 class transform;
+
+
+template <typename IT, typename OT>
+class transform<IT, OT, DEGREE::SCALAR>  : public kernel_base {
+    public:
+        using InputType = IT;
+        using OutputType = OT;
+        virtual ~transform() {};
+        inline virtual OT operator()(IT const & in) const = 0;
+};
 
 template <typename IT, typename OT>
 class transform<IT, OT, DEGREE::VECTOR>  : public kernel_base {
