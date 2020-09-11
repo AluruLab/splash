@@ -371,6 +371,124 @@ class GlobalTransform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_ma
 
 
 
+
+// Transform each element individually.  same dimensionality.
+template <typename IN, typename IN2, typename Op, typename OUT>
+class BinaryOp;
+
+// FIX: [ ] non determinism, and at times segv.
+template <typename IT, typename IT2, typename Op, typename OT>
+class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, Op, splash::ds::aligned_matrix<OT>> {
+
+    protected:
+	    splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
+        using part1D_type = splash::utils::partition<size_t>;
+
+    public:
+        using InputType = splash::ds::aligned_matrix<IT>;
+        using InputType2 = splash::ds::aligned_matrix<IT2>;
+        using OutputType = splash::ds::aligned_matrix<OT>;
+
+    protected:
+        // FULL INPUT.
+        void operator()(InputType const & input, InputType2 const & input2, part1D_type part, Op const & _op, OutputType & output) const {
+            assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
+
+            // split the input amongst the processors.
+
+            // ---- parallel compute
+
+#ifdef USE_OPENMP
+#pragma omp parallel 
+            {
+                int threads = omp_get_num_threads();
+                int thread_id = omp_get_thread_num();
+#else 
+                int threads = 1;
+                int thread_id = 0;
+#endif
+                // fprintf(stdout, "make Op copy: thread %d\n", omp_get_thread_num());
+                Op op;
+                op.copy_parameters(_op);
+
+                // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
+                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
+                part1D_type omp_tile_parts = partitioner.get_partition(part, threads, thread_id);
+                omp_tile_parts.print("OMP TRANSFORM TILES: ");
+
+                // iterate over rows.
+                size_t rid = omp_tile_parts.offset;
+                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
+                    op(input.data(rid), input2.data(rid), input.columns(), output.data(rid));
+                }
+
+#ifdef USE_OPENMP
+#pragma omp barrier
+            }
+#endif
+        }
+    
+    public:
+        void operator()(InputType const & input, InputType2 const & input2, Op const & _op, OutputType & output) const {
+            this->operator()(input, input2, part1D_type(0, input.rows(), 0), _op, output);
+        }
+};
+
+
+// Transform each element individually.  same dimensionality.
+template <typename IN, typename IN2, typename Op, typename OUT>
+class GlobalBinaryOp;
+
+// FIX: [ ] non determinism, and at times segv.
+template <typename IT, typename IT2, typename Op, typename OT>
+class GlobalBinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, Op, splash::ds::aligned_matrix<OT>> :
+ public splash::pattern::BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, Op, splash::ds::aligned_matrix<OT>> {
+
+    protected:
+	    splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
+        using part1D_type = splash::utils::partition<size_t>;
+        int procs;
+        int rank;
+        using basetype = splash::pattern::BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>,
+                                                    Op, splash::ds::aligned_matrix<OT>>;
+
+    public:
+        using InputType = splash::ds::aligned_matrix<IT>;
+        using InputType2 = splash::ds::aligned_matrix<IT2>;
+        using OutputType = splash::ds::aligned_matrix<OT>;
+
+#ifdef USE_MPI
+        GlobalBinaryOp(MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+        }
+#else
+        GlobalBinaryOp() : procs(1), rank(0) {};
+#endif
+        GlobalBinaryOp(int const & _procs, int const & _rank) :
+            procs(_procs), rank(_rank) {};
+
+        // FULL INPUT.
+        void operator()(InputType const & input, InputType2 const & input2, Op const & _op, OutputType & output) const {
+            assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
+
+            // split the input amongst the processors.
+
+            // ---- MPI partitioning.  row by row.
+            part1D_type mpi_tile_parts = partitioner.get_partition(input.rows(), procs, rank );
+
+            // ---- parallel compute
+            basetype::operator()(input, input2, mpi_tile_parts, _op, output);
+
+            // ----- allgather in place. 
+            output.allgather_inplace(mpi_tile_parts);
+        }
+};
+
+
+
+
+
 // reduction and transform
 template <typename IN, typename Reduc, typename Op, typename OUT>
 class ReduceTransform;
@@ -525,7 +643,31 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 
         int procs;
         int rank;
+
+        // SFINAE test
+        template <typename T, typename... Args>
+        class has_operator
+        {
+            template <typename C,
+                    typename = decltype( std::declval<C>().operator()(std::declval<Args>()...) )>
+            static std::true_type test(int);
+            template <typename C>
+            static std::false_type test(...);
+
+        public:
+            static constexpr bool value = decltype(test<T>(0))::value;
+        };
+        
+        template <typename OO, typename I, typename std::enable_if<has_operator<Op, size_t const &, size_t const &, I const *, I const *, size_t const &>::value, int>::type = 1>
+        inline OT run(OO const & op, size_t const & r, size_t const & c, I const * row, I const * col, size_t const & count) const {
+            return op(r, c, row, col, count);
+        }
 	
+        template <typename OO, typename I, typename std::enable_if<!has_operator<Op, size_t const &, size_t const &, I const *, I const *, size_t const &>::value, int>::type = 1>
+        inline OT run(OO const & op, size_t const & r, size_t const & c, I const * row, I const * col, size_t const & count) const {
+            return op(row, col, count);
+        }
+
     public:
 #ifdef USE_MPI
         InnerProduct(MPI_Comm comm = MPI_COMM_WORLD) {
@@ -640,7 +782,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                                 // auto xy = op(input1.data(row), input2.data(col), input1.columns());
                                 // auto yx = op(input2.data(col), input1.data(row), input2.columns());
                                 // if (xy != yx)  printf("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
-                                *data = op(input1.data(row), input2.data(col), input1.columns());
+                                *data = run(op, row, col, input1.data(row), input2.data(col), input1.columns());
                                 ++data;
                             }
                         }
@@ -671,7 +813,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                                     *data = 1.0;
                                 } else if (row < col) {
                                     // upper.  so fill in.
-                                    auto xy = op(input1.data(row), input2.data(col), input1.columns());
+                                    auto xy = run(op, row, col, input1.data(row), input2.data(col), input1.columns());
                                     *data = xy; 
                                     *data2 = xy;
                                 }  // else lower half.  skip.
