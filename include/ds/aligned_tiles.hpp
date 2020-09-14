@@ -156,6 +156,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         size_type allocated() const { return bytes; }
         splash::utils::partition2D<size_type>& part(size_t const & id) { return parts[id]; };
         T* data(size_t const & id) { return _data + offsets[id]; }
+        void clear_data() { memset(_data, 0, bytes); };
 
     protected:
         bool is_sorted_by_offsets() const  {
