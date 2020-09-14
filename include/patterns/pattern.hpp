@@ -626,10 +626,10 @@ template <typename IN, typename Op, typename OUT>
 class InnerProduct;
 
 template <typename IT, typename Op, typename OT>
-class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<OT>> {
+class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles<OT, splash::utils::partition2D<size_t>>> {
     public:
         using InputType = splash::ds::aligned_matrix<IT>;
-        using OutputType = splash::ds::aligned_matrix<OT>;
+        using OutputType = splash::ds::aligned_tiles<OT, splash::utils::partition2D<size_t>>;
 
     protected:
         splash::utils::partitioner2D<PARTITION_FIXED> partitioner2d;
@@ -639,7 +639,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 	
         using part1D_type = splash::utils::partition<size_t>;
         using part2D_type = splash::utils::partition2D<size_t>;
-        using tiles_type = splash::ds::aligned_tiles<typename OutputType::data_type, part2D_type>;
+        using tiles_type = OutputType;
 
         int procs;
         int rank;
@@ -682,14 +682,9 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 
 
         // FULL INPUT, PARTITIONED OUTPUT.
-        void operator()(InputType const & input1, InputType const & input2, Op const & _op, OutputType & output) const {
-            if ((output.rows() != input1.rows()) || (output.columns() != input2.rows())) 
-                PRINT_RT("InnerProduct: input1 rows:  %lu, input2 rows: %lu, output rows: %lu, columns %lu\n",
-                    input1.rows(), input2.rows(), output.rows(), output.columns());
-            assert(((output.rows() == input1.rows()) && (output.columns() == input2.rows())) && "InnerProduct requires output rows and input1 rows to be same, and output columns and input2 rows to be same.");
-
-            PRINT_RT("InnerProduct: input1 %lu X %lu, input2 %lu X %lu, output %lu X %lu\n",
-                input1.rows(), input1.columns(), input2.rows(), input2.columns(), output.rows(), output.columns());
+        OutputType operator()(InputType const & input1, InputType const & input2, Op const & _op) const {
+            PRINT_RT("InnerProduct: input1 %lu X %lu, input2 %lu X %lu\n",
+                input1.rows(), input1.columns(), input2.rows(), input2.columns());
 
             // ---- fixed-size partiton input and filter for tiles t
             auto stime = getSysTime();
@@ -708,12 +703,18 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             ROOT_PRINT("Correlation Partitioned in %f sec\n", get_duration_s(stime, etime));
 
             // ---- compute correlation
-            stime = getSysTime();
 
         	// ---- set up the temporary output, tiled, contains the partitions to process.
 	        // PRINT_RT("[pearson TILES] ");
-	        tiles_type tiles(tile_parts.data() + mpi_tile_parts.offset, mpi_tile_parts.size);
+	        OutputType output(tile_parts.data() + mpi_tile_parts.offset, mpi_tile_parts.size);
             // input1.print("NORMED: ");
+
+            this->operator()(input1, input2, _op, output);
+            return output;
+        }
+
+        void operator()(InputType const & input1, InputType const & input2, Op const & _op, OutputType & tiles) const {
+            auto stime = getSysTime();
 
             // OpenMP stuff.
 #ifdef USE_OPENMP
@@ -730,10 +731,10 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
                 op.copy_parameters(_op);
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", mpi_tile_parts.size, threads, thread_id);
-		        part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts.size, threads, thread_id);
+                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", tiles.size(), threads, thread_id);
+		        part1D_type omp_tile_parts = partitioner.get_partition(tiles.size(), threads, thread_id);
 		        // PRINT_RT("thread %d partition: ", thread_id);
-		        omp_tile_parts.print("OMP PARTITION: ");
+		        // omp_tile_parts.print("OMP PARTITION: ");
 
                 // run
                 // get range of global partitions for this thread.
@@ -835,19 +836,62 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 #pragma omp barrier
         	}
 #endif
-        	etime = getSysTime();
+        	auto etime = getSysTime();
 	        ROOT_PRINT("Computed in %f sec\n", get_duration_s(stime, etime));
 
+        }
+
+};
+
+
+
+
+
+template <typename IT, typename Op, typename OT>
+class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<OT>> {
+    public:
+        using InputType = splash::ds::aligned_matrix<IT>;
+        using OutputType = splash::ds::aligned_matrix<OT>;
+
+    protected:
+        splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
+	
+        using part1D_type = splash::utils::partition<size_t>;
+        using part2D_type = splash::utils::partition2D<size_t>;
+        using tiles_type = splash::ds::aligned_tiles<typename OutputType::data_type, part2D_type>;
+
+        using Delegate = InnerProduct<InputType, Op, tiles_type>;
+        Delegate delegate;
+        int procs;
+        int rank;
+
+
+    public:
+#ifdef USE_MPI
+        InnerProduct(MPI_Comm comm = MPI_COMM_WORLD) : delegate(comm) {
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+        }
+#else
+        InnerProduct() : procs(1), rank(0) {};
+#endif
+        InnerProduct(int const & _procs, int const & _rank) : delegate(_procs, _rank),
+            procs(_procs), rank(_rank) {};
+
+
+        // FULL INPUT, PARTITIONED OUTPUT.
+        void operator()(InputType const & input1, InputType const & input2, Op const & _op, OutputType & output) const {
+            tiles_type tiles = delegate(input1, input2, _op); // delegate computes and return the tiles.
 
         	// ============= repartition output
-	        stime = getSysTime();
+	        auto stime = getSysTime();
 
-            tiles.get_bounds().print("TILES BOUNDS: ");
-            PRINT_RT("TILES COUNT: %lu\n", tiles.size());
+            // tiles.get_bounds().print("TILES BOUNDS: ");
+            // PRINT_RT("TILES COUNT: %lu\n", tiles.size());
             // tiles.print("TILES: ");
 
         	part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
-            row_part.print("ROW PARTITIONS: ");
+            // row_part.print("ROW PARTITIONS: ");
             // // with transpose.
             // tiles_type transposed = tiles.transpose();
             // tiles_type all_tiles = tiles.merge(transposed);
@@ -874,7 +918,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             //       however, a tile may straddle a boundary since we partition the tiles by offset and do not split tiles.
             // the output size needs to be allocated after tile partitioning to get the bounds properly.
 	
-        	etime = getSysTime();
+        	auto etime = getSysTime();
 	        PRINT_RT("Reorder tiles in %f sec\n", get_duration_s(stime, etime));
         }
 
