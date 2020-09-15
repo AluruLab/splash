@@ -21,7 +21,7 @@
 namespace splash { namespace kernel { 
 
 
-template <typename IT, typename OT, bool SampleStats = true>
+template <typename IT, typename OT = IT, bool SampleStats = true>
 class GaussianParams : public splash::kernel::reduce<IT, std::pair<OT, OT>, splash::kernel::DEGREE::VECTOR, splash::kernel::DEGREE::SCALAR> {
     public:
         using InputType = IT;
