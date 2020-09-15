@@ -21,14 +21,14 @@
 namespace splash { namespace kernel { 
 
 
-template <typename IT, typename OT = std::pair<IT, IT>, bool SampleStats = true>
-class GaussianParams : public splash::kernel::reduce<IT, OT, splash::kernel::DEGREE::VECTOR, splash::kernel::DEGREE::SCALAR> {
+template <typename IT, typename OT, bool SampleStats = true>
+class GaussianParams : public splash::kernel::reduce<IT, std::pair<OT, OT>, splash::kernel::DEGREE::VECTOR, splash::kernel::DEGREE::SCALAR> {
     public:
         using InputType = IT;
-        using OutputType = OT;
-        using FT = splash::utils::widened<IT>;
+        using OutputType = std::pair<OT, OT>;
+        using FT = splash::utils::widened<OT>;
 
-        inline virtual OT operator()(IT const * in_vec,
+        inline virtual OutputType operator()(IT const * in_vec,
             size_t const & count) const {
 
             const FT avg = 1.0L / static_cast<FT>(count);
@@ -70,7 +70,7 @@ class GaussianParams : public splash::kernel::reduce<IT, OT, splash::kernel::DEG
 template <typename IT, typename OT = IT, bool SampleStats = true>
 class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::DEGREE::VECTOR> {
     protected:
-        GaussianParams<IT, std::pair<OT, OT>, SampleStats> stats;
+        GaussianParams<IT, OT, SampleStats> stats;
 
     public:
         using InputType = IT;
