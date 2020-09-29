@@ -322,7 +322,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                     rmax = std::max(rmax, parts[i].r.offset + parts[i].r.size);
                     cmax = std::max(cmax, parts[i].c.offset + parts[i].c.size);
                 }
-                PRINT_RT("rmin %lu rmax %lu, cmin %lu cmax %lu\n", rmin, rmax, cmin, cmax);
+                // PRINT_RT("rmin %lu rmax %lu, cmin %lu cmax %lu\n", rmin, rmax, cmin, cmax);
                 return splash::utils::partition2D<S>(
                     splash::utils::partition<S>(rmin, rmax-rmin, 0),
                     splash::utils::partition<S>(cmin, cmax-cmin, 0),
@@ -501,11 +501,11 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             splash::utils::mpi::datatype<int> int_dt;
             MPI_Allgather(MPI_IN_PLACE, 1, int_dt.value, upper_bounds, 1, int_dt.value, comm);
 
-            PRINT_RT("UPPER_BOUNDS [");
-            for (int i = 0; i < procs; ++i) {
-                PRINT_RT("%d ", upper_bounds[i]);
-            }
-            PRINT_RT("]\n");
+            // ROOT_PRINT("UPPER_BOUNDS [");
+            // for (int i = 0; i < procs; ++i) {
+            //     ROOT_PRINT("%d ", upper_bounds[i]);
+            // }
+            // ROOT_PRINT("]\n");
 
             
             // PRINT_RT("aligned_tiles ROW_PARTITION sort DONE\n");

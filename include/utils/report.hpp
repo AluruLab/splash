@@ -61,14 +61,14 @@ class buffered_printf {
             if (instances.empty()) {
 #ifdef USE_OPENMP
                 int max = omp_get_max_threads();
-                fprintf(stdout, "thread = %d, curr %d, empty %lu\n", max, omp_get_thread_num(), instances.size());  fflush(stdout);
+                // fprintf(stdout, "thread = %d, curr %d, empty %lu\n", max, omp_get_thread_num(), instances.size());  fflush(stdout);
 #else
                 int max = 1;
 #endif
                 for (int p = 0; p < max; ++p) {
                     instances.emplace(p, std::unordered_map<FILE*, buffered_printf>());
                 }
-                fprintf(stdout, "thread = %d, result  %lu\n", max, instances.size());  fflush(stdout);
+                // fprintf(stdout, "thread = %d, result  %lu\n", max, instances.size());  fflush(stdout);
             }
             // if (instances.find(tid) == instances.end()) {
             //     instances.emplace(tid, std::unordered_map<FILE*, buffered_printf>());
