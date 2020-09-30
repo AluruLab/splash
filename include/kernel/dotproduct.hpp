@@ -10,7 +10,6 @@
 #pragma once
 
 #include "kernel/kernel_base.hpp"
-#include "utils/precise_float.hpp"
 
 #if defined(USE_SIMD)
 #include <omp.h>
@@ -25,10 +24,9 @@ class DotProductKernel : public splash::kernel::inner_product<IT, OT, splash::ke
 	public:
 		using InputType = IT;
 		using OutputType = OT;
-		using FT = splash::utils::widened<OT>;
 
-		inline virtual OT operator()(IT const * first, IT const * second, size_t const & count) const  {
-			FT prod = 0;
+		inline OT operator()(IT const * first, IT const * second, size_t const & count) const  {
+			OT prod = 0;
 #if defined(__INTEL_COMPILER)
 #pragma vector aligned
 #endif
