@@ -159,8 +159,8 @@ inline double dotp_avx(double const * xx, double const * yy, size_t const & coun
     _mm256_storeu_pd(val, acc1);
  
     // last ones (up to 3) if there.
-    for (; k < count; ++k) {
-        val[k] += (xx[k] * yy[k]);
+    for (size_t i = 0; k < count; ++i, ++k) {
+        val[i] += (xx[k] * yy[k]);
     }
 
     val[0] += val[1];
@@ -232,8 +232,8 @@ inline double dotp_avx512(double const * xx, double const * yy, size_t const & c
     _mm512_storeu_pd(val, acc1);
  
     // last ones (up to 7) if there.
-    for (; k < count; ++k) {
-        val[k] += (xx[k] * yy[k]);
+    for (size_t i = 0; k < count; ++i, ++k) {
+        val[i] += (xx[k] * yy[k]);
     }
 
     val[0] += val[1];
