@@ -68,11 +68,12 @@ class common_parameters : public parameters_base {
         long rseed;
         double rmin;
         double rmax;
+        bool skip;
 
         common_parameters() :
             input(""), random(false), // use_single(true),
             num_vectors(0), vector_size(0), 
-            num_threads(1), rseed(11), rmin(0.0), rmax(1.0) {}
+            num_threads(1), rseed(11), rmin(0.0), rmax(1.0), skip(false) {}
         virtual ~common_parameters() {}
 
 
@@ -95,6 +96,8 @@ class common_parameters : public parameters_base {
             random_opt->needs(nvec_opt);
             random_opt->needs(vsize_opt);
 
+            auto skip_opt = app.add_flag("--skip", skip, "skip lines 2 and 3 (exp files only)");
+            skip_opt->needs(input_opt);
 
             auto seed_opt = app.add_option("--random-seed", rseed, "random number generator seed")->group("RNG");
             auto min_opt = app.add_option("--random-min", rmin, "random number min")->group("RNG");
@@ -119,6 +122,7 @@ class common_parameters : public parameters_base {
             size_t numPairs = (num_vectors + 1) * num_vectors / 2;	/*including self-vs-self*/
             // ROOT_PRINT("Single precision: %d\n", use_single ? 1 : 0);
             ROOT_PRINT("%s Input: %s\n", prefix, input.c_str());
+            ROOT_PRINT("%s Skip lines 2 and 3: %s\n", prefix, (skip ? "Y" : "N"));
             ROOT_PRINT("%s Random Input: %s\n", prefix, (random ? "Y" : "N"));
             ROOT_PRINT("%s Output: %s\n", prefix, output.c_str());
             ROOT_PRINT("%s Number of vectors: %ld\n", prefix, num_vectors);

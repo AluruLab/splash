@@ -64,13 +64,13 @@ splash::ds::aligned_matrix<T> make_random_matrix(
 
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> read_exp_matrix(std::string const & filename, S & rows, S & cols,
-	std::vector<std::string> & genes, std::vector<std::string> & samples) {
+	std::vector<std::string> & genes, std::vector<std::string> & samples, bool skip = false) {
 	int nvecs;
 	int vecsize;
 	
 	// read file to get size (HAVE TO DO 2 PASS to get size.)
 	// MPI compatible, not OpenMP enabled.
-	splash::io::EXPMatrixReader<T>::getMatrixSize(filename, nvecs, vecsize);
+	splash::io::EXPMatrixReader<T>::getMatrixSize(filename, nvecs, vecsize, skip);
 
 	// get the minimum array size.
 	rows = (rows > 0) ? std::min(static_cast<S>(nvecs), rows) : nvecs;
@@ -80,7 +80,7 @@ splash::ds::aligned_matrix<T> read_exp_matrix(std::string const & filename, S & 
 	splash::ds::aligned_matrix<T> input(rows, cols);
 
 	// now read the data.  // MPI compatible, not OpenMP enabled.
-	splash::io::EXPMatrixReader<T>::loadMatrixData(filename, genes, samples, input);
+	splash::io::EXPMatrixReader<T>::loadMatrixData(filename, genes, samples, input, skip);
 
 	return input;
 };
@@ -89,7 +89,7 @@ splash::ds::aligned_matrix<T> read_exp_matrix(std::string const & filename, S & 
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> read_exp_matrix_fast(std::string const & filename, S & rows, S & cols,
 	std::vector<std::string> & genes, std::vector<std::string> & samples,
-	int const & atof_type = 1
+	int const & atof_type = 1, bool skip = false
 ) {
 	int nvecs = std::numeric_limits<int>::max();
 	int vecsize = std::numeric_limits<int>::max();
@@ -97,7 +97,7 @@ splash::ds::aligned_matrix<T> read_exp_matrix_fast(std::string const & filename,
 	// read file to get size (HAVE TO DO 2 PASS to get size.)
 	// MPI compatible, not OpenMP enabled.
 	splash::io::EXPMatrixReader2<T> reader(filename.c_str(), atof_type);
-	reader.getMatrixSize(nvecs, vecsize);
+	reader.getMatrixSize(nvecs, vecsize, skip);
 
 	// get the minimum array size.
 	rows = (rows > 0) ? std::min(static_cast<S>(nvecs), rows) : nvecs;
@@ -107,7 +107,7 @@ splash::ds::aligned_matrix<T> read_exp_matrix_fast(std::string const & filename,
 	splash::ds::aligned_matrix<T> input(rows, cols);
 
 	// now read the data.  // MPI compatible, not OpenMP enabled.
-	reader.loadMatrixData(genes, samples, input);
+	reader.loadMatrixData(genes, samples, input, skip);
 
 	return input;
 };
