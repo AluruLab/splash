@@ -617,7 +617,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             output.resize(input.rows(), input.columns());
 
             // now do the transform using the intermediate results.
-            size_t count;
+            size_t count = 0;
 #ifdef USE_OPENMP
 #pragma omp parallel reduction(+:count)
             {
