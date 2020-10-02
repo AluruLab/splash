@@ -48,6 +48,18 @@ struct datatype<std::vector<T>, false> {
     }
     MPI_Datatype value;
 };
+template <typename T, size_t count> 
+struct datatype<std::array<T, count>, false> {
+    datatype() {
+        splash::utils::mpi::datatype<T> dt1;
+        MPI_Type_contiguous(count, dt1.value, &value);
+        MPI_Type_commit(&value);
+    }
+    ~datatype() {
+        MPI_Type_free(&value);
+    }
+    MPI_Datatype value;
+};
 
 
 template <typename T1, typename T2> 

@@ -21,6 +21,7 @@
 
 #include "utils/benchmark.hpp"
 #include "utils/report.hpp"
+#include "utils/mpi_types.hpp"
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -173,13 +174,22 @@ class FileReader {
 					data = this->load(filename);			
 				mapped = _map;
 				MPI_Bcast(&(data.size), 1, MPI_UNSIGNED_LONG, 0, comm);
-				MPI_Bcast(data.ptr, data.size, MPI_BYTE, 0, comm);
 			} else {
 				MPI_Bcast(&(data.size), 1, MPI_UNSIGNED_LONG, 0, comm);
 				data.ptr = reinterpret_cast<char *>(splash::utils::aalloc((data.size) * sizeof(char)));
 				mapped = false;
-				MPI_Bcast(data.ptr, data.size, MPI_BYTE, 0, comm);
 			}
+
+			// do in batches.
+			size_t m = static_cast<size_t>(std::numeric_limits<int>::max());
+			if (data.size > m) {
+				int div = data.size / m;
+				int rem = data.size - static_cast<size_t>(div) * m;
+				splash::utils::mpi::datatype<std::vector<uint8_t>, false> dt(m);
+				MPI_Bcast(data.ptr, div, dt.value, 0, comm);
+				MPI_Bcast(data.ptr + div * m, rem, MPI_BYTE, 0, comm);
+			} else 
+				MPI_Bcast(data.ptr, data.size, MPI_BYTE, 0, comm);
 
 		}
 #else
