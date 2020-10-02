@@ -34,6 +34,14 @@ namespace splash { namespace pattern {
 // [ ] work with partitioned input. and use shift when computing.
 
 
+class OpBase {
+    public:
+        mutable size_t processed;
+        OpBase() : processed(0) {};
+        virtual ~OpBase() {};
+};
+
+
 enum DIM_INDEX : int { ROW = 1, COLUMN = 2 };
 
 
@@ -44,7 +52,8 @@ class Reduce;
 
 // row wise reduction in matrix. 
 template <typename IT, typename Op, typename OT>
-class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>, DIM_INDEX::ROW> {
+class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>, DIM_INDEX::ROW> :
+    public OpBase {
 
     protected:
 	    splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
@@ -62,12 +71,14 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
             // split the input amongst the processors.
 
             // ---- parallel compute
+            size_t count = 0;
 #ifdef USE_OPENMP
-#pragma omp parallel
+#pragma omp parallel reduction(+: count)
             {
                 int threads = omp_get_num_threads();
                 int thread_id = omp_get_thread_num();
 #else 
+            {
                 int threads = 1;
                 int thread_id = 0;
 #endif
@@ -88,8 +99,10 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
 
 #ifdef USE_OPENMP
 #pragma omp barrier
-            }
 #endif
+                count += op.processed;
+            }
+            this->processed = count;
         }
 
     public:
@@ -209,6 +222,9 @@ class GlobalReduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vecto
             // ----- NO allgather in place. 
             output.allgather_inplace(mpi_tile_parts);
 
+            // allreduce
+            splash::utils::mpi::datatype<size_t> dt;
+            MPI_Allreduce(MPI_IN_PLACE, &(this->processed), 1, dt.value, MPI_SUM, MPI_COMM_WORLD );
         }
 };
 
@@ -265,7 +281,8 @@ class Transform;
 
 // FIX: [ ] non determinism, and at times segv.
 template <typename IT, typename Op, typename OT>
-class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<OT>> {
+class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<OT>>  :
+    public OpBase {
 
     protected:
 	    splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
@@ -283,13 +300,14 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
             // split the input amongst the processors.
 
             // ---- parallel compute
-
+            size_t count = 0;
 #ifdef USE_OPENMP
-#pragma omp parallel 
+#pragma omp parallel reduction(+: count)
             {
                 int threads = omp_get_num_threads();
                 int thread_id = omp_get_thread_num();
 #else 
+            {
                 int threads = 1;
                 int thread_id = 0;
 #endif
@@ -310,8 +328,10 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
 
 #ifdef USE_OPENMP
 #pragma omp barrier
-            }
 #endif
+                count += op.processed;
+            }
+            this->processed = count;
         }
     
     public:
@@ -366,6 +386,10 @@ class GlobalTransform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_ma
 
             // ----- allgather in place. 
             output.allgather_inplace(mpi_tile_parts);
+
+            // allreduce
+            splash::utils::mpi::datatype<size_t> dt;
+            MPI_Allreduce(MPI_IN_PLACE, &(this->processed), 1, dt.value, MPI_SUM, MPI_COMM_WORLD );
         }
 };
 
@@ -378,7 +402,8 @@ class BinaryOp;
 
 // FIX: [ ] non determinism, and at times segv.
 template <typename IT, typename IT2, typename Op, typename OT>
-class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, Op, splash::ds::aligned_matrix<OT>> {
+class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, Op, splash::ds::aligned_matrix<OT>> :
+    public OpBase {
 
     protected:
 	    splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
@@ -397,13 +422,14 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
             // split the input amongst the processors.
 
             // ---- parallel compute
-
+            size_t count = 0;
 #ifdef USE_OPENMP
-#pragma omp parallel 
+#pragma omp parallel reduction(+: count)
             {
                 int threads = omp_get_num_threads();
                 int thread_id = omp_get_thread_num();
 #else 
+            {
                 int threads = 1;
                 int thread_id = 0;
 #endif
@@ -424,8 +450,10 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
 
 #ifdef USE_OPENMP
 #pragma omp barrier
-            }
 #endif
+                count += op.processed;
+            }
+            this->processed = count;
         }
     
     public:
@@ -482,6 +510,10 @@ class GlobalBinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<
 
             // ----- allgather in place. 
             output.allgather_inplace(mpi_tile_parts);
+
+            // allreduce
+            splash::utils::mpi::datatype<size_t> dt;
+            MPI_Allreduce(MPI_IN_PLACE, &(this->processed), 1, dt.value, MPI_SUM, MPI_COMM_WORLD );
         }
 };
 
@@ -494,7 +526,8 @@ template <typename IN, typename Reduc, typename Op, typename OUT>
 class ReduceTransform;
 
 template <typename IT, typename Reduc, typename Op, typename OT>
-class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::aligned_matrix<OT>> {
+class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::aligned_matrix<OT>> :
+    public OpBase {
     protected:
 	    splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
         using part1D_type = splash::utils::partition<size_t>;
@@ -584,12 +617,14 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             output.resize(input.rows(), input.columns());
 
             // now do the transform using the intermediate results.
+            size_t count;
 #ifdef USE_OPENMP
-#pragma omp parallel 
+#pragma omp parallel reduction(+:count)
             {
                 int threads = omp_get_num_threads();
                 int thread_id = omp_get_thread_num();
 #else 
+            {
                 int threads = 1;
                 int thread_id = 0;
 #endif
@@ -612,10 +647,17 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
 
 #ifdef USE_OPENMP
 #pragma omp barrier
-            }
 #endif
+                count += op.processed;
+            }
+            this->processed = count;
+
             // ----- allgather in place. 
             output.allgather_inplace(mpi_tile_parts);
+
+            // allreduce
+            splash::utils::mpi::datatype<size_t> dt;
+            MPI_Allreduce(MPI_IN_PLACE, &(this->processed), 1, dt.value, MPI_SUM, MPI_COMM_WORLD );
         }
 
 };
@@ -626,7 +668,8 @@ template <typename IN, typename Op, typename OUT, bool SYMMETRIC = true>
 class InnerProduct;
 
 template <typename IT, typename Op, typename OT, bool SYMMETRIC>
-class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles<OT, splash::utils::partition2D<size_t>>, SYMMETRIC> {
+class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles<OT, splash::utils::partition2D<size_t>>, SYMMETRIC> :
+    public OpBase {
     public:
         using InputType = splash::ds::aligned_matrix<IT>;
         using OutputType = splash::ds::aligned_tiles<OT, splash::utils::partition2D<size_t>>;
@@ -728,6 +771,11 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
             }
             
             this->operator()(input1, input2, ops, output);
+
+            // allreduce
+            splash::utils::mpi::datatype<size_t> dt;
+            MPI_Allreduce(MPI_IN_PLACE, &(this->processed), 1, dt.value, MPI_SUM, MPI_COMM_WORLD );
+
         	etime = getSysTime();
 	        ROOT_PRINT("Computed in %f sec\n", get_duration_s(stime, etime));
             return output;
@@ -736,12 +784,14 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
         void operator()(InputType const & input1, InputType const & input2, std::vector<Op> const & _ops, OutputType & tiles) const {
             
             // OpenMP stuff.
+            size_t count = 0;
 #ifdef USE_OPENMP
-#pragma omp parallel
+#pragma omp parallel reduction(+: count)
             {
                 int threads = omp_get_num_threads();
                 int thread_id = omp_get_thread_num();
 #else 
+            {
                 int threads = 1;
                 int thread_id = 0;
 #endif
@@ -848,8 +898,9 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
 
 #ifdef USE_OPENMP
 #pragma omp barrier
-        	}
 #endif
+                count += _ops[thread_id].processed;
+        	}
 
         }
 
@@ -860,7 +911,8 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
 
 
 template <typename IT, typename Op, typename OT, bool SYMMETRIC>
-class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<OT>, SYMMETRIC> {
+class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<OT>, SYMMETRIC> :
+    public OpBase {
     public:
         using InputType = splash::ds::aligned_matrix<IT>;
         using OutputType = splash::ds::aligned_matrix<OT>;
@@ -893,7 +945,9 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 
         // FULL INPUT, PARTITIONED OUTPUT.
         void operator()(InputType const & input1, InputType const & input2, Op const & _op, OutputType & output) const {
+            
             tiles_type tiles = delegate(input1, input2, _op); // delegate computes and return the tiles.
+            this->processed = delegate.processed;
 
         	// ============= repartition output
 	        auto stime = getSysTime();

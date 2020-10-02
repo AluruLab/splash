@@ -45,7 +45,8 @@ enum DIM    : int { ROW = 0, COLUMN = 1};
 //    in thread, create with default constructor and copy_parameters.
 class kernel_base {
     public:
-        kernel_base() {}
+        mutable size_t processed;
+        kernel_base() : processed(0) {}
         virtual ~kernel_base() {}
         void copy_parameters(kernel_base const & other)  {}
 };
