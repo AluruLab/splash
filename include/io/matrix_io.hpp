@@ -65,8 +65,8 @@ splash::ds::aligned_matrix<T> make_random_matrix(
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> read_exp_matrix(std::string const & filename, S & rows, S & cols,
 	std::vector<std::string> & genes, std::vector<std::string> & samples, bool skip = false) {
-	int nvecs;
-	int vecsize;
+	ssize_t nvecs;
+	ssize_t vecsize;
 	
 	// read file to get size (HAVE TO DO 2 PASS to get size.)
 	// MPI compatible, not OpenMP enabled.
@@ -91,8 +91,8 @@ splash::ds::aligned_matrix<T> read_exp_matrix_fast(std::string const & filename,
 	std::vector<std::string> & genes, std::vector<std::string> & samples,
 	int const & atof_type = 1, bool skip = false
 ) {
-	int nvecs = std::numeric_limits<int>::max();
-	int vecsize = std::numeric_limits<int>::max();
+	ssize_t nvecs = std::numeric_limits<ssize_t>::max();
+	ssize_t vecsize = std::numeric_limits<ssize_t>::max();
 	
 	// read file to get size (HAVE TO DO 2 PASS to get size.)
 	// MPI compatible, not OpenMP enabled.
@@ -142,8 +142,8 @@ splash::ds::aligned_matrix<T> read_csv_matrix(std::string const & filename, S & 
 	std::vector<std::string> & genes, std::vector<std::string> & samples,
 	int const & atof_type = 1
 ) {
-	int nvecs = std::numeric_limits<int>::max();
-	int vecsize = std::numeric_limits<int>::max();
+	ssize_t nvecs = std::numeric_limits<ssize_t>::max();
+	ssize_t vecsize = std::numeric_limits<ssize_t>::max();
 	
 	// read file to get size (HAVE TO DO 2 PASS to get size.)
 	// MPI compatible, not OpenMP enabled.
@@ -168,8 +168,8 @@ splash::ds::aligned_matrix<T> read_csv_matrix_fast(std::string const & filename,
 	std::vector<std::string> & genes, std::vector<std::string> & samples,
 	int const & atof_type = 1
 ) {
-	int nvecs = std::numeric_limits<int>::max();
-	int vecsize = std::numeric_limits<int>::max();
+	ssize_t nvecs = std::numeric_limits<ssize_t>::max();
+	ssize_t vecsize = std::numeric_limits<ssize_t>::max();
 	
 	// read file to get size (HAVE TO DO 2 PASS to get size.)
 	// MPI compatible, not OpenMP enabled.

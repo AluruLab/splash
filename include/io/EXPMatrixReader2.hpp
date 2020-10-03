@@ -48,13 +48,13 @@ class EXPMatrixReader2 : public FileReader2 {
 
 
 #ifdef USE_MPI
-		bool getMatrixSize(int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS,
+		bool getMatrixSize(ssize_t& numVectors, ssize_t& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS,
 			MPI_Comm comm = MPI_COMM_WORLD) {
 			return getMatrixSize_impl(numVectors, vectorSize, comm, skip);
 		}
 		bool loadMatrixData(std::vector<std::string>& genes,
-				std::vector<std::string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
-				const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS, MPI_Comm comm = MPI_COMM_WORLD) {
+				std::vector<std::string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+				const ssize_t & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS, MPI_Comm comm = MPI_COMM_WORLD) {
 			return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes,
 				comm, skip);
 		}
@@ -67,12 +67,12 @@ class EXPMatrixReader2 : public FileReader2 {
 		}
 #else
 		/*get gene expression matrix size*/
-		bool getMatrixSize(int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
+		bool getMatrixSize(ssize_t& numVectors, ssize_t& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
 			return getMatrixSize_impl(numVectors, vectorSize, skip);
 		}
 		bool loadMatrixData(std::vector<std::string>& genes,
-				std::vector<std::string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
-				const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
+				std::vector<std::string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+				const ssize_t & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
 			if (atof_type == 0)  // default
 				return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes, skip);
 			else // fast and precise atof
@@ -90,7 +90,7 @@ class EXPMatrixReader2 : public FileReader2 {
 
 	protected:
 		/*get gene expression matrix size*/
-		bool getMatrixSize_impl(int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
+		bool getMatrixSize_impl(ssize_t& numVectors, ssize_t& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
 				auto stime = getSysTime();
 
 			splash::ds::char_array_template buffer = this->data;
@@ -114,7 +114,7 @@ class EXPMatrixReader2 : public FileReader2 {
 			/*analyze the header on the first row*/
 			fprintf(stderr, "line size = %lu, ptr = %p\n", line.size, line.ptr);
 			vectorSize = line.count_token_or_empty<TAB>() - 2;
-			fprintf(stderr, "Number of samples: %d\n", vectorSize);
+			fprintf(stderr, "Number of samples: %ld\n", vectorSize);
 
 			if (skip) {
 				buffer.get_token_or_empty<LF>();
@@ -123,7 +123,7 @@ class EXPMatrixReader2 : public FileReader2 {
 
 			/*get gene expression profiles.  skip empty lines*/ 
 			numVectors = buffer.count_token<LF>();
-			fprintf(stderr, "Number of gene expression profiles: %d\n", numVectors);
+			fprintf(stderr, "Number of gene expression profiles: %ld\n", numVectors);
 
 			auto etime = getSysTime();
 			ROOT_PRINT("get matrix size in %f sec\n", get_duration_s(stime, etime));
@@ -133,8 +133,8 @@ class EXPMatrixReader2 : public FileReader2 {
 
 		/*get the matrix data*/
 		bool loadMatrixData_impl(std::vector<std::string>& genes,
-				std::vector<std::string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
-				const int & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
+				std::vector<std::string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+				const ssize_t & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
 			auto stime = getSysTime();
 
 			splash::ds::char_array_template buffer = this->data;
@@ -153,7 +153,7 @@ class EXPMatrixReader2 : public FileReader2 {
 
 			stime = getSysTime();
 			/*analyze the header.  first entry is skipped.  save the sample names */
-			int numSamples = 0;
+			ssize_t numSamples = 0;
 			token = line.get_token_or_empty<TAB>();  // skip first 2.  this is column name and id
 			token = line.get_token_or_empty<TAB>();  
 			token = line.get_token_or_empty<TAB>();  
@@ -164,12 +164,12 @@ class EXPMatrixReader2 : public FileReader2 {
 			/*check consistency*/
 			if (numSamples < vectorSize) {
 				fprintf(stderr,
-						"ERROR The number of samples (%d) read is less than vectorSize (%d)\n",
+						"ERROR The number of samples (%ld) read is less than vectorSize (%ld)\n",
 						numSamples, vectorSize);
 				return false;
 			}
 			etime = getSysTime();
-			ROOT_PRINT("parse column headers %d in %f sec\n", numSamples, get_duration_s(stime, etime));
+			ROOT_PRINT("parse column headers %ld in %f sec\n", numSamples, get_duration_s(stime, etime));
 
 			stime = getSysTime();
 			if (skip) {
@@ -181,7 +181,7 @@ class EXPMatrixReader2 : public FileReader2 {
 			/*extract gene expression values*/  // WAS READING TRANSPOSED.  NO LONGER.
 			/* input is column major (row is 1 gene).  memory is row major (row is 1 sample) */
 			FloatType * vec;
-			int numGenes = 0;
+			ssize_t numGenes = 0;
 			// get just the non-empty lines
 			line = buffer.get_token<LF>();
 			for (; (line.ptr != nullptr)  && (numGenes < numVectors);
@@ -208,7 +208,7 @@ class EXPMatrixReader2 : public FileReader2 {
 			/*consistency check*/
 			if (numGenes < numVectors) {
 				fprintf(stderr,
-						"ERROR The number of genes (%d) read is less than numVectors (%d)\n",
+						"ERROR The number of genes (%ld) read is less than numVectors (%ld)\n",
 						numGenes, numVectors);
 				return false;
 			}
@@ -222,8 +222,8 @@ class EXPMatrixReader2 : public FileReader2 {
 
 		/*get the matrix data*/
 		bool loadMatrixData_impl_fast(std::vector<std::string>& genes,
-				std::vector<std::string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
-				const int & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
+				std::vector<std::string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+				const ssize_t & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
 			auto stime = getSysTime();
 
 			splash::ds::char_array_template buffer = this->data;
@@ -242,7 +242,7 @@ class EXPMatrixReader2 : public FileReader2 {
 
 			stime = getSysTime();
 			/*analyze the header.  first entry is skipped.  save the sample names */
-			int numSamples = 0;
+			ssize_t numSamples = 0;
 			token = line.get_token_or_empty<TAB>();  // skip first 2.  this is column name and id
 			token = line.get_token_or_empty<TAB>();  
 			token = line.get_token_or_empty<TAB>();  
@@ -253,12 +253,12 @@ class EXPMatrixReader2 : public FileReader2 {
 			/*check consistency*/
 			if (numSamples < vectorSize) {
 				fprintf(stderr,
-						"ERROR The number of samples (%d) read is less than vectorSize (%d)\n",
+						"ERROR The number of samples (%ld) read is less than vectorSize (%ld)\n",
 						numSamples, vectorSize);
 				return false;
 			}
 			etime = getSysTime();
-			ROOT_PRINT("parse column headers %d in %f sec\n", numSamples, get_duration_s(stime, etime));
+			ROOT_PRINT("parse column headers %ld in %f sec\n", numSamples, get_duration_s(stime, etime));
 
 			stime = getSysTime();
 			if (skip) {
@@ -270,7 +270,7 @@ class EXPMatrixReader2 : public FileReader2 {
 			/*extract gene expression values*/  // WAS READING TRANSPOSED.  NO LONGER.
 			/* input is column major (row is 1 gene).  memory is row major (row is 1 sample) */
 			FloatType * vec;
-			int numGenes = 0;
+			ssize_t numGenes = 0;
 			// get just the non-empty lines
 			line = buffer.get_token<LF>();
 			for (; (line.ptr != nullptr)  && (numGenes < numVectors);
@@ -298,7 +298,7 @@ class EXPMatrixReader2 : public FileReader2 {
 			/*consistency check*/
 			if (numGenes < numVectors) {
 				fprintf(stderr,
-						"ERROR The number of genes (%d) read is less than numVectors (%d)\n",
+						"ERROR The number of genes (%ld) read is less than numVectors (%ld)\n",
 						numGenes, numVectors);
 				return false;
 			}
@@ -317,14 +317,14 @@ class EXPMatrixReader2 : public FileReader2 {
 
 #ifdef USE_MPI
 		/*get gene expression matrix size*/
-		bool getMatrixSize_impl(int& numVectors, int& vectorSize, MPI_Comm comm,
+		bool getMatrixSize_impl(ssize_t& numVectors, ssize_t& vectorSize, MPI_Comm comm,
 			const bool skip = EXP_SKIP_TWO_ROWS) {
 				return getMatrixSize_impl(numVectors, vectorSize, skip);
 			}
 
 		bool loadMatrixData_impl(std::vector<std::string>& genes,
-				std::vector<std::string>& samples, FloatType* vectors, const int & numVectors, const int & vectorSize,
-				const int & stride_bytes, MPI_Comm comm,
+				std::vector<std::string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+				const ssize_t & stride_bytes, MPI_Comm comm,
 				const bool skip = EXP_SKIP_TWO_ROWS) {
 			if (atof_type == 0)  // default
 				return loadMatrixData_impl( genes, samples, vectors, numVectors, vectorSize, stride_bytes, skip);

@@ -67,7 +67,7 @@ public:
 
         // write header (samples)
         // empty first entry.
-        for (int i = 0; i < col_names.size(); ++i) {
+        for (size_t i = 0; i < col_names.size(); ++i) {
             ofs << delim << col_names[i];
         }
         ofs << std::endl;
@@ -75,7 +75,7 @@ public:
         ofs.precision(std::numeric_limits<FloatType>::max_digits10);
 
         // now write all data.
-        for (int j = 0, jj = i * rowStride; 
+        for (size_t j = 0, jj = i * rowStride; 
             j < col_names.size(); ++j, ++jj) {
             ofs << delim << vectors[jj];
         }

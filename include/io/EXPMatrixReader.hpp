@@ -83,11 +83,11 @@ protected:
 public:
 	/*get gene expression matrix size*/
 #ifdef USE_MPI
-	static bool getMatrixSize(string const & fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS,
+	static bool getMatrixSize(string const & fileName, ssize_t& numVectors, ssize_t& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS,
 		MPI_Comm comm = MPI_COMM_WORLD) {
 		return getMatrixSize_impl(fileName, numVectors, vectorSize, comm, skip);
 #else
-	static bool getMatrixSize(string const & fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
+	static bool getMatrixSize(string const & fileName, ssize_t& numVectors, ssize_t& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS) {
 		return getMatrixSize_impl(fileName, numVectors, vectorSize, skip);
 #endif
 	}
@@ -95,14 +95,14 @@ public:
 	/*get the matrix data*/
 #ifdef USE_MPI
 	static bool loadMatrixData(string const & fileName, vector<string>& genes,
-			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
-			const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS, MPI_Comm comm = MPI_COMM_WORLD) {
+			vector<string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+			const ssize_t & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS, MPI_Comm comm = MPI_COMM_WORLD) {
 		return loadMatrixData_impl(fileName, genes, samples, vectors, numVectors, vectorSize, stride_bytes,
 			comm, skip);
 #else
 	static bool loadMatrixData(string const & fileName, vector<string>& genes,
-			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
-			const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
+			vector<string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+			const ssize_t & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS) {
 		return loadMatrixData_impl(fileName, genes, samples, vectors, numVectors, vectorSize, stride_bytes, skip);
 #endif
 	}
@@ -127,12 +127,12 @@ public:
 
 protected:
 	/*get gene expression matrix size*/
-	static bool getMatrixSize_impl(string const & fileName, int& numVectors, int& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS);
+	static bool getMatrixSize_impl(string const & fileName, ssize_t& numVectors, ssize_t& vectorSize, const bool skip = EXP_SKIP_TWO_ROWS);
 
 	/*get the matrix data*/
 	static bool loadMatrixData_impl(string const & fileName, vector<string>& genes,
-			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
-			const int stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS);
+			vector<string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+			const ssize_t & stride_bytes, const bool skip = EXP_SKIP_TWO_ROWS);
 
 	/*get the matrix data*/
 	// static bool loadMatrixData_impl(string const & fileName, vector<string>& genes,
@@ -141,13 +141,13 @@ protected:
 
 #ifdef USE_MPI
 	/*get gene expression matrix size*/
-	static bool getMatrixSize_impl(string const & fileName, int& numVectors, int& vectorSize, 
+	static bool getMatrixSize_impl(string const & fileName, ssize_t& numVectors, ssize_t& vectorSize, 
 		MPI_Comm comm,
 		const bool skip = EXP_SKIP_TWO_ROWS);
 
 	static bool loadMatrixData_impl(string const & fileName, vector<string>& genes,
-			vector<string>& samples, FloatType* vectors, const int numVectors, const int vectorSize,
-			const int stride_bytes, MPI_Comm comm, const bool skip = EXP_SKIP_TWO_ROWS);
+			vector<string>& samples, FloatType* vectors, const ssize_t & numVectors, const ssize_t & vectorSize,
+			const ssize_t & stride_bytes, MPI_Comm comm, const bool skip = EXP_SKIP_TWO_ROWS);
 
 	// static bool loadMatrixData_impl(string const & fileName, vector<string>& genes,
 	// 		vector<string>& samples, splash::ds::aligned_matrix<FloatType> & input, MPI_Comm comm, const bool skip = EXP_SKIP_TWO_ROWS);
@@ -156,10 +156,10 @@ protected:
 
 template<typename FloatType>
 bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, 
-		int& numVectors, int& vectorSize, const bool skip) {
+		ssize_t& numVectors, ssize_t& vectorSize, const bool skip) {
 	char* buffer = NULL, *tok;
 	size_t bufferSize = 0;
-	int numChars;
+	ssize_t numChars;
 	const char delim[] = "\t";
 	splash::io::CustomFileReader fileReader;
 
@@ -183,7 +183,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName,
 		vectorSize++;
 	}
 	vectorSize -= 2; /*exclude the first columns of the header: prob id and locus id*/
-	fprintf(stderr, "Number of samples: %d\n", vectorSize);
+	fprintf(stderr, "Number of samples: %ld\n", vectorSize);
 
 	if(skip){
 		/*skip the second and the third rows*/
@@ -207,7 +207,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName,
 		}
 		++numVectors;
 	}
-	fprintf(stderr, "Number of gene expression profiles: %d\n", numVectors);
+	fprintf(stderr, "Number of gene expression profiles: %ld\n", numVectors);
 
 	/*close the file*/
 	fileReader.close();
@@ -220,11 +220,11 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName,
 template<typename FloatType>
 bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		vector<string>& genes, vector<string>& samples, FloatType* vectors,
-		const int numVectors, const int vectorSize, 
-		const int stride_bytes, const bool skip) {
+		const ssize_t & numVectors, const ssize_t & vectorSize, 
+		const ssize_t & stride_bytes, const bool skip) {
 	char* buffer = NULL, *tok;
 	size_t bufferSize = 0;
-	int numChars, index;
+	ssize_t numChars, index;
 	// bool firstEntry;
 	const char delim[] = "\t";
 	splash::io::CustomFileReader fileReader;
@@ -235,8 +235,8 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		return false;
 	}
 
-	int numGenes = 0;
-	int numSamples = 0;
+	ssize_t numGenes = 0;
+	ssize_t numSamples = 0;
 	/*read the header to get the number of samples*/
 	numChars = fileReader.getline(&buffer, &bufferSize);
 	if (numChars <= 0) {
@@ -267,7 +267,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	/*check consistency*/
 	if (numSamples != vectorSize) {
 		fprintf(stderr,
-				"The number of samples (%d) not equal to number of vectors (%d)\n",
+				"The number of samples (%ld) not equal to number of vectors (%ld)\n",
 				numSamples, vectorSize);
 		fileReader.close();
 		return false;
@@ -298,7 +298,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		/*consistency check*/
 		if (numGenes >= numVectors) {
 			fprintf(stderr,
-					"Error: number of genes (%d) is not equal to (%d)\n", numGenes, numVectors);
+					"Error: number of genes (%ld) is not equal to (%ld)\n", numGenes, numVectors);
 			fileReader.close();
 			return false;
 		}
@@ -345,7 +345,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	}
 	if (numGenes != numVectors) {
 		fprintf(stderr,
-				"Error: number of genes (%d) is inconsistent with numVectors (%d)\n", numGenes, numVectors);
+				"Error: number of genes (%ld) is inconsistent with numVectors (%ld)\n", numGenes, numVectors);
 		fileReader.close();
 		return false;
 	}
@@ -499,13 +499,13 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 #ifdef USE_MPI
 
 template <typename FloatType>
-bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, int& numVectors, int& vectorSize, 
+bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, ssize_t& numVectors, ssize_t& vectorSize, 
 		MPI_Comm comm,
 		const bool skip) {
 
 	char* buffer = NULL, *tok;
 	// size_t bufferSize = 0;
-	int numChars; //, index;
+	ssize_t numChars; //, index;
 	// bool firstEntry;
 	const char delim[] = "\t";
 	
@@ -586,14 +586,14 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, int
 		// set to first non-eol character.
 		numChars = getline_start(fullbuf, max);
 		if (numChars < 0) {
-			fprintf(stderr, "Incomplete file at line %d, count %d\n", __LINE__, numChars);
+			fprintf(stderr, "Incomplete file at line %d, count %ld\n", __LINE__, numChars);
 			fflush(stderr);
 			err = true;
 		}
 
 		numChars = getline(fullbuf, max, buffer);
 		if (numChars < 0) {
-			fprintf(stderr, "The processor has incomplete data, count %d\n", numChars);
+			fprintf(stderr, "The processor has incomplete data, count %ld\n", numChars);
 			fflush(stderr);
 			err = true;
 		}
@@ -611,19 +611,19 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, int
 			/*skip the second and third rows*/
 			/*skip the second and the third rows*/
 			if(getline(fullbuf, max, buffer) < 0){
-				fprintf(stderr, "EXP file is incomplete at the second row, count %d\n", numChars);
+				fprintf(stderr, "EXP file is incomplete at the second row, count %ld\n", numChars);
 				fflush(stderr);
 				err = true;
 			}
 			if(getline(fullbuf, max, buffer) < 0){
-				fprintf(stderr, "EXP file is incomplete at the third row, count %d\n", numChars);
+				fprintf(stderr, "EXP file is incomplete at the third row, count %ld\n", numChars);
 				fflush(stderr);
 				err = true;
 			}
 		}
 	}
 	MPI_Bcast(&vectorSize, 1, MPI_INT, 0, comm);
-	if (rank == 0)	fprintf(stderr, "Number of samples: %d\n", vectorSize);
+	if (rank == 0)	fprintf(stderr, "Number of samples: %ld\n", vectorSize);
 
 	if (err) return false;
 
@@ -656,11 +656,11 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, int
 	// last[10] = 0;
 	// fprintf(stderr, "[%d] last line %s.\n", rank, last);
 
-	fprintf(stderr, "rank %d Number of gene expression profiles: %d\n", rank, numVectors);
+	fprintf(stderr, "rank %d Number of gene expression profiles: %ld\n", rank, numVectors);
 	fflush(stderr);
 	// allreduce
 	MPI_Allreduce(MPI_IN_PLACE, &numVectors, 1, MPI_INT, MPI_SUM, comm);
-	if (rank == 0)	fprintf(stderr, "Number of gene expression profiles: %d\n", numVectors);
+	if (rank == 0)	fprintf(stderr, "Number of gene expression profiles: %ld\n", numVectors);
 
 	splash::utils::afree(read_buffer);
 
@@ -672,11 +672,11 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, int
 template<typename FloatType>
 bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		vector<string>& genes, vector<string>& samples, FloatType* vectors,
-		const int numVectors, const int vectorSize, 
-		const int stride_bytes, MPI_Comm comm, const bool skip) {
+		const ssize_t & numVectors, const ssize_t & vectorSize, 
+		const ssize_t & stride_bytes, MPI_Comm comm, const bool skip) {
 	char* buffer = NULL, *tok;
 	// size_t bufferSize = 0;
-	int numChars, index;
+	ssize_t numChars, index;
 	// bool firstEntry;
 	const char delim[] = "\t";
 	
@@ -774,8 +774,8 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	// ======= DATA NOW IN MEMORY.  PARSE.
 	// now parse.
 
-	int numGenes = 0;
-	int numSamples = 0;
+	ssize_t numGenes = 0;
+	ssize_t numSamples = 0;
 
 	char * fullbuf = read_buffer;
 	ssize_t max = bytes_read + 1;
@@ -815,7 +815,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	/*check consistency*/
 	if ((numSamples != vectorSize) || (static_cast<size_t>(numSamples) != samples.size())) {
 		fprintf(stderr,
-				"The number of samples (%d) not equal to number of vectors (%d) sampels size %lu\n",
+				"The number of samples (%ld) not equal to number of vectors (%ld) sampels size %lu\n",
 				numSamples, vectorSize, samples.size());
 		return false;
 	}
@@ -851,7 +851,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		/*consistency check*/
 		if (numGenes >= numVectors) {
 			fprintf(stderr,
-					"Error: rank %d number of genes (%d) is about to exceed (%d)\n", rank, numGenes, numVectors);
+					"Error: rank %d number of genes (%ld) is about to exceed (%ld)\n", rank, numGenes, numVectors);
 			return false;
 		}
 	
@@ -903,7 +903,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 	if ((numGenes != numVectors) || (static_cast<size_t>(numGenes) != genes.size())) {
 		fprintf(stderr,
-				"Error: number of genes (%d) is inconsistent with numVectors (%d) and  gene size %lu\n", numGenes, numVectors, genes.size());
+				"Error: number of genes (%ld) is inconsistent with numVectors (%ld) and  gene size %lu\n", numGenes, numVectors, genes.size());
 		return false;
 	}
 	splash::utils::afree(read_buffer);
