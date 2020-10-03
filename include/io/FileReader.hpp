@@ -173,26 +173,22 @@ class FileReader {
 				else
 					data = this->load(filename);			
 				mapped = _map;
-				MPI_Bcast(&(data.size), 1, MPI_UNSIGNED_LONG, 0, comm);
-			} else {
-				MPI_Bcast(&(data.size), 1, MPI_UNSIGNED_LONG, 0, comm);
+			}
+			MPI_Bcast(&(data.size), 1, MPI_UNSIGNED_LONG, 0, comm);
+
+			if (rank != 0) {
 				data.ptr = reinterpret_cast<char *>(splash::utils::aalloc((data.size) * sizeof(char)));
 				mapped = false;
 			}
 
 			// do in batches.
-			size_t m = 1 << 30;
-			if (data.size > m) {
-				int div = data.size >> 30;
-				int rem = data.size - (static_cast<size_t>(div) << 30);
-				if (div > 0) {
-					splash::utils::mpi::datatype<std::vector<uint8_t>, false> dt(m);
-					MPI_Bcast(data.ptr, div, dt.value, 0, comm);
-				}
-				if (rem > 0)
-					MPI_Bcast(data.ptr + (static_cast<size_t>(div) << 30), rem, MPI_BYTE, 0, comm);
-			} else 
-				MPI_Bcast(data.ptr, data.size, MPI_BYTE, 0, comm);
+			char* ptr = data.ptr;
+			size_t c = data.size;
+			int block;
+			for (c = 0; c < data.size; c += std::numeric_limits<int>::max(), ptr += std::numeric_limits<int>::max()) {
+				block = std::min(std::numeric_limits<int>::max(), static_cast<int>(data.size - c));
+				MPI_Bcast(ptr, block, MPI_BYTE, 0, comm);
+			}
 		}
 #else
 		// memmap the whole file
