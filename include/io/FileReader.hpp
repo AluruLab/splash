@@ -184,13 +184,13 @@ class FileReader {
 			size_t m = 1 << 30;
 			if (data.size > m) {
 				int div = data.size >> 30;
-				int rem = data.size - static_cast<size_t>(div) << 30;
+				int rem = data.size - (static_cast<size_t>(div) << 30);
 				if (div > 0) {
 					splash::utils::mpi::datatype<std::vector<uint8_t>, false> dt(m);
 					MPI_Bcast(data.ptr, div, dt.value, 0, comm);
 				}
 				if (rem > 0)
-					MPI_Bcast(data.ptr + div << 30, rem, MPI_BYTE, 0, comm);
+					MPI_Bcast(data.ptr + (static_cast<size_t>(div) << 30), rem, MPI_BYTE, 0, comm);
 			} else 
 				MPI_Bcast(data.ptr, data.size, MPI_BYTE, 0, comm);
 		}
