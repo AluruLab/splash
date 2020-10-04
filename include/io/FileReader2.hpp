@@ -185,7 +185,7 @@ class FileReader2 {
 			size_t c = data.size;
 			int block;
 			for (c = 0; c < data.size; c += std::numeric_limits<int>::max(), ptr += std::numeric_limits<int>::max()) {
-				block = std::min(std::numeric_limits<int>::max(), static_cast<int>(data.size - c));
+				block = std::min(static_cast<size_t>(std::numeric_limits<int>::max()), data.size - c);
 				MPI_Bcast(ptr, block, MPI_BYTE, 0, comm);
 			}
 
