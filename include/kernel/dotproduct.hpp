@@ -43,7 +43,7 @@ inline double dotp_sse(double const * xx, double const * yy, size_t const & coun
     __m128d acc4 = acc1;
 
     // compute the bulk
-    size_t max = count - 7;
+    size_t max = count & 0xFFFFFFFFFFFFFFF8;
     size_t k = 0;
     for (; k < max; k += 8) {
         a = _mm_loadu_pd(xx + k);
@@ -113,7 +113,7 @@ inline double dotp_avx(double const * xx, double const * yy, size_t const & coun
     __m256d acc4 = acc1;
 
     // compute the bulk
-    size_t max = count - 15;
+    size_t max = count & 0xFFFFFFFFFFFFFFF0;
     size_t k = 0;
     for (; k < max; k += 16) {
         a = _mm256_loadu_pd(xx + k);
@@ -186,7 +186,7 @@ inline double dotp_avx512(double const * xx, double const * yy, size_t const & c
     __m512d acc4 = acc1;
 
     // compute the bulk
-    size_t max = count - 31;
+    size_t max = count & 0xFFFFFFFFFFFFFFE0;
     size_t k = 0;
     for (; k < max; k += 32) {
         a = _mm512_loadu_pd(xx + k);
