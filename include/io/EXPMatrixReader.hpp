@@ -656,7 +656,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, ssi
 	// last[10] = 0;
 	// fprintf(stderr, "[%d] last line %s.\n", rank, last);
 
-	fprintf(stderr, "rank %d Number of gene expression profiles: %ld\n", rank, numVectors);
+	// fprintf(stderr, "rank %d Number of gene expression profiles: %ld\n", rank, numVectors);
 	fflush(stderr);
 	// allreduce
 	MPI_Allreduce(MPI_IN_PLACE, &numVectors, 1, MPI_INT, MPI_SUM, comm);
