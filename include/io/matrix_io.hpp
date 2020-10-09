@@ -214,3 +214,22 @@ void write_csv_matrix(std::string const & filename, std::vector<std::string> & r
 		data.print("matrix: ");
 	}
 };
+
+
+template <typename T>
+void write_csv_matrix_distributed(std::string const & filename, std::vector<std::string> & row_names, std::vector<std::string> & col_names,
+	splash::ds::aligned_matrix<T> const & data, MPI_Comm const & comm = MPI_COMM_WORLD) {
+	if (filename.length() > 0) {
+		// write to file.  MPI enabled.  Not thread enabled.
+		// ROOT_PRINT("name sizes: %lu, %lu\n", row_names.size(), col_names.size());
+		// ROOT_PRINT("outputing matrix size: %lu, %lu\n", data.rows(), data.columns());
+#ifdef USE_MPI
+		splash::io::MatrixWriter<T>::storeMatrixDistributed(filename, row_names, col_names, data, comm);
+#else
+		splash::io::MatrixWriter<T>::storeMatrixData(filename, row_names, col_names, data);
+#endif
+	} else {
+		// dump to console.  TODO: MPI
+		data.print("matrix: ");
+	}
+};

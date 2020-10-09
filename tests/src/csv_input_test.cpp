@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
     {	// NOTE: rank 0 writes out.
         stime = getSysTime();
             // write to file.  MPI enabled.  Not thread enabled.
-        write_csv_matrix(common_params.output, genes, samples, input);
+        write_csv_matrix_distributed(common_params.output, genes, samples, input);
         etime = getSysTime();
         ROOT_PRINT("dump input in %f sec\n", get_duration_s(stime, etime));
     }
