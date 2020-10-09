@@ -9,12 +9,47 @@
 
 #pragma once
 
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
 #include <unistd.h>  // sysconf, for getting cacheline size.
-#include <stdlib.h>  // aligned_alloc
+#endif
+
+#include <stdlib.h>  // aligned_alloc, posix_memalign
 #include <new>       // bad_alloc
 #include <exception>
 #include "utils/report.hpp"
 #include <cstring>
+
+
+/*
+ * NOTE:  mvapich intercepts memory allocation and free operations for registration with infiniband:  malloc, posix_memalign, and free.
+ *          mvapich2 2.3.3 and earlier does not intercept std c lib aligned_alloc.   but the free is intercepted.
+ *        the result is on free, we get a segv.
+ *        not clear if _mm_malloc and _mm_free is supported.
+ * 
+ *        OpenMPI does not perform this registration, and likely intel MPI does not.  both of which do not segv.
+ * 
+ * See https://github.com/QMCPACK/qmcpack/issues/1703
+ * 
+ * Proposed solutions include 
+ *      1. use compiler macro MVAPICH2_VERSION to change to using posix_memalign when necessary.
+ *      2. loading libc before libmpi (prevents interception).  This probably reduce performance.
+ *      3. switch to using posix_memalign everywhere.
+ * mvapich2 2.3.4 fixes this by including interceptor for aligned_alloc.  
+ *  http://mvapich.cse.ohio-state.edu/static/media/mvapich/MV2_CHANGELOG-2.3.4.txt
+ * 
+ * it's not clear that there are performance benefits for aligned_alloc or posix_memalign, so for mvapich2 we can just globally use posix_memalign.
+ * the concern is for non-posix systems.  2 methods are potentially universal:  aligned_alloc, and _mm_malloc.  so these are what we'll use.
+ * 
+ */
+#ifdef USE_MPI
+#include <mpi.h>   // need to see if we are using MVAPICH2. 
+
+#ifdef MVAPICH2_VERSION 
+#include <xmmintrin.h>   // if MVAPICH2, then use _mm_malloc, _mm_free
+#endif
+
+#endif
+
 
 namespace splash { namespace utils { 
 
@@ -40,7 +75,13 @@ inline size_t get_aligned_size(size_t const & bytes) {
 
 inline void afree(void* data) {
     if (data) {
+#if defined(MVAPICH2_VERSION)
+        // MVAPICH2 2.3.3 and earlier does not support aligned_alloc.  for cross platform, use _mm_free.
+        _mm_free(data);
+#else
+        // not using MVAPICH2 or not using MPI.  so use free
         free(data);
+#endif
     }
 }
 
@@ -56,7 +97,14 @@ inline void* aalloc(size_t const & bytes, size_t const & alignment) {
         // throw std::logic_error("aalloc with size == 0");
     }
 
-    void* data = aligned_alloc(alignment, splash::utils::get_aligned_size(bytes, alignment));
+    void * data;
+#if defined(MVAPICH2_VERSION)
+    // MVAPICH2 2.3.3 and earlier does not support aligned_alloc.  for cross platform, use _mm_malloc.
+    data = _mm_malloc(splash::utils::get_aligned_size(bytes, alignment), alignment);
+#else
+    // not using MVAPICH2 or not using MPI.  so use aligned_alloc.
+    data = aligned_alloc(alignment, splash::utils::get_aligned_size(bytes, alignment));
+#endif
     if (!data) {
         PRINT_ERR("%s:%d: Memory allocation failed\n", __FILE__, __LINE__);
         throw std::bad_alloc();
