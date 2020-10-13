@@ -15,6 +15,9 @@
 
 #include <cstring> // memset, memcpy
 
+#include "utils/report.hpp"
+#include "utils/benchmark.hpp"
+
 #ifdef USE_MPI
 #include <mpi.h>
 #include "utils/mpi_types.hpp"
@@ -172,6 +175,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         aligned_tiles sort_by_offsets() const {
             if (is_sorted_by_offsets()) return *this;
 
+            auto stime = getSysTime();
             // ====== first sort.
             std::vector<sort_elem> ids;
             ids.reserve(parts.size());
@@ -179,18 +183,30 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             for (size_t i = 0; i < parts.size(); ++i) {
                 ids.emplace_back(parts[i].r.offset, parts[i].c.offset, i, offsets[i] );
             }
+            auto etime = getSysTime();
+            ROOT_PRINT("sort: set up in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
 
             // sort the partitions
             std::stable_sort(ids.begin(), ids.end(), [](sort_elem const & a, sort_elem const & b){
                 return (a.r_offset == b.r_offset) ? (a.c_offset < b.c_offset) : (a.r_offset < b.r_offset);
             });
+            etime = getSysTime();
+            ROOT_PRINT("sort: sorted_ids in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
             
             // ======= now copy with reorder
             // PRINT_RT("aligned_tiles SORT ");
             aligned_tiles output(ids.size(), offsets.back(), _align);
             // PRINT_RT("aligned_tiles SORT DONE\n");
             // FLUSH();
+            etime = getSysTime();
+            ROOT_PRINT("sort: size_output in %f sec\n", get_duration_s(stime, etime));
 
+            stime = getSysTime();
+            
             size_type offset = 0;
             size_type s = 0;
             splash::utils::partition2D<size_type> part;
@@ -202,6 +218,8 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 memcpy(output._data + offset, _data + ids[i].ptr_offset, s * sizeof(T));
                 offset += s;
             }
+            etime = getSysTime();
+            ROOT_PRINT("sort: shuffled in %f sec\n", get_duration_s(stime, etime));
 
             return output;
         }
@@ -489,11 +507,18 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             MPI_Comm_size(comm, &procs);
             MPI_Comm_rank(comm, &rank);
 
+            auto stime = getSysTime();
+
             // -------- sort first.  we'd need things in order anyway.
             // PRINT_RT("aligned_tiles ROW_PARTITION sort ");
             aligned_tiles sorted = sort_by_offsets();
 
+            auto etime = getSysTime();
+            ROOT_PRINT("partition: sorted in %f sec\n", get_duration_s(stime, etime));
+
             if (procs == 1)  return sorted;
+
+            stime = getSysTime();
 
             // -------- aggregate the offsets
             int *upper_bounds = new int[procs]{};
@@ -511,7 +536,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             // PRINT_RT("aligned_tiles ROW_PARTITION sort DONE\n");
             // FLUSH();
             
-            // -------- get counts.  this should be faster than sorting first.
+            // -------- get counts.
             int * part_counts = new int[procs]{};
             int * part_offsets = new int[procs]{};
             int * elem_counts = new int[procs]{};
@@ -564,6 +589,11 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
 
             delete [] upper_bounds;
 
+            etime = getSysTime();
+            ROOT_PRINT("partition: count parts in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
+
             // ------ move counts
             int * recv_parts = new int[procs]{};
             int * recv_elems = new int[procs]{};
@@ -598,11 +628,19 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             //     PRINT_RT("%d ", recv_elem_offsets[i]);
             // }
             // PRINT_RT("]\n");
+            etime = getSysTime();
+            ROOT_PRINT("partition: a2a counts in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
 
             // --------- allocate
             // PRINT_RT("aligned_tiles ROW_PARTITION out ");
             aligned_tiles output(recv_part_offsets[procs], recv_elem_offsets[procs], _align);
             // PRINT_RT("aligned_tiles ROW_PARTITION out DONE\n");
+            etime = getSysTime();
+            ROOT_PRINT("partition: alloc out in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
 
             // -------- move parts by bytes
             splash::utils::mpi::datatype<splash::utils::partition2D<S>> part2d_dt;
@@ -613,6 +651,12 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             delete [] part_offsets;
             delete [] recv_parts;
             delete [] recv_part_offsets;
+
+            etime = getSysTime();
+            ROOT_PRINT("partition: move parts in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
+
             
             // -------- move data by bytes
             splash::utils::mpi::datatype<T> t_dt;
@@ -624,12 +668,20 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             delete [] recv_elems;
             delete [] recv_elem_offsets;
             
+            etime = getSysTime();
+            ROOT_PRINT("partition: move elem in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
             // -------- reconstruct offsets
             S offset = 0;
             for (size_t i = 0; i < output.parts.size(); ++i) {
                 output.offsets[i] = offset;
                 offset += output.parts[i].r.size * output.parts[i].c.size;
             }
+
+            etime = getSysTime();
+            ROOT_PRINT("partition: reconstruct offset in %f sec\n", get_duration_s(stime, etime));
+
             return output;
         }
 #else   
