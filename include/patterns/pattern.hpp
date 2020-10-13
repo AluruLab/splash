@@ -964,13 +964,20 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             tiles_type all_tiles;
             if (SYMMETRIC) all_tiles = tiles.reflect_diagonally();
             else all_tiles = std::move(tiles);
+            auto etime = getSysTime();
+	        ROOT_PRINT("Reflected partition in %f sec\n", get_duration_s(stime, etime));
+
+	        stime = getSysTime();
 
             // PRINT_RT("[pearson ROW_PARTITION] ");
             tiles_type parted_tiles = all_tiles.row_partition(row_part);
             // PRINT_RT("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.size(), transposed.size(), all_tiles.size(), parted_tiles.size());
             // PRINT_RT("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.allocated(), transposed.allocated(), all_tiles.allocated(), parted_tiles.allocated());
             // parted_tiles.print("PARTED TILES: ");
+            etime = getSysTime();
+	        ROOT_PRINT("Partitioned tiles in %f sec\n", get_duration_s(stime, etime));
 
+	        stime = getSysTime();
             // get actual bounds.  set up first for MPI.
             part2D_type bounds = parted_tiles.get_bounds();
 // #else
@@ -981,17 +988,20 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
 
             assert((output.rows() >= bounds.r.size) && "Output rows have to be at least equal to the bounds row size" );
             output.resize(bounds.r.size, input2.rows());
+
+            etime = getSysTime();
+	        ROOT_PRINT("Resized output in %f sec\n", get_duration_s(stime, etime));
+
+	        stime = getSysTime();
+
+
 	        parted_tiles.copy_to(output, bounds.r.offset, 0);
             // TODO: fix copy to - we are partitioning rows equally and allocating output in the same way.
             //       however, a tile may straddle a boundary since we partition the tiles by offset and do not split tiles.
             // the output size needs to be allocated after tile partitioning to get the bounds properly.
 	
-        	auto etime = getSysTime();
-#ifdef USE_MPI
-            if (procs > 1)
-                MPI_Barrier(MPI_COMM_WORLD);
-#endif
-	        ROOT_PRINT("Reorder tiles in %f sec\n", get_duration_s(stime, etime));
+        	etime = getSysTime();
+	        ROOT_PRINT("Copied tiles in %f sec\n", get_duration_s(stime, etime));
         }
 
 };
