@@ -294,8 +294,9 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
 
     protected:
         // FULL INPUT.
-        void operator()(InputType const & input, part1D_type part, Op const & _op, OutputType & output) const {
-            assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
+        void operator()(InputType const & input, part1D_type const & part, 
+            Op const & _op, OutputType & output, part1D_type const & out_part) const {
+            assert((out_part.size == part.size)  && "Transform requires output and input to have same number of rows.");
 
             // split the input amongst the processors.
 
@@ -318,12 +319,14 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 // ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
                 part1D_type omp_tile_parts = partitioner.get_partition(part, threads, thread_id);
+                part1D_type omp_out_part = partitioner.get_partition(out_part, threads, thread_id);
                 // omp_tile_parts.print("OMP TRANSFORM TILES: ");
 
                 // iterate over rows.
                 size_t rid = omp_tile_parts.offset;
-                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
-                    op(input.data(rid),  input.columns(), output.data(rid));
+                size_t orid = omp_out_part.offset;
+                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid, ++orid) {
+                    op(input.data(rid),  input.columns(), output.data(orid));
                 }
 
 #ifdef USE_OPENMP
@@ -336,7 +339,8 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
     
     public:
         void operator()(InputType const & input, Op const & _op, OutputType & output) const {
-            this->operator()(input, part1D_type(0, input.rows(), 0), _op, output);
+            part1D_type rows = part1D_type(0, input.rows(), 0);
+            this->operator()(input, rows, _op, output, rows);
         }
 };
 
@@ -374,7 +378,6 @@ class GlobalTransform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_ma
 
         // FULL INPUT.
         void operator()(InputType const & input, Op const & _op, OutputType & output) const {
-            assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
 
             // split the input amongst the processors.
 
@@ -382,10 +385,11 @@ class GlobalTransform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_ma
             part1D_type mpi_tile_parts = partitioner.get_partition(input.rows(), procs, rank );
 
             // ---- parallel compute
-            basetype::operator()(input, mpi_tile_parts, _op, output);
+            output.resize(mpi_tile_parts.size, input.columns());
+            basetype::operator()(input, mpi_tile_parts, _op, output, part1D_type(0, mpi_tile_parts.size, 0));
 
-            // ----- allgather in place. 
-            output.allgather_inplace(mpi_tile_parts);
+            // // ----- allgather in place. 
+            // output.allgather_inplace(mpi_tile_parts);
 
             // allreduce
             splash::utils::mpi::datatype<size_t> dt;
@@ -400,7 +404,7 @@ class GlobalTransform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_ma
 template <typename IN, typename IN2, typename Op, typename OUT>
 class BinaryOp;
 
-// FIX: [ ] non determinism, and at times segv.
+// this is COMPLETELY LOCAL
 template <typename IT, typename IT2, typename Op, typename OT>
 class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, Op, splash::ds::aligned_matrix<OT>> :
     public OpBase {
@@ -414,12 +418,11 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
         using InputType2 = splash::ds::aligned_matrix<IT2>;
         using OutputType = splash::ds::aligned_matrix<OT>;
 
-    protected:
         // FULL INPUT.
-        void operator()(InputType const & input, InputType2 const & input2, part1D_type part, Op const & _op, OutputType & output) const {
-            assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
-
-            // split the input amongst the processors.
+        void operator()(InputType const & input, part1D_type const & in_part, 
+            InputType2 const & input2, part1D_type const & in2_part,
+            Op const & _op, OutputType & output, part1D_type const & out_part) const {
+            assert((out_part.size == in_part.size) && (out_part.size == in2_part.size) && "Transform requires output and input to have same number of rows.");
 
             // ---- parallel compute
             size_t count = 0;
@@ -439,13 +442,17 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 // ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
-                part1D_type omp_tile_parts = partitioner.get_partition(part, threads, thread_id);
+                part1D_type omp_in_part = partitioner.get_partition(in_part, threads, thread_id);
+                part1D_type omp_in2_part = partitioner.get_partition(in2_part, threads, thread_id);
+                part1D_type omp_out_part = partitioner.get_partition(out_part, threads, thread_id);
                 // omp_tile_parts.print("OMP BINARY_OP TILES: ");
 
                 // iterate over rows.
-                size_t rid = omp_tile_parts.offset;
-                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
-                    op(input.data(rid), input2.data(rid), input.columns(), output.data(rid));
+                size_t rid = omp_in_part.offset;
+                size_t rid2 = omp_in2_part.offset;
+                size_t orid = omp_out_part.offset;
+                for (size_t i = 0; i < omp_out_part.size; ++i, ++rid, ++rid2, ++orid) {
+                    op(input.data(rid), input2.data(rid2), input.columns(), output.data(orid));
                 }
 
 #ifdef USE_OPENMP
@@ -455,19 +462,18 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
             }
             this->processed = count;
         }
-    
-    public:
+
         void operator()(InputType const & input, InputType2 const & input2, Op const & _op, OutputType & output) const {
-            this->operator()(input, input2, part1D_type(0, input.rows(), 0), _op, output);
+            part1D_type rows = part1D_type(0, input.rows(), 0);
+            this->operator()(input, rows, input2, rows, _op, output, rows);
         }
 };
 
 
-// Transform each element individually.  same dimensionality.
+// Transform each element individually.  input and output output distriibuted.
 template <typename IN, typename IN2, typename Op, typename OUT>
 class GlobalBinaryOp;
 
-// FIX: [ ] non determinism, and at times segv.
 template <typename IT, typename IT2, typename Op, typename OT>
 class GlobalBinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, Op, splash::ds::aligned_matrix<OT>> :
  public splash::pattern::BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, Op, splash::ds::aligned_matrix<OT>> {
@@ -498,18 +504,18 @@ class GlobalBinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<
 
         // FULL INPUT.
         void operator()(InputType const & input, InputType2 const & input2, Op const & _op, OutputType & output) const {
-            assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
 
             // split the input amongst the processors.
 
             // ---- MPI partitioning.  row by row.
-            part1D_type mpi_tile_parts = partitioner.get_partition(input.rows(), procs, rank );
+            part1D_type input_rows = partitioner.get_partition(input.rows(), procs, rank );
 
             // ---- parallel compute
-            basetype::operator()(input, input2, mpi_tile_parts, _op, output);
+            output.resize(input_rows.size, input.columns());
+            basetype::operator()(input, input_rows, input2, input_rows, _op, output, part1D_type(0, input_rows.size, 0));
 
-            // ----- allgather in place. 
-            output.allgather_inplace(mpi_tile_parts);
+            // // ----- allgather in place. 
+            // output.allgather_inplace(mpi_tile_parts);
 
             // allreduce
             splash::utils::mpi::datatype<size_t> dt;
@@ -563,7 +569,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             assert((output.columns() == input.columns())  && "Transform requires output and input to have same number of columns.");
 
             // for now, require symmetry.
-            assert((input.rows() == input.columns())  && "Transform requires output and input to be symmetric.");
+            // assert((input.rows() == input.columns())  && "Transform requires output and input to be symmetric.");
 
 
             // first perform a row-wise reduction
@@ -653,7 +659,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             this->processed = count;
 
             // ----- allgather in place. 
-            output.allgather_inplace(mpi_tile_parts);
+            // output.allgather_inplace(mpi_tile_parts);
 
             // allreduce
             splash::utils::mpi::datatype<size_t> dt;
@@ -781,6 +787,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
             return output;
         }
 
+        // compute for only tiles specified in the output.
         void operator()(InputType const & input1, InputType const & input2, std::vector<Op> const & _ops, OutputType & tiles) const {
             
             // OpenMP stuff.
@@ -904,6 +911,61 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
 
         }
 
+        void copy_to_distributed_matrix(tiles_type const & tiles,
+            splash::ds::aligned_matrix<OT> & output,
+            part1D_type const & row_part, size_t const & cols) const {
+
+        	// ============= repartition output
+	        auto stime = getSysTime();
+            // transpose if needed
+            tiles_type all_tiles;
+            if (SYMMETRIC) all_tiles = tiles.reflect_diagonally();
+            else all_tiles = std::move(tiles);
+            auto etime = getSysTime();
+	        ROOT_PRINT("Reflected tiles in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
+            MPI_Barrier(MPI_COMM_WORLD);
+            etime = getSysTime();
+            MIN_MAX_DOUBLE_PRINT("PV2M Barrier before partition (s):", get_duration_s(stime, etime));
+
+            // partition tiles by row
+	        stime = getSysTime();
+            tiles_type parted_tiles;
+            if (this->procs == 1)
+                parted_tiles = std::move(all_tiles);
+            else
+                parted_tiles = all_tiles.row_partition(row_part);
+            etime = getSysTime();
+	        ROOT_PRINT("Partitioned tiles in %f sec\n", get_duration_s(stime, etime));
+
+            stime = getSysTime();
+            MPI_Barrier(MPI_COMM_WORLD);
+            etime = getSysTime();
+            MIN_MAX_DOUBLE_PRINT("PV2M Barrier after partition (s):", get_duration_s(stime, etime));
+
+
+            // rows are partitioned equally, but a tile may cross that partition boundary.
+            // for output allocation we want the actual offset and range.
+	        stime = getSysTime();
+            // get actual bounds.
+            part1D_type bounds;
+            if (this->procs == 1)
+                bounds = row_part;
+            else 
+                bounds = parted_tiles.get_bounds().r;
+            output.resize(bounds.size, cols);
+            etime = getSysTime();
+	        ROOT_PRINT("Resized output in %f sec\n", get_duration_s(stime, etime));
+
+            // copy the tiles to matrix
+	        stime = getSysTime();
+	        parted_tiles.copy_to(output, bounds.offset, 0);	
+        	etime = getSysTime();
+	        ROOT_PRINT("Copied tiles in %f sec\n", get_duration_s(stime, etime));
+
+        }
+
 };
 
 
@@ -949,59 +1011,11 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matri
             tiles_type tiles = delegate(input1, input2, _op); // delegate computes and return the tiles.
             this->processed = delegate.processed;
 
-        	// ============= repartition output
-	        auto stime = getSysTime();
+            // get the partition
+            part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
+            // re-parttition and copy the tiles to the output matrix.  result is row_part.size x columns.
 
-            // tiles.get_bounds().print("TILES BOUNDS: ");
-            // PRINT_RT("TILES COUNT: %lu\n", tiles.size());
-            // tiles.print("TILES: ");
-
-        	part1D_type row_part = partitioner.get_partition(input1.rows(), this->procs, this->rank);
-            // row_part.print("ROW PARTITIONS: ");
-            // // with transpose.
-            // tiles_type transposed = tiles.transpose();
-            // tiles_type all_tiles = tiles.merge(transposed);
-            tiles_type all_tiles;
-            if (SYMMETRIC) all_tiles = tiles.reflect_diagonally();
-            else all_tiles = std::move(tiles);
-            auto etime = getSysTime();
-	        ROOT_PRINT("Reflected partition in %f sec\n", get_duration_s(stime, etime));
-
-	        stime = getSysTime();
-
-            // PRINT_RT("[pearson ROW_PARTITION] ");
-            tiles_type parted_tiles = all_tiles.row_partition(row_part);
-            // PRINT_RT("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.size(), transposed.size(), all_tiles.size(), parted_tiles.size());
-            // PRINT_RT("[DEBUG] Tiles: %ld + %ld = %ld, partitioned %ld\n", tiles.allocated(), transposed.allocated(), all_tiles.allocated(), parted_tiles.allocated());
-            // parted_tiles.print("PARTED TILES: ");
-            etime = getSysTime();
-	        ROOT_PRINT("Partitioned tiles in %f sec\n", get_duration_s(stime, etime));
-
-	        stime = getSysTime();
-            // get actual bounds.  set up first for MPI.
-            part2D_type bounds = parted_tiles.get_bounds();
-// #else
-//  		bounds = part2D_type(part1D_type(0, input1.rows(), 0), part1D_type(0, input2.columns(), 0), 0, 1); 
-// #endif
-            // bounds.print("REPARTED BOUNDS: ");
-            // PRINT_RT("REPARTED COUNT: %lu\n", parted_tiles.size());
-
-            assert((output.rows() >= bounds.r.size) && "Output rows have to be at least equal to the bounds row size" );
-            output.resize(bounds.r.size, input2.rows());
-
-            etime = getSysTime();
-	        ROOT_PRINT("Resized output in %f sec\n", get_duration_s(stime, etime));
-
-	        stime = getSysTime();
-
-
-	        parted_tiles.copy_to(output, bounds.r.offset, 0);
-            // TODO: fix copy to - we are partitioning rows equally and allocating output in the same way.
-            //       however, a tile may straddle a boundary since we partition the tiles by offset and do not split tiles.
-            // the output size needs to be allocated after tile partitioning to get the bounds properly.
-	
-        	etime = getSysTime();
-	        ROOT_PRINT("Copied tiles in %f sec\n", get_duration_s(stime, etime));
+            delegate.copy_to_distributed_matrix(tiles, output, row_part, input2.rows());
         }
 
 };
