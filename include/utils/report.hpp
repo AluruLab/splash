@@ -237,6 +237,21 @@ std::unordered_map<int, std::unordered_map<FILE *, buffered_printf>> buffered_pr
     } \
 } while(false)
 
+#define MIN_MAX_DOUBLE_PRINT(prefix, val) do {\
+    double v = val; \
+    double mx = val; \
+    double mn = val; \
+    MPI_Reduce(&v, &mx, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD); \
+    MPI_Reduce(&v, &mn, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD); \
+    GET_RANK(); \
+    if (___bp__rank == 0) {\
+        GET_THREAD_ID(); \
+        BUFFERED_PRINT(___bp__tid, stdout, "%s [%f - %f]\n", prefix, mn, mx); \
+        buffered_printf::get_instance(___bp__tid, stdout).flush(); \
+    } \
+} while(false)
+
+
 #define PRINT(...) fprintf(stdout, __VA_ARGS__)
 
 #define FLUSH() do { fflush(stdout); fflush(stderr); } while(false)
