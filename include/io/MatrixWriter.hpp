@@ -163,7 +163,7 @@ public:
 
         size_t offset = input.rows();
         MPI_Exscan(MPI_IN_PLACE, &offset, 1, MPI_UNSIGNED_LONG, MPI_SUM, comm);
-
+        if (rank == 0) offset = 0;
 
         std::string data;
         {
@@ -203,6 +203,7 @@ public:
         offset = 0;
         // do some counts.
         MPI_Exscan(&lsize, &offset, 1, MPI_UNSIGNED_LONG, MPI_SUM, comm);
+        if (rank == 0) offset = 0;
 
         // PRINT_RT("MPI_IO writing %lu bytes, starting at %lu\n", lsize, offset);
 
