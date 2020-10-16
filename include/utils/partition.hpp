@@ -436,7 +436,6 @@ class partitioner2D<PARTITION_FIXED> {
 // ------------- additional partition filters.  
 
 
-
 class upper_triangle_filter {
     protected:
         template <typename T>
@@ -491,25 +490,36 @@ class upper_triangle_filter {
 };
 
 
+// IMPORTANT ASSUMPTION: WIDTH >= HEIGHT
 class banded_diagonal_filter {
     // columns is even or odd, need columns/2 +1 per row.
-    // 2x2 tile matrix would result in nothing filtered.
+    // with even number of columns, a little less than full band.
     protected:
+        // linear id is by row.
         template <typename T>
         inline T get_linear_id(T const & r, T const & c, T const & w, T const & bw) const {
-            // shifted by -r.  then shift by w to make all positive, then % w to restrict to [0, w)
-            T c_id = (c + w - (r + off_diag)) % w;
+            // do some checks.  ASSUMPTION: height < width
+            if (r >= w) PRINT_RT("ERROR: row id exceed width (==height): %ld >= %ld\n", r, w);
+            if (c >= w) PRINT_RT("ERROR: col id exceed width: %ld >= %ld\n", c, w);
 
-            T id = ((c_id < 0) || (c_id >= bw)) ? -1 : (r * bw + c_id);
+            // shifted by -r.  then shift by w to make all positive, then % w to restrict to [0, w)
+            // this converts column id to relative to the off-diagonal (0 if main diagonal)
+            T c_id = (c + w + w - (r + off_diag)) % w;  // assuming off_diag < w, this is positive.  2 w, 1 each for r and off-diag.
+            
+            T diag_id = c_id * w + r;  // diagonal first id.  ASSUMES height == w.
+            T mx = w * (w + 1) / 2;  // again, assume square.  1/2 of all off-diag, + diag.
+            T id = r * bw + c_id;
+            id = (diag_id < mx) ? id : -1;
 
             // PRINT_RT("r, c->cid = %ld, %ld->%ld, id = %ld\n", r, c, c_id, id);
             return id;
         }
-        size_t band_width;
+
+        int64_t band_width;
         int64_t off_diag;
 
     public:
-        banded_diagonal_filter(size_t const & _band_width = 0, 
+        banded_diagonal_filter(int64_t const & _band_width = std::numeric_limits<int64_t>::max(), 
             int64_t const & _dist_from_diag = 0) : band_width(_band_width), off_diag(_dist_from_diag) {}
 
         template <typename ST>
@@ -524,14 +534,19 @@ class banded_diagonal_filter {
             id_type id = 0;
             // if even, need 1 + cols/2 in order to cover full matrix
             id_type w = parts.front().id_cols;
-            id_type bw = (band_width == 0) ? (w / 2 + 1) : band_width;
+
+            id_type bw = (w / 2 + 1);
+            bw = std::min(static_cast<id_type>(this->band_width), bw);
             ROOT_PRINT("Banded Diagnonal Filter for tiles: width = %ld,  bandwidth = %ld\n", w, bw);
+
+            if (this->off_diag >= w) PRINT_RT("ERROR: diagonal offset exceed width: %ld >= %ld\n", this->off_diag, w);
             
             for (auto part : parts) {
                 id = get_linear_id(part.r.id, part.c.id, w, bw);
                 if (id >= 0) {
                     selected.push_back(part);
                     selected.back().id = id;
+                    selected.back().print("[TEST]");
                 }
             }
             return selected;
@@ -543,15 +558,17 @@ class banded_diagonal_filter {
             partition2D<ST> output;
             using id_type = typename partition2D<ST>::id_type;
             id_type w = part.front().id_cols;
-            id_type bw = (band_width == 0) ? (w / 2 + 1) : band_width;
+
+            if (this->off_diag >= w) PRINT_RT("ERROR: diagonal offset exceed width: %ld >= %ld\n", this->off_diag, w);
+
+            id_type bw = (w / 2 + 1);
+            bw = std::min(static_cast<id_type>(this->band_width), bw);
+
             auto id = get_linear_id(part.r.id, part.c.id, w, bw);
-            
             if (id >= 0) {
                 output = part;
-                output.id = id;
-            } else {
-                output.id = -1;
             }
+            output.id = id;
             return output;
         }
 };
