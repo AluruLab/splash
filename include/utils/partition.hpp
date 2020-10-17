@@ -107,13 +107,13 @@ class partitioner1D<PARTITION_EQUAL> {
     public:
         // ------------ block partition a 1D range.
         template <typename ST>
-        inline std::vector<partition<ST>> divide(ST const & total, int const & parts) const {
+        inline std::vector<partition<ST>> divide(ST const & total, ST const & parts) const {
             return divide(partition<ST>(0, total, 0), parts);
         }
 
         // partitions the given partition.  advance the offset, but does minimal with the id and parts.
         template <typename ST>
-        inline std::vector<partition<ST>> divide(partition<ST> const & src, int const & parts) const {
+        inline std::vector<partition<ST>> divide(partition<ST> const & src, ST const & parts) const {
             ST block = src.size / parts;
             ST remainder = src.size - block * parts;
 

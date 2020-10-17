@@ -368,7 +368,8 @@ class aligned_matrix {
             int *counts = nullptr;
             int *offsets = nullptr;
             if (rank == src_rank) {
-                std::vector<splash::utils::partition<size_type>> parts = partitioner.divide(_rows, procs);
+                std::vector<splash::utils::partition<size_type>> parts = 
+                    partitioner.divide(_rows, static_cast<size_type>(procs));
 
                 counts = new int[procs];
                 offsets = new int[procs];
