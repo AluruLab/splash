@@ -546,7 +546,7 @@ class banded_diagonal_filter {
                 if (id >= 0) {
                     selected.push_back(part);
                     selected.back().id = id;
-                    selected.back().print("[TEST]");
+                    // selected.back().print("[TEST]");
                 }
             }
             return selected;
