@@ -63,6 +63,48 @@ splash::ds::aligned_matrix<T> make_random_matrix(
 };
 
 template <typename T, typename S>
+splash::ds::aligned_matrix<T> make_random_matrix_distributed(
+	long const & seed, T const & rmin, T const & rmax,
+	S const & rows, S const & cols,
+	std::vector<std::string> & row_names, std::vector<std::string> & col_names
+) {
+	// random generate data.   output: every proc has full data.
+	// OMP compatible, rows per thread.  MPI compatible, rows per proc.
+	splash::kernel::random_number_generator<> generators(seed);
+	splash::kernel::UniformRandomMatrixGenerator<T> mat_gen(generators, rmin, rmax);
+
+	// split by proc
+	splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
+
+	int procs = 1;
+	int rank = 0;
+
+#ifdef USE_MPI
+	MPI_Comm_size(MPI_COMM_WORLD, &procs);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif 
+
+	splash::utils::partition<S> part = partitioner.get_partition(rows, procs, rank);
+	part.print("random: ");
+
+	// allocate input.
+	splash::ds::aligned_matrix<T> input(part.size, cols);
+
+	mat_gen(input);
+
+	row_names.resize(rows);
+	for (size_t i = 0; i < rows; ++i) {
+		row_names[i] = std::to_string(i);
+	}
+	col_names.resize(cols);
+	for (size_t i = 0; i < cols; ++i) {
+		col_names[i] = std::to_string(i);
+	}
+
+	return input;
+};
+
+template <typename T, typename S>
 splash::ds::aligned_matrix<T> read_exp_matrix(std::string const & filename, S & rows, S & cols,
 	std::vector<std::string> & genes, std::vector<std::string> & samples, bool skip = false) {
 	ssize_t nvecs;
@@ -111,6 +153,40 @@ splash::ds::aligned_matrix<T> read_exp_matrix_fast(std::string const & filename,
 
 	return input;
 };
+
+// template <typename T, typename S>
+// splash::ds::aligned_matrix<T> read_exp_matrix_distributed(std::string const & filename, S & rows, S & cols,
+// 	std::vector<std::string> & genes, std::vector<std::string> & samples,
+// 	int const & atof_type = 1, bool skip = false
+// ) {
+// 	ssize_t nvecs = std::numeric_limits<ssize_t>::max();
+// 	ssize_t vecsize = std::numeric_limits<ssize_t>::max();
+	
+// 	// read file to get size (HAVE TO DO 2 PASS to get size.)
+// 	// MPI compatible, not OpenMP enabled.
+// 	splash::io::EXPMatrixReader2<T> reader(filename.c_str(), atof_type);
+// 	reader.getMatrixSize(nvecs, vecsize, skip);
+
+// 	// get the minimum array size.
+// 	rows = (rows > 0) ? std::min(static_cast<S>(nvecs), rows) : nvecs;
+// 	cols = (cols > 0) ? std::min(static_cast<S>(vecsize), cols) : vecsize;
+
+// #ifdef USE_MPI
+// 	MPI_Comm_size(MPI_COMM_WORLD, &procs);
+// 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+// #endif 
+
+// 	splash::utils::partition<S> part = partitioner.get_partition(rows, procs, rank);
+
+
+// 	// allocate the data
+// 	splash::ds::aligned_matrix<T> input(part.size, cols);
+
+// 	// now read the data.  // MPI compatible, not OpenMP enabled.
+// 	reader.loadMatrixData(genes, samples, input, skip);
+
+// 	return input;
+// };
 
 template <typename T>
 void write_exp_matrix(std::string const & filename, std::vector<std::string> & row_names, std::vector<std::string> & col_names,
@@ -188,6 +264,33 @@ splash::ds::aligned_matrix<T> read_csv_matrix_fast(std::string const & filename,
 
 	return input;
 };
+
+
+// template <typename T, typename S>
+// splash::ds::aligned_matrix<T> read_csv_matrix_distributed(std::string const & filename, S & rows, S & cols,
+// 	std::vector<std::string> & genes, std::vector<std::string> & samples,
+// 	int const & atof_type = 1
+// ) {
+// 	ssize_t nvecs = std::numeric_limits<ssize_t>::max();
+// 	ssize_t vecsize = std::numeric_limits<ssize_t>::max();
+	
+// 	// read file to get size (HAVE TO DO 2 PASS to get size.)
+// 	// MPI compatible, not OpenMP enabled.
+// 	splash::io::CSVMatrixReader2<T> reader(filename.c_str(), atof_type);
+// 	reader.getMatrixSize(nvecs, vecsize);
+
+// 	// get the minimum array size.
+// 	rows = (rows > 0) ? std::min(static_cast<S>(nvecs), rows) : nvecs;
+// 	cols = (cols > 0) ? std::min(static_cast<S>(vecsize), cols) : vecsize;
+
+// 	// allocate the data
+// 	splash::ds::aligned_matrix<T> input(rows, cols);
+
+// 	// now read the data.  // MPI compatible, not OpenMP enabled.
+// 	reader.loadMatrixData(genes, samples, input);
+
+// 	return input;
+// };
 
 
 template <typename T>
