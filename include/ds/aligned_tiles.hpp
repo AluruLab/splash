@@ -585,7 +585,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             aligned_tiles sorted = sort_by_offsets();
 
             auto etime = getSysTime();
-            PRINT_RT("partition: sorted in %f sec\n", get_duration_s(stime, etime));
+            // ROOT_PRINT("partition: sorted in %f sec\n", get_duration_s(stime, etime));
 
             if (procs == 1)  return sorted;
 
@@ -661,7 +661,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             delete [] upper_bounds;
 
             etime = getSysTime();
-            PRINT_RT("partition: count _parts in %f sec\n", get_duration_s(stime, etime));
+            // ROOT_PRINT("partition: count _parts in %f sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -700,7 +700,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             // }
             // PRINT_RT("]\n");
             etime = getSysTime();
-            PRINT_RT("partition: a2a counts in %f sec\n", get_duration_s(stime, etime));
+            // ROOT_PRINT("partition: a2a counts in %f sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -709,7 +709,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             aligned_tiles output(recv_part_offsets[procs], recv_elem_offsets[procs], _align);
             // PRINT_RT("aligned_tiles ROW_PARTITION out DONE\n");
             etime = getSysTime();
-            PRINT_RT("partition: alloc out in %f sec\n", get_duration_s(stime, etime));
+            // ROOT_PRINT("partition: alloc out in %f sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -724,7 +724,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             delete [] recv_part_offsets;
 
             etime = getSysTime();
-            PRINT_RT("partition: move _parts in %f sec\n", get_duration_s(stime, etime));
+            // ROOT_PRINT("partition: move _parts in %f sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -740,7 +740,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             delete [] recv_elem_offsets;
             
             etime = getSysTime();
-            PRINT_RT("partition: move elem in %f sec\n", get_duration_s(stime, etime));
+            // ROOT_PRINT("partition: move elem in %f sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
             // -------- reconstruct offsets
@@ -751,7 +751,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             }
 
             etime = getSysTime();
-            PRINT_RT("partition: reconstruct offset in %f sec\n", get_duration_s(stime, etime));
+            // ROOT_PRINT("partition: reconstruct offset in %f sec\n", get_duration_s(stime, etime));
 
             return output;
         }

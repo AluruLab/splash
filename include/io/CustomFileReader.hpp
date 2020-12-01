@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "utils/report.hpp"
 using namespace std;
 
 #ifdef COMPRESSED_INPUT
@@ -68,7 +69,7 @@ public:
 		_fileBufferSentinel = 0;
 		_fileBufferLength = 0;
 		if (_fileBufferR == NULL) {
-			fprintf(stderr, "Memory allocation failed in file %s in line %d\n",
+			PRINT_RT("ERROR: Memory allocation failed in file %s in line %d\n",
 					__FUNCTION__, __LINE__);
 			exit(-1);
 		}
@@ -99,7 +100,7 @@ public:
 				*bufferSize = *buffer != NULL ? *bufferSize * 2 : (1 << 11);
 				*buffer = (char*) realloc(*buffer, *bufferSize);
 				if (!*buffer) {
-					fprintf(stderr, "Memory reallocation failed (%ld)\n",
+					PRINT_RT("ERROR: Memory reallocation failed (%ld)\n",
 							*bufferSize * 2);
 					exit(-1);
 				}
@@ -116,7 +117,7 @@ public:
 			*bufferSize = length + 1;
 			*buffer = (char*) malloc(*bufferSize * sizeof(char));
 			if (!*buffer) {
-				fprintf(stderr, "Memory reallocation failed (%ld)\n",
+				PRINT_RT("ERROR: Memory reallocation failed (%ld)\n",
 						*bufferSize * 2);
 				exit(-1);
 			}
@@ -143,13 +144,13 @@ public:
 		if (!fileName) {
 			_fp = myopenstdin(mode);
 			if (!_fp) {
-				fprintf(stderr, "Failed to open STDIN\n");
+				PRINT_RT("ERROR: Failed to open STDIN\n");
 				exit(-1);
 			}
 		} else {
 			_fp = myfopen(fileName, mode);
 			if (!_fp) {
-				fprintf(stderr, "Failed to open file: %s\n", fileName);
+				PRINT_RT("ERROR: Failed to open file: %s\n", fileName);
 				exit(-1);
 			}
 		}
@@ -176,7 +177,7 @@ public:
 				if (myfeof(_fp)) {
 					return -1;
 				} else {
-					fprintf(stderr, "File reading failed in function %s line %d\n",
+					PRINT_RT("ERROR: File reading failed in function %s line %d\n",
 							__FUNCTION__, __LINE__);
 					exit(-1);
 				}
@@ -189,7 +190,7 @@ public:
 		if (_fileBufferSentinel >= 0) {
 			_fileBuffer[--_fileBufferSentinel] = ch;
 		} else {
-			fprintf(stderr, "Two consecutive ungetc operations occurred\n");
+			PRINT_RT("ERROR: Two consecutive ungetc operations occurred\n");
 			return -1; /*an error occurred, return end-of-file marker*/
 		}
 		return ch;

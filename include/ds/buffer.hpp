@@ -1,4 +1,5 @@
 #pragma once
+#include "utils/report.hpp"
 
 namespace splash { namespace ds {
 
@@ -10,7 +11,7 @@ struct buffer {
 
         buffer() : data(nullptr), count(0) {
 // #ifdef USE_OPENMP
-// 			fprintf(stdout, "construct BUFFER, thread %d\n", omp_get_thread_num());
+// 			PRINT_RT("construct BUFFER, thread %d\n", omp_get_thread_num());
 // #endif  
 		}
 		~buffer() {

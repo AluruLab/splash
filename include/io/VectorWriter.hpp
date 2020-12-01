@@ -16,6 +16,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include "utils/report.hpp"
 
 namespace splash { namespace io { 
 
@@ -61,7 +62,7 @@ public:
         std::ofstream ofs;
         ofs.open(fileName);
         if (! ofs.is_open()) {
-            fprintf(stderr, "Failed to open file %s\n", fileName.c_str());
+            PRINT_RT("ERROR: Failed to open file %s\n", fileName.c_str());
             return false;
         }
 
@@ -84,7 +85,7 @@ public:
 
         ofs.close();
         auto etime = getSysTime();
-        fprintf(stderr, "Wrote file %s in %f sec\n", fileName.c_str(), get_duration_s(stime, etime));
+        ROOT_PRINT("Wrote file %s in %f sec\n", fileName.c_str(), get_duration_s(stime, etime));
 
         return true;
 

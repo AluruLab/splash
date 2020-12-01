@@ -11,6 +11,8 @@
 
 #include <algorithm>  // find, find_if
 
+#include "utils/report.hpp"
+
 // #include "utils/benchmark.hpp"
 // #include "utils/report.hpp"
 
@@ -101,7 +103,7 @@ class char_array_stl {
 			// update the output and buffer sizes.
 			output.size = std::distance(output.ptr, ptr);
 			size -= output.size;
-			// printf("extract_token: %lu\n", output.size);
+			// ROOT_PRINT("extract_token: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -125,7 +127,7 @@ class char_array_stl {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// printf("trim_left_1: %lu\n", output.size);
+			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -140,7 +142,7 @@ class char_array_stl {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// printf("trim_left_1: %lu\n", output.size);
+			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("trim_left_1 in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -288,7 +290,7 @@ class char_array_hybrid {
 			// update the output and buffer sizes.
 			output.size = std::distance(output.ptr, ptr);
 			size -= output.size;
-			// printf("extract_token: %lu\n", output.size);
+			// ROOT_PRINT("extract_token: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -312,7 +314,7 @@ class char_array_hybrid {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// printf("trim_left_1: %lu\n", output.size);
+			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -327,7 +329,7 @@ class char_array_hybrid {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// printf("trim_left_1: %lu\n", output.size);
+			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("trim_left_1 in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -469,7 +471,7 @@ class char_array_loop {
 			size -= i;
 			output.size = i;
 
-			// printf("extract_token: %lu\n", output.size);
+			// ROOT_PRINT("extract_token: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -493,7 +495,7 @@ class char_array_loop {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// printf("trim_left_1: %lu\n", output.size);
+			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -508,7 +510,7 @@ class char_array_loop {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// printf("trim_left_1: %lu\n", output.size);
+			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("trim_left_1 in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -654,7 +656,7 @@ class char_array_template {
 			size -= i;
 			output.size = i;
 
-			// printf("extract_token: %lu\n", output.size);
+			// ROOT_PRINT("extract_token: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
 			return output;
@@ -676,7 +678,7 @@ class char_array_template {
 				size -= output.size;
 				ptr += output.size;
 			}
-			// printf("trim_left_1: %lu\n", output.size);
+			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
 			// auto etime = getSysTime();	
 			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
 			return output;

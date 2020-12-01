@@ -46,7 +46,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
             // size_t gap = end - start;
             // size_t block = k / gap;
 
-            // fprintf(stderr, "range: %lu, %lu, %lu\n", start, middle, end);
+            // ROOT_PRINT("range: %lu, %lu, %lu\n", start, middle, end);
 
             ElemType last = in[st1];   // initialize to first element.
             // this will leave pre as empty for the first element:  if in[st1] > in[st2], last < in[st2] is not going to be true.  else: no action due to last.
@@ -70,7 +70,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
                     out[k].combine(pre);  // uses exscan
                     swap_count += middle - st1;
 
-                    // if (print) fprintf(stderr, "ASC_C, %lu, %lu, %lu, R, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
+                    // if (print) ROOT_PRINT("ASC_C, %lu, %lu, %lu, R, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
 					++st2;
                 } else { // Left smaller or equal
                     if (last < in[st1]) {  // sets current partial sum when L is smaller.
@@ -83,7 +83,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
                     curr.add(in[st1]);   // update current prefix sum
                     // curr.count = ++L;  // increment the left count, including self, and overwrite the current count = L+in[st1].count
                     
-                    // if (print) fprintf(stderr, "ASC_C, %lu, %lu, %lu, L, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
+                    // if (print) ROOT_PRINT("ASC_C, %lu, %lu, %lu, L, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
     				++st1;
                 }
                 last = out[k];                        
@@ -96,7 +96,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
                 out[k] = in[st1];
                 // none in LEFT, so don't need to update curr for merge_update.
 
-                // if (print) fprintf(stderr, "ASC_C, %lu, %lu, %lu, LE, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
+                // if (print) ROOT_PRINT("ASC_C, %lu, %lu, %lu, LE, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
             }
             // right side unfinished.  use the strictly-smaller_element prefix sum.
             for (; st2 < end; ++st2, ++k) {
@@ -107,7 +107,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_CONCORDANT> {
 
                 out[k] = in[st2];
                 out[k].combine(pre);
-                // if (print) fprintf(stderr, "ASC_C, %lu, %lu, %lu, RE, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
+                // if (print) ROOT_PRINT("ASC_C, %lu, %lu, %lu, RE, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
             }
 
             return swap_count;
@@ -142,7 +142,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
 					out[k] = in[st2];
                     out[k].combine(suffix);    // we update with suffix, and exclude any ties on the left side.  ties on right side all receive the same suffix.
                     swap_count += (middle - st1);
-                    // if (print) fprintf(stderr, "ASC_D, %lu, %lu, %lu, R, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
+                    // if (print) ROOT_PRINT("ASC_D, %lu, %lu, %lu, R, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
 					++st2;
                 } else { // Left smaller or equal
 					out[k] = in[st1];  // select left.
@@ -150,7 +150,7 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
                     // reduce the suffix by current.
                     suffix.subtract(in[st1]);   // update current suffix sum, including the ties.
                                         
-                    // if (print) fprintf(stderr, "ASC_D, %lu, %lu, %lu, L, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
+                    // if (print) ROOT_PRINT("ASC_D, %lu, %lu, %lu, L, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
     				++st1;
                 }
 			}
@@ -161,14 +161,14 @@ class MergeAndReduce<ElemType, DC_MERGESORT_ASCEND_DISCORDANT> {
                 out[k] = in[st1];
 
                 // none on the RIGht that requires merge_update.
-                    // if (print) fprintf(stderr, "ASC_D, %lu, %lu, %lu, LE, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
+                    // if (print) ROOT_PRINT("ASC_D, %lu, %lu, %lu, LE, %lu, %f, -1, %ld\n", gap, block, k, st1, out[k].key, static_cast<long>(out[k].concCount));
             }
             // right side unfinished. 
             for (; st2 < end; ++st2, ++k) {
                 out[k] = in[st2];
                 // none on the LEFT  so RIGHT merge_update would be with 0.
-                // if (print) fprintf(stderr, "ASC_D, %lu, %lu, %lu, RE, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
-                // if (print) fprintf(stderr, "ASC_D, %lu, RE, %lu, %f, %ld, %ld\n", k, st2, out[k].key, static_cast<long>(suffix.count), (middle - start));
+                // if (print) ROOT_PRINT("ASC_D, %lu, %lu, %lu, RE, %lu, %f, %ld, %ld\n", gap, block, k, st2, out[k].key, static_cast<long>(pre.count), static_cast<long>(out[k].concCount));
+                // if (print) ROOT_PRINT("ASC_D, %lu, RE, %lu, %f, %ld, %ld\n", k, st2, out[k].key, static_cast<long>(suffix.count), (middle - start));
             }
 
             return swap_count;
@@ -219,7 +219,7 @@ class MergeSortAndReduce {
 			size_t gap;
 			size_t start, middle, end;
 
-            // if (print) fprintf(stderr, "variant, gap, block, outpos, half, inpos, key, update, conCount\n");
+            // if (print) ROOT_PRINT("variant, gap, block, outpos, half, inpos, key, update, conCount\n");
 
 
             for (size_t i = sorted_block_size; i < count; i *= 2) {

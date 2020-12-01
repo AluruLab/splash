@@ -19,6 +19,7 @@
 
 #include "utils/benchmark.hpp"
 #include "ds/aligned_matrix.hpp"
+#include "utils/report.hpp"
 
 #ifndef EXP_SKIP_TWO_ROWS
 #define EXP_SKIP_TWO_ROWS false
@@ -90,12 +91,12 @@ public:
 
         auto stime = getSysTime();
 
-        fprintf(stderr, "EXPMatrixWriter writing r %lu x c %lu\n", genes.size(), samples.size() );
+        ROOT_PRINT("EXPMatrixWriter writing r %lu x c %lu\n", genes.size(), samples.size() );
         // open file
         std::ofstream ofs;
         ofs.open(fileName);
         if (! ofs.is_open()) {
-            fprintf(stderr, "Failed to open file %s\n", fileName.c_str());
+            PRINT_RT("ERROR: Failed to open file %s\n", fileName.c_str());
             return false;
         }
 
@@ -135,7 +136,7 @@ public:
         ofs.close();
 
         auto etime = getSysTime();
-        fprintf(stderr, "Wrote file %s in %f sec\n", fileName.c_str(), get_duration_s(stime, etime));
+        ROOT_PRINT("Wrote file %s in %f sec\n", fileName.c_str(), get_duration_s(stime, etime));
 
         return true;
 
@@ -156,12 +157,12 @@ public:
 
         auto stime = getSysTime();
 
-        fprintf(stderr, "EXPMatrixWriter writing r %lu x c %lu\n", genes.size(), samples.size() );
+        ROOT_PRINT("EXPMatrixWriter writing r %lu x c %lu\n", genes.size(), samples.size() );
         // open file
         std::ofstream ofs;
         ofs.open(fileName);
         if (! ofs.is_open()) {
-            fprintf(stderr, "Failed to open file %s\n", fileName.c_str());
+            PRINT_RT("ERROR: Failed to open file %s\n", fileName.c_str());
             return false;
         }
 
@@ -197,7 +198,7 @@ public:
         ofs.close();
 
         auto etime = getSysTime();
-        fprintf(stderr, "Wrote file %s in %f sec\n", fileName.c_str(), get_duration_s(stime, etime));
+        ROOT_PRINT("Wrote file %s in %f sec\n", fileName.c_str(), get_duration_s(stime, etime));
 
         return true;
 

@@ -193,7 +193,7 @@ public:
         }
 
         auto etime = getSysTime();
-        PRINT_RT("converted data to string, %lu chars in %f sec\n", data.length(), get_duration_s(stime, etime));
+        ROOT_PRINT("converted data to string, %lu chars in %f sec\n", data.length(), get_duration_s(stime, etime));
 
         // now get ready to write out.
 

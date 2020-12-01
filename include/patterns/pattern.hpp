@@ -8,6 +8,8 @@
 #include <vector>
 #include <cassert>
 
+#include "utils/report.hpp"
+
 #ifdef USE_MPI
 #include <mpi.h>
 #endif
@@ -312,7 +314,7 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
                 int threads = 1;
                 int thread_id = 0;
 #endif
-                // fprintf(stdout, "make Op copy: thread %d\n", omp_get_thread_num());
+                // PRINT_RT("make Op copy: thread %d\n", omp_get_thread_num());
                 Op op;
                 op.copy_parameters(_op);
 
@@ -436,7 +438,7 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
                 int threads = 1;
                 int thread_id = 0;
 #endif
-                // fprintf(stdout, "make Op copy: thread %d\n", omp_get_thread_num());
+                // PRINT_RT("make Op copy: thread %d\n", omp_get_thread_num());
                 Op op;
                 op.copy_parameters(_op);
 
@@ -592,7 +594,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 int threads = 1;
                 int thread_id = 0;
 #endif
-                // fprintf(stdout, "make Op copy: thread %d\n", omp_get_thread_num());
+                // PRINT_RT("make Op copy: thread %d\n", omp_get_thread_num());
                 Reduc reduc;
                 reduc.copy_parameters(_reduc);
 
@@ -634,7 +636,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 int threads = 1;
                 int thread_id = 0;
 #endif
-                // fprintf(stdout, "make Op copy: thread %d\n", omp_get_thread_num());
+                // PRINT_RT("make Op copy: thread %d\n", omp_get_thread_num());
                 Op op;
                 op.copy_parameters(_op);
 
@@ -855,7 +857,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                                 // compute correlation
                                 // auto xy = _ops[thread_id](input1.data(row), input2.data(col), input1.columns());
                                 // auto yx = _ops[thread_id](input2.data(col), input1.data(row), input2.columns());
-                                // if (xy != yx)  printf("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
+                                // if (xy != yx)  PRINT_RT("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
                                 *data = run(_ops[thread_id], row, col, input1.data(row), input2.data(col), input1.columns());
                                 ++data;
                             }
@@ -893,7 +895,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                                 // compute correlation
                                 // auto xy = _ops[thread_id](input1.data(row), input2.data(col), input1.columns());
                                 // auto yx = _ops[thread_id](input2.data(col), input1.data(row), input2.columns());
-                                // if (xy != yx)  printf("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
+                                // if (xy != yx)  PRINT_RT("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
                                 ++data;  // advance 1 col
                                 data2 += part.c.size;  // advance 1 row
                             }

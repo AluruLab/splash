@@ -16,6 +16,8 @@
 #include "ds/buffer.hpp"
 #include "kernel/kernel_base.hpp"
 
+#include "utils/report.hpp"
+
 #if defined(USE_SIMD)
 #include <omp.h>
 #endif
@@ -33,11 +35,11 @@ class Sort{
 	public:
 
 		inline void sort(IT const * in_vec, size_t const & count) const {
-			// fprintf(stdout, "thread %d, in %p, buffer %p, count %lu\n", omp_get_thread_num(), in_vec, __buffer.data, count);
+			// PRINT_RT("thread %d, in %p, buffer %p, count %lu\n", omp_get_thread_num(), in_vec, __buffer.data, count);
 
 			__buffer.resize(count);  // ensure sufficient space.
 
-			// fprintf(stdout, "thread %d, in %p, resized %p, count %lu\n", omp_get_thread_num(), in_vec, __buffer.data, count);
+			// PRINT_RT("thread %d, in %p, resized %p, count %lu\n", omp_get_thread_num(), in_vec, __buffer.data, count);
 			// fflush(stdout);
 			/*get the rank vector*/
 #if defined(__INTEL_COMPILER)
