@@ -222,7 +222,7 @@ class GlobalReduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vecto
             basetype::operator()(input, mpi_tile_parts, _op, output);
 
             // ----- NO allgather in place. 
-            output.allgather_inplace(mpi_tile_parts);
+            // output.allgather_inplace(mpi_tile_parts);
 
             // allreduce
             splash::utils::mpi::datatype<size_t> dt;

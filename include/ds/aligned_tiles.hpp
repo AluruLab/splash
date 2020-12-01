@@ -192,7 +192,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 ids.emplace_back(_parts[i].r.offset, _parts[i].c.offset, i, offsets[i] );
             }
             auto etime = getSysTime();
-            PRINT_RT("sort: set up in %f sec\n", get_duration_s(stime, etime));
+            ROOT_PRINT("sort: set up in %f sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -201,17 +201,17 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 return (a.r_offset == b.r_offset) ? (a.c_offset < b.c_offset) : (a.r_offset < b.r_offset);
             });
             etime = getSysTime();
-            PRINT_RT("sort: sorted_ids in %f sec\n", get_duration_s(stime, etime));
+            ROOT_PRINT("sort: sorted_ids in %f sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
             
             // ======= now copy with reorder
-            // PRINT_RT("aligned_tiles SORT ");
+            // ROOT_PRINT("aligned_tiles SORT ");
             aligned_tiles output(ids.size(), offsets.back(), _align);
-            // PRINT_RT("aligned_tiles SORT DONE\n");
+            // ROOT_PRINT("aligned_tiles SORT DONE\n");
             // FLUSH();
             etime = getSysTime();
-            PRINT_RT("sort: size_output in %f sec\n", get_duration_s(stime, etime));
+            ROOT_PRINT("sort: size_output in %f sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
             
@@ -227,7 +227,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 offset += s;
             }
             etime = getSysTime();
-            PRINT_RT("sort: shuffled in %f sec\n", get_duration_s(stime, etime));
+            ROOT_PRINT("sort: shuffled in %f sec\n", get_duration_s(stime, etime));
 
             return output;
         }
