@@ -262,7 +262,7 @@ class aligned_matrix {
                     output(col, row) = in[col];
                 }
             }
-
+            return output;
         }
         // shallow copy?
         aligned_matrix<FloatType> deep_copy() {
