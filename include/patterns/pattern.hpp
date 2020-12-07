@@ -533,6 +533,7 @@ class GlobalBinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<
 template <typename IN, typename Reduc, typename Op, typename OUT>
 class ReduceTransform;
 
+// output is distributed.
 template <typename IT, typename Reduc, typename Op, typename OT>
 class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::aligned_matrix<OT>> :
     public OpBase {
@@ -546,7 +547,6 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
         // using ROW_REDUC = splash::pattern::GlobalReduce<splash::ds::aligned_matrix<IT>, Reduc, splash::ds::aligned_vector<MT>, DIM_INDEX::ROW>;
         // using COL_REDUC = splash::pattern::GlobalReduce<splash::ds::aligned_matrix<IT>, Reduc, splash::ds::aligned_vector<MT>, DIM_INDEX::COLUMN>;
         
-
     public:
         using InputType = splash::ds::aligned_matrix<IT>;
         using OutputType = splash::ds::aligned_matrix<OT>;
@@ -622,7 +622,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
 
             // ------------------ processing. reach element needs row and col
             // use the same partitioning
-            output.resize(input.rows(), input.columns());
+            output.resize(mpi_tile_parts.size, input.columns());
 
             // now do the transform using the intermediate results.
             size_t count = 0;
@@ -647,9 +647,10 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
 
                 // iterate over rows.
                 size_t rid = omp_tile_parts.offset;
+                size_t offset = mpi_tile_parts.offset;
                 for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
                     for (unsigned int j = 0; j < input.columns(); ++j) {
-                        output(rid, j) = op(input(rid, j), __buffer[rid], __buffer[j]);
+                        output(rid - offset, j) = op(input(rid, j), __buffer[rid], __buffer[j]);
                     }
                 }
 
