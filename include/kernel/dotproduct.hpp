@@ -32,9 +32,8 @@ inline T dotp_scalar(T const * xx, T const * yy, size_t const & count) {
 // no float version yet.
 
 inline double dotp_sse(double const * xx, double const * yy, size_t const & count) {
-    double val[2] = {0.0, 0.0};
-
 #ifdef __SSE2__
+    double val[2] = {0.0, 0.0};
 
     __m128d a, b;
     __m128d acc1 = _mm_setzero_pd();
@@ -95,16 +94,16 @@ inline double dotp_sse(double const * xx, double const * yy, size_t const & coun
 
     val[0] += val[1];
 
-#endif
-
     return val[0];
+#else
+    return 0.0;
+#endif
 }   
 
 
 inline double dotp_avx(double const * xx, double const * yy, size_t const & count) {
-    double val[4] = {0.0, 0.0, 0.0, 0.0};
-
 #ifdef __AVX__
+    double val[4] = {0.0, 0.0, 0.0, 0.0};
 
     __m256d a, b;
     __m256d acc1 = _mm256_setzero_pd();
@@ -168,15 +167,16 @@ inline double dotp_avx(double const * xx, double const * yy, size_t const & coun
 
     val[0] += val[2];
 
-#endif
-
     return val[0];
+#else
+    return 0.0;
+#endif
 }   
 
 inline double dotp_avx512(double const * xx, double const * yy, size_t const & count) {
+#ifdef __AVX512F__  
     double val[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-#ifdef __AVX512F__  
     // has FMA, use it.
 
     __m512d a, b;
@@ -207,7 +207,7 @@ inline double dotp_avx512(double const * xx, double const * yy, size_t const & c
     }
 
     // compute the remaining.
-    max = (count - k) >> 2;
+    max = (count - k) >> 3;
     switch (max) {
         case 3:  
             a = _mm512_loadu_pd(xx + k + 16);
@@ -223,7 +223,7 @@ inline double dotp_avx512(double const * xx, double const * yy, size_t const & c
             acc1 = _mm512_fmadd_pd(a, b, acc1);
         default: break;
     }
-    k += (max << 2);
+    k += (max << 3);
 
     // handle accumulators and extract
     acc4 = _mm512_add_pd(acc4, acc3);
@@ -246,9 +246,10 @@ inline double dotp_avx512(double const * xx, double const * yy, size_t const & c
 
     val[0] += val[4];
 
-#endif
-
     return val[0];
+#else
+    return 0.0;
+#endif
 }   
 
 
