@@ -22,7 +22,7 @@ namespace splash { namespace kernel {
 
 
 template <typename IT, typename OT = IT, bool SampleStats = true>
-class GaussianParams : public splash::kernel::reduce<IT, std::pair<OT, OT>, splash::kernel::DEGREE::VECTOR, splash::kernel::DEGREE::SCALAR> {
+class GaussianParams : public splash::kernel::reduce<IT, std::pair<OT, OT>, splash::kernel::DEGREE::VECTOR> {
     public:
         using InputType = IT;
         using OutputType = std::pair<OT, OT>;
@@ -100,6 +100,56 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
         }
 };
 
+
+template <typename IT, typename OT = IT, bool SampleStats = true>
+class GaussianParamsExclude1 : public splash::kernel::reduce_except1<IT, std::pair<OT, OT>, splash::kernel::DEGREE::VECTOR> {
+    public:
+        using InputType = IT;
+        using OutputType = std::pair<OT, OT>;
+        using FT = splash::utils::widened<OT>;
+
+        inline virtual OutputType operator()(size_t const & exclude_id, IT const * in_vec,
+            size_t const & count) const {
+                
+            bool exclusion = exclude_id < count;
+            size_t cnt = count - exclusion;
+
+            const FT avg = 1.0L / static_cast<FT>(cnt);
+            const FT sample_avg = 1.0L / static_cast<FT>(cnt - SampleStats);
+            
+            // compute mean
+            FT mean = 0;
+            FT meanX2 = 0;
+            FT x;
+            // add all entries including the exclusion
+#if defined(__INTEL_COMPILER)
+#pragma vector aligned
+#endif
+#if defined(USE_SIMD)
+#pragma omp simd reduction(+:mean, meanX2)
+#endif
+            for (size_t j = 0; j < count; ++j) {
+                x = static_cast<FT>(in_vec[j]);
+                mean += (x * avg);
+                meanX2 += (x * sample_avg * x);
+            }
+            if (exclusion) {
+                // remove the excluded entry.
+                x = static_cast<FT>(in_vec[exclude_id]);
+                mean -= x * avg;
+                meanX2 -= x * sample_avg * x;
+            }
+
+            /*compute the stdev*/
+            FT stdev;
+            if (SampleStats) 
+                stdev = std::sqrt(meanX2 - (static_cast<FT>(cnt) * sample_avg) * mean * mean );
+            else
+                stdev = std::sqrt(meanX2 - mean * mean);
+
+			return {mean, stdev};
+        }
+};
 
 
 }}

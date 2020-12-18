@@ -35,6 +35,19 @@ namespace splash { namespace pattern {
 // [ ] combine the MM2M and MVMV2M patterns.  
 // [ ] work with partitioned input. and use shift when computing.
 
+// SFINAE test
+template <typename T, typename... Args>
+class has_operator
+{
+    template <typename C,
+            typename = decltype( std::declval<C>().operator()(std::declval<Args>()...) )>
+    static std::true_type test(int);
+    template <typename C>
+    static std::false_type test(...);
+
+public:
+    static constexpr bool value = decltype(test<T>(0))::value;
+};
 
 class OpBase {
     public:
@@ -60,6 +73,17 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
     protected:
 	    splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
         using part1D_type = splash::utils::partition<size_t>;
+
+        template <typename OO, typename I, typename std::enable_if<splash::pattern::has_operator<OO, size_t const &, I const *, size_t const &>::value, int>::type = 1>
+        inline OT run(OO const & op, size_t const & r, I const * row, size_t const & count) const {
+            return op(r, row, count);
+        }
+	
+        template <typename OO, typename I, typename std::enable_if<!splash::pattern::has_operator<OO, size_t const &, I const *, size_t const &>::value, int>::type = 1>
+        inline OT run(OO const & op, size_t const & r, I const * row, size_t const & count) const {
+            return op(row, count);
+        }
+
 
     public:
         using InputType = splash::ds::aligned_matrix<IT>;
@@ -96,7 +120,7 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
                 // iterate over rows.
                 size_t rid = omp_tile_parts.offset;
                 for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
-                    output[rid] = op(input.data(rid),  input.columns());
+                    output[rid] = run(op, rid, input.data(rid),  input.columns());
                 }
 
 #ifdef USE_OPENMP
@@ -547,6 +571,17 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
         // using ROW_REDUC = splash::pattern::GlobalReduce<splash::ds::aligned_matrix<IT>, Reduc, splash::ds::aligned_vector<MT>, DIM_INDEX::ROW>;
         // using COL_REDUC = splash::pattern::GlobalReduce<splash::ds::aligned_matrix<IT>, Reduc, splash::ds::aligned_vector<MT>, DIM_INDEX::COLUMN>;
         
+        template <typename OO, typename I, typename std::enable_if<splash::pattern::has_operator<OO, size_t const &, I const *, size_t const &>::value, int>::type = 1>
+        inline MT reduc_run(OO const & op, size_t const & r, I const * row, size_t const & count) const {
+            return op(r, row, count);
+        }
+	
+        template <typename OO, typename I, typename std::enable_if<!splash::pattern::has_operator<OO, size_t const &, I const *, size_t const &>::value, int>::type = 1>
+        inline MT reduc_run(OO const & op, size_t const & r, I const * row, size_t const & count) const {
+            return op(row, count);
+        }
+
+
     public:
         using InputType = splash::ds::aligned_matrix<IT>;
         using OutputType = splash::ds::aligned_matrix<OT>;
@@ -607,7 +642,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 // iterate over rows.
                 size_t rid = omp_tile_parts.offset;
                 for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
-                    __buffer[rid] = reduc(input.data(rid), input.columns());
+                    __buffer[rid] = reduc_run(reduc, rid, input.data(rid), input.columns());
                 }
 #ifdef USE_OPENMP
 #pragma omp barrier
@@ -695,27 +730,13 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
 
         int procs;
         int rank;
-
-        // SFINAE test
-        template <typename T, typename... Args>
-        class has_operator
-        {
-            template <typename C,
-                    typename = decltype( std::declval<C>().operator()(std::declval<Args>()...) )>
-            static std::true_type test(int);
-            template <typename C>
-            static std::false_type test(...);
-
-        public:
-            static constexpr bool value = decltype(test<T>(0))::value;
-        };
         
-        template <typename OO, typename I, typename std::enable_if<has_operator<Op, size_t const &, size_t const &, I const *, I const *, size_t const &>::value, int>::type = 1>
+        template <typename OO, typename I, typename std::enable_if<splash::pattern::has_operator<OO, size_t const &, size_t const &, I const *, I const *, size_t const &>::value, int>::type = 1>
         inline OT run(OO const & op, size_t const & r, size_t const & c, I const * row, I const * col, size_t const & count) const {
             return op(r, c, row, col, count);
         }
 	
-        template <typename OO, typename I, typename std::enable_if<!has_operator<Op, size_t const &, size_t const &, I const *, I const *, size_t const &>::value, int>::type = 1>
+        template <typename OO, typename I, typename std::enable_if<!splash::pattern::has_operator<OO, size_t const &, size_t const &, I const *, I const *, size_t const &>::value, int>::type = 1>
         inline OT run(OO const & op, size_t const & r, size_t const & c, I const * row, I const * col, size_t const & count) const {
             return op(row, col, count);
         }

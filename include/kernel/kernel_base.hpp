@@ -18,7 +18,7 @@
 namespace splash { namespace kernel { 
 
 enum DEGREE : int { SCALAR = 0, VECTOR = 1, MATRIX = 2};
-enum DIM    : int { ROW = 0, COLUMN = 1};
+enum DIM    : int { ALL = -1, ROW = 0, COLUMN = 1};
 
 /**
  * KERNEL BASE CLASSES.
@@ -230,11 +230,11 @@ class transform<IT, OT, DEGREE::MATRIX>  : public kernel_base {
 
 // general reduction template
 // REDUC_PER indicates which dimenion to preserve.  reduction is done across the other dims.
-template <typename IT, typename OT, int IN_DEG, int REDUC_PER = DIM::ROW>
+template <typename IT, typename OT, int IN_DEG, int REDUC_PER = DIM::ALL>
 class reduce; 
 
 template <typename IT, typename OT>
-class reduce<IT, OT, DEGREE::VECTOR, DIM::ROW>  : public kernel_base {
+class reduce<IT, OT, DEGREE::VECTOR, DIM::ALL>  : public kernel_base {
     public:
         using InputType = IT;
         using OutputType = OT;
@@ -245,23 +245,23 @@ class reduce<IT, OT, DEGREE::VECTOR, DIM::ROW>  : public kernel_base {
         inline virtual void initialize(size_t const & count) {};
 };
 
-template <typename IT, typename OT>
-class reduce<IT, OT, DEGREE::VECTOR, DIM::COLUMN>  : public kernel_base {
-    public:
-        using InputType = IT;
-        using OutputType = OT;
-         virtual ~reduce() {};
-        inline virtual void operator()(IT const * in, 
-            size_t const & count,
-            OT * aux) const = 0;
-    protected:
-        inline virtual void initialize(size_t const & count) {};
-};
-
 
 // // this will always be row-wise reduction.
 // template <typename IT, typename OT>
-// class reduce<IT, OT, DEGREE::MATRIX, DEGREE::VECTOR>  : public kernel_base {
+// class reduce<IT, OT, DEGREE::MATRIX, DIM::ROW>  : public kernel_base {
+//     public:
+//         using InputType = IT;
+//         using OutputType = OT;
+//          virtual ~reduce() {};
+//        inline virtual void operator()(IT const * in, 
+//             size_t const & row, size_t const & col, OT * out) const = 0;
+//     protected:
+//         inline virtual void initialize(size_t const & row, size_t const & col) {};
+// };
+
+// // this will always be row-wise reduction.
+// template <typename IT, typename OT>
+// class reduce<IT, OT, DEGREE::MATRIX, DIM::COLUMN>  : public kernel_base {
 //     public:
 //         using InputType = IT;
 //         using OutputType = OT;
@@ -274,7 +274,7 @@ class reduce<IT, OT, DEGREE::VECTOR, DIM::COLUMN>  : public kernel_base {
 
 
 // template <typename IT, typename OT>
-// class reduce<IT, OT, DEGREE::MATRIX, DEGREE::SCALAR>  : public kernel_base {
+// class reduce<IT, OT, DEGREE::MATRIX, DIM::ALL>  : public kernel_base {
 //     public:
 //         using InputType = IT;
 //         using OutputType = OT;
@@ -285,6 +285,21 @@ class reduce<IT, OT, DEGREE::VECTOR, DIM::COLUMN>  : public kernel_base {
 //         inline virtual void initialize(size_t const & row, size_t const & col) {};
 // };
 
+
+template <typename IT, typename OT, int IN_DEG, int REDUC_PER = DIM::ALL>
+class reduce_except1; 
+
+template <typename IT, typename OT>
+class reduce_except1<IT, OT, DEGREE::VECTOR, DIM::ALL>  : public kernel_base {
+    public:
+        using InputType = IT;
+        using OutputType = OT;
+         virtual ~reduce_except1() {};
+       inline virtual OT operator()(size_t const & exclude_id, IT const * in_vector, 
+            size_t const & count) const = 0;
+    protected:
+        inline virtual void initialize(size_t const & count) {};
+};
 
 
 

@@ -24,7 +24,7 @@ namespace Detail
 */
 double constexpr sqrt(double x)
 {
-    return x >= 0 && x < std::numeric_limits<double>::infinity()
+    return (x >= 0) && (x < std::numeric_limits<double>::infinity())
         ? Detail::sqrtNewtonRaphson(x, x, 0)
         : std::numeric_limits<double>::quiet_NaN();
 }
