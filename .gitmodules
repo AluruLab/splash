@@ -7,3 +7,6 @@
 [submodule "ext/hdf5"]
 	path = ext/hdf5
 	url = https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git
+[submodule "ext/fmt"]
+	path = ext/fmt
+	url = https://github.com/fmtlib/fmt.git
