@@ -29,13 +29,27 @@ inline T dotp_scalar(T const * xx, T const * yy, size_t const & count) {
     return val;
 }   
 
+template <typename T>
+inline T dotp_omp(T const * xx, T const * yy, size_t const & count) {
+    T val = 0.0;
+#if defined(__INTEL_COMPILER)
+#pragma vector aligned
+#endif
+#if defined(USE_SIMD)
+#pragma omp simd reduction(+:val)
+#endif
+    for (size_t k = 0; k < count; ++k) {
+        val += (xx[k] * yy[k]);
+    }
+    return val;
+}  
 // no float version yet.
 
 inline double dotp_sse(double const * xx, double const * yy, size_t const & count) {
 #ifdef __SSE2__
     double val[2] = {0.0, 0.0};
 
-    __m128d a, b;
+    __m128d a1, a2, a3, a4, b1, b2, b3, b4;
     __m128d acc1 = _mm_setzero_pd();
     __m128d acc2 = acc1;
     __m128d acc3 = acc1;
@@ -45,38 +59,38 @@ inline double dotp_sse(double const * xx, double const * yy, size_t const & coun
     size_t max = count & 0xFFFFFFFFFFFFFFF8;
     size_t k = 0;
     for (; k < max; k += 8) {
-        a = _mm_loadu_pd(xx + k);
-        b = _mm_loadu_pd(yy + k);
-        acc1 = _mm_add_pd(acc1, _mm_mul_pd(a, b));
+        a1 = _mm_loadu_pd(xx + k);
+        b1 = _mm_loadu_pd(yy + k);
+        acc1 = _mm_add_pd(acc1, _mm_mul_pd(a1, b1));
 
-        a = _mm_loadu_pd(xx + k + 2);
-        b = _mm_loadu_pd(yy + k + 2);
-        acc2 = _mm_add_pd(acc2, _mm_mul_pd(a, b));
+        a2 = _mm_loadu_pd(xx + k + 2);
+        b2 = _mm_loadu_pd(yy + k + 2);
+        acc2 = _mm_add_pd(acc2, _mm_mul_pd(a2, b2));
 
-        a = _mm_loadu_pd(xx + k + 4);
-        b = _mm_loadu_pd(yy + k + 4);
-        acc3 = _mm_add_pd(acc3, _mm_mul_pd(a, b));
+        a3 = _mm_loadu_pd(xx + k + 4);
+        b3 = _mm_loadu_pd(yy + k + 4);
+        acc3 = _mm_add_pd(acc3, _mm_mul_pd(a3, b3));
 
-        a = _mm_loadu_pd(xx + k + 6);
-        b = _mm_loadu_pd(yy + k + 6);
-        acc4 = _mm_add_pd(acc4, _mm_mul_pd(a, b));
+        a4 = _mm_loadu_pd(xx + k + 6);
+        b4 = _mm_loadu_pd(yy + k + 6);
+        acc4 = _mm_add_pd(acc4, _mm_mul_pd(a4, b4));
     }
 
     // compute the remaining.
     max = (count - k) >> 1;
     switch (max) {
         case 3:  
-            a = _mm_loadu_pd(xx + k + 4);
-            b = _mm_loadu_pd(yy + k + 4);
-            acc3 = _mm_add_pd(acc3, _mm_mul_pd(a, b));
+            a3 = _mm_loadu_pd(xx + k + 4);
+            b3 = _mm_loadu_pd(yy + k + 4);
+            acc3 = _mm_add_pd(acc3, _mm_mul_pd(a3, b3));
         case 2:
-            a = _mm_loadu_pd(xx + k + 2);
-            b = _mm_loadu_pd(yy + k + 2);
-            acc2 = _mm_add_pd(acc2, _mm_mul_pd(a, b));
+            a2 = _mm_loadu_pd(xx + k + 2);
+            b2 = _mm_loadu_pd(yy + k + 2);
+            acc2 = _mm_add_pd(acc2, _mm_mul_pd(a2, b3));
         case 1:
-            a = _mm_loadu_pd(xx + k);
-            b = _mm_loadu_pd(yy + k);
-            acc1 = _mm_add_pd(acc1, _mm_mul_pd(a, b));
+            a1 = _mm_loadu_pd(xx + k);
+            b1 = _mm_loadu_pd(yy + k);
+            acc1 = _mm_add_pd(acc1, _mm_mul_pd(a1, b3));
         default: break;
     }
     k += (max << 1);
@@ -105,7 +119,7 @@ inline double dotp_avx(double const * xx, double const * yy, size_t const & coun
 #ifdef __AVX__
     double val[4] = {0.0, 0.0, 0.0, 0.0};
 
-    __m256d a, b;
+    __m256d a1, a2, a3, a4, b1, b2, b3, b4;
     __m256d acc1 = _mm256_setzero_pd();
     __m256d acc2 = acc1;
     __m256d acc3 = acc1;
@@ -115,38 +129,38 @@ inline double dotp_avx(double const * xx, double const * yy, size_t const & coun
     size_t max = count & 0xFFFFFFFFFFFFFFF0;
     size_t k = 0;
     for (; k < max; k += 16) {
-        a = _mm256_loadu_pd(xx + k);
-        b = _mm256_loadu_pd(yy + k);
-        acc1 = _mm256_add_pd(acc1, _mm256_mul_pd(a, b));
+        a1 = _mm256_loadu_pd(xx + k);
+        b1 = _mm256_loadu_pd(yy + k);
+        acc1 = _mm256_add_pd(acc1, _mm256_mul_pd(a1, b1));
 
-        a = _mm256_loadu_pd(xx + k + 4);
-        b = _mm256_loadu_pd(yy + k + 4);
-        acc2 = _mm256_add_pd(acc2, _mm256_mul_pd(a, b));
+        a2 = _mm256_loadu_pd(xx + k + 4);
+        b2 = _mm256_loadu_pd(yy + k + 4);
+        acc2 = _mm256_add_pd(acc2, _mm256_mul_pd(a2, b2));
 
-        a = _mm256_loadu_pd(xx + k + 8);
-        b = _mm256_loadu_pd(yy + k + 8);
-        acc3 = _mm256_add_pd(acc3, _mm256_mul_pd(a, b));
+        a3 = _mm256_loadu_pd(xx + k + 8);
+        b3 = _mm256_loadu_pd(yy + k + 8);
+        acc3 = _mm256_add_pd(acc3, _mm256_mul_pd(a3, b3));
 
-        a = _mm256_loadu_pd(xx + k + 12);
-        b = _mm256_loadu_pd(yy + k + 12);
-        acc4 = _mm256_add_pd(acc4, _mm256_mul_pd(a, b));
+        a4 = _mm256_loadu_pd(xx + k + 12);
+        b4 = _mm256_loadu_pd(yy + k + 12);
+        acc4 = _mm256_add_pd(acc4, _mm256_mul_pd(a4, b4));
     }
 
     // compute the remaining.
     max = (count - k) >> 2;
     switch (max) {
         case 3:  
-            a = _mm256_loadu_pd(xx + k + 8);
-            b = _mm256_loadu_pd(yy + k + 8);
-            acc3 = _mm256_add_pd(acc3, _mm256_mul_pd(a, b));
+            a3 = _mm256_loadu_pd(xx + k + 8);
+            b3 = _mm256_loadu_pd(yy + k + 8);
+            acc3 = _mm256_add_pd(acc3, _mm256_mul_pd(a3, b3));
         case 2:
-            a = _mm256_loadu_pd(xx + k + 4);
-            b = _mm256_loadu_pd(yy + k + 4);
-            acc2 = _mm256_add_pd(acc2, _mm256_mul_pd(a, b));
+            a2 = _mm256_loadu_pd(xx + k + 4);
+            b2 = _mm256_loadu_pd(yy + k + 4);
+            acc2 = _mm256_add_pd(acc2, _mm256_mul_pd(a2, b2));
         case 1:
-            a = _mm256_loadu_pd(xx + k);
-            b = _mm256_loadu_pd(yy + k);
-            acc1 = _mm256_add_pd(acc1, _mm256_mul_pd(a, b));
+            a1 = _mm256_loadu_pd(xx + k);
+            b1 = _mm256_loadu_pd(yy + k);
+            acc1 = _mm256_add_pd(acc1, _mm256_mul_pd(a1, b1));
         default: break;
     }
     k += (max << 2);
@@ -173,13 +187,15 @@ inline double dotp_avx(double const * xx, double const * yy, size_t const & coun
 #endif
 }   
 
+
+
 inline double dotp_avx512(double const * xx, double const * yy, size_t const & count) {
 #ifdef __AVX512F__  
     double val[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     // has FMA, use it.
 
-    __m512d a, b;
+    __m512d a1, a2, a3, a4, b1, b2, b3, b4;
     __m512d acc1 = _mm512_setzero_pd();
     __m512d acc2 = acc1;
     __m512d acc3 = acc1;
@@ -189,38 +205,38 @@ inline double dotp_avx512(double const * xx, double const * yy, size_t const & c
     size_t max = count & 0xFFFFFFFFFFFFFFE0;
     size_t k = 0;
     for (; k < max; k += 32) {
-        a = _mm512_loadu_pd(xx + k);
-        b = _mm512_loadu_pd(yy + k);
-        acc1 = _mm512_fmadd_pd(a, b, acc1);
+        a1 = _mm512_loadu_pd(xx + k);
+        b1 = _mm512_loadu_pd(yy + k);
+        acc1 = _mm512_fmadd_pd(a1, b1, acc1);
 
-        a = _mm512_loadu_pd(xx + k + 8);
-        b = _mm512_loadu_pd(yy + k + 8);
-        acc2 = _mm512_fmadd_pd(a, b, acc2);
+        a2 = _mm512_loadu_pd(xx + k + 8);
+        b2 = _mm512_loadu_pd(yy + k + 8);
+        acc2 = _mm512_fmadd_pd(a2, b2, acc2);
 
-        a = _mm512_loadu_pd(xx + k + 16);
-        b = _mm512_loadu_pd(yy + k + 16);
-        acc3 = _mm512_fmadd_pd(a, b, acc3);
+        a3 = _mm512_loadu_pd(xx + k + 16);
+        b3 = _mm512_loadu_pd(yy + k + 16);
+        acc3 = _mm512_fmadd_pd(a3, b3, acc3);
 
-        a = _mm512_loadu_pd(xx + k + 24);
-        b = _mm512_loadu_pd(yy + k + 24);
-        acc4 = _mm512_fmadd_pd(a, b, acc4);
+        a4 = _mm512_loadu_pd(xx + k + 24);
+        b4 = _mm512_loadu_pd(yy + k + 24);
+        acc4 = _mm512_fmadd_pd(a4, b4, acc4);
     }
 
     // compute the remaining.
     max = (count - k) >> 3;
     switch (max) {
         case 3:  
-            a = _mm512_loadu_pd(xx + k + 16);
-            b = _mm512_loadu_pd(yy + k + 16);
-            acc3 = _mm512_fmadd_pd(a, b, acc3);
+            a3 = _mm512_loadu_pd(xx + k + 16);
+            b3 = _mm512_loadu_pd(yy + k + 16);
+            acc3 = _mm512_fmadd_pd(a3, b3, acc3);
         case 2:
-            a = _mm512_loadu_pd(xx + k + 8);
-            b = _mm512_loadu_pd(yy + k + 8);
-            acc2 = _mm512_fmadd_pd(a, b, acc2);
+            a2 = _mm512_loadu_pd(xx + k + 8);
+            b2 = _mm512_loadu_pd(yy + k + 8);
+            acc2 = _mm512_fmadd_pd(a2, b2, acc2);
         case 1:
-            a = _mm512_loadu_pd(xx + k);
-            b = _mm512_loadu_pd(yy + k);
-            acc1 = _mm512_fmadd_pd(a, b, acc1);
+            a1 = _mm512_loadu_pd(xx + k);
+            b1 = _mm512_loadu_pd(yy + k);
+            acc1 = _mm512_fmadd_pd(a1, b1, acc1);
         default: break;
     }
     k += (max << 3);
@@ -264,16 +280,16 @@ class DotProductKernel : public splash::kernel::inner_product<IT, OT, splash::ke
 
 		inline virtual OT operator()(IT const * first, IT const * second, size_t const & count) const  {
 			FT prod = 0;
-#if defined(__INTEL_COMPILER)
-#pragma vector aligned
-#endif
-#if defined(USE_SIMD)
-#pragma omp simd reduction(+:prod)
-#endif
+// #if defined(__AVX512F__)
+//             prod = dotp_avx512(first, second, count);
+// #elif defined(__AVX__)
+//             prod = dotp_avx(first, second, count);
+// #elif defined(__SSE2__)
+//             prod = dotp_sse(first, second, count);
+// #else
 			// MAJORITY OF TIME HERE.  slowdown: O3 + omp simd (1x).  O3 (5x).  sanitizer + omp simd (11x), sanitizer (5.5x) 
-			for (size_t j = 0; j < count; ++j) {
-				prod += static_cast<FT>(first[j] * second[j]);
-			}
+            prod = dotp_omp(first, second, count);
+// #endif
 			return prod;
 		};
 };
