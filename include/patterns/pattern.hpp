@@ -123,9 +123,6 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
                     output[rid] = run(op, rid, input.data(rid),  input.columns());
                 }
 
-#ifdef USE_OPENMP
-#pragma omp barrier
-#endif
                 count += op.processed;
             }
             this->processed = count;
@@ -164,6 +161,7 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
 //                 int threads = omp_get_num_threads();
 //                 int thread_id = omp_get_thread_num();
 // #else 
+//              {
 //                 int threads = 1;
 //                 int thread_id = 0;
 // #endif
@@ -182,10 +180,8 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
 //                     op(input.data(rid), input.columns(), buffers.data(thread_id));
 //                 }
 
-// #ifdef USE_OPENMP
-// #pragma omp barrier
 //             }
-// #endif
+//
 //             // now merge in thread safe way
 //             for (size_t i = 0; i < omp_get_max_threads(); ++i) {
 //                 op(buffers.data(i), input.columns(), output.data());
@@ -350,14 +346,13 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
 
                 // iterate over rows.
                 size_t rid = omp_tile_parts.offset;
+                size_t max_rid = rid + omp_tile_parts.size;
                 size_t orid = omp_out_part.offset;
-                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid, ++orid) {
-                    op(input.data(rid),  input.columns(), output.data(orid));
+                for (; rid < max_rid; ++rid, ++orid) {
+                    // DIRECTLY INCREMENT POINTER does not change time.
+                    op(input.data(rid), input.columns(), output.data(orid));
                 }
 
-#ifdef USE_OPENMP
-#pragma omp barrier
-#endif
                 count += op.processed;
             }
             this->processed = count;
@@ -481,9 +476,6 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
                     op(input.data(rid), input2.data(rid2), input.columns(), output.data(orid));
                 }
 
-#ifdef USE_OPENMP
-#pragma omp barrier
-#endif
                 count += op.processed;
             }
             this->processed = count;
@@ -626,6 +618,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 int threads = omp_get_num_threads();
                 int thread_id = omp_get_thread_num();
 #else 
+            {
                 int threads = 1;
                 int thread_id = 0;
 #endif
@@ -644,10 +637,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
                     __buffer[rid] = reduc_run(reduc, rid, input.data(rid), input.columns());
                 }
-#ifdef USE_OPENMP
-#pragma omp barrier
             }
-#endif
 
             // MPI to allgather results.
             __buffer.allgather_inplace(mpi_tile_parts);
@@ -689,9 +679,6 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                     }
                 }
 
-#ifdef USE_OPENMP
-#pragma omp barrier
-#endif
                 count += op.processed;
             }
             this->processed = count;
@@ -927,9 +914,6 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                 }
         		// PRINT_RT("CORR BOUNDS r: %lu %lu, c %lu %lu\n", rmin, rmax-rmin, cmin, cmax-cmin);
 
-#ifdef USE_OPENMP
-#pragma omp barrier
-#endif
                 count += _ops[thread_id].processed;
         	}
 
