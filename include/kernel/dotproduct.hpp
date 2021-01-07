@@ -280,16 +280,16 @@ class DotProductKernel : public splash::kernel::inner_product<IT, OT, splash::ke
 
 		inline virtual OT operator()(IT const * first, IT const * second, size_t const & count) const  {
 			FT prod = 0;
-// #if defined(__AVX512F__)
-//             prod = dotp_avx512(first, second, count);
-// #elif defined(__AVX__)
-//             prod = dotp_avx(first, second, count);
-// #elif defined(__SSE2__)
-//             prod = dotp_sse(first, second, count);
-// #else
+#if defined(__AVX512F__)
+            prod = dotp_avx512(first, second, count);
+#elif defined(__AVX__)
+            prod = dotp_avx(first, second, count);
+#elif defined(__SSE2__)
+            prod = dotp_sse(first, second, count);
+#else
 			// MAJORITY OF TIME HERE.  slowdown: O3 + omp simd (1x).  O3 (5x).  sanitizer + omp simd (11x), sanitizer (5.5x) 
             prod = dotp_omp(first, second, count);
-// #endif
+#endif
 			return prod;
 		};
 };
