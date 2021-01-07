@@ -172,7 +172,8 @@ inline std::pair<T *, size_t> acresize(T * data, size_t const & old_count, size_
         data = reinterpret_cast<T*>(splash::utils::acalloc(count * sizeof(T), alignment));  // if bytes == 0 here, that means old data==nullptr..  we return nullptr and 0 bytes.
         return std::make_pair(data, count);
     }  else {
-        memset(data, 0, old_count * sizeof(T));
+        // memset(data, 0, old_count * sizeof(T));
+        std::fill(data, data + old_count, T() );
         return std::make_pair(data, old_count);
     }
 }
@@ -251,7 +252,8 @@ inline std::pair<T *, size_t> arecalloc(T * data, size_t const & old_count, size
         }
         return std::make_pair(output, count);
     } else {
-        memset(data + count, 0, (old_count - count) * sizeof(T));
+        // memset(data + count, 0, (old_count - count) * sizeof(T));
+        std::fill(data + count, data + old_count, T());
         return std::make_pair(data, old_count);
     }
 }

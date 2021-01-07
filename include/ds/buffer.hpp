@@ -24,13 +24,15 @@ struct buffer {
 		buffer(buffer const & other) : count(other.count)  {
             data = reinterpret_cast<T*>(splash::utils::aalloc(count * sizeof(T)));
             if (other.data && other.count) {
-                memcpy(data, other.data, other.count * sizeof(T));
+                // memcpy(data, other.data, other.count * sizeof(T));
+                std::copy(other.data, other.data + other.count, data);
             }
         }
 		buffer& operator=(buffer const & other) {
             std::tie(data, count) = splash::utils::acresize(data, count, other.count);
             if (data && other.data)
-                memcpy(data, other.data, count * sizeof(T));
+                // memcpy(data, other.data, count * sizeof(T));
+                std::copy(other.data, other.data + other.count, data);
         }
 		buffer(buffer && other) : data(std::move(other.data)), count(other.count) {
             other.data = nullptr;

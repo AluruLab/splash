@@ -197,7 +197,8 @@ class MergeSortAndReduce {
         virtual ~MergeSortAndReduce() {}
 
         inline void clear(ElemType* data, size_t const & count) const {
-            memset(data, 0, count * sizeof(ElemType));
+            // memset(data, 0, count * sizeof(ElemType));
+            std::fill(data, data + count, ElemType());
         }
         inline void initialize(ElemType* data, size_t const & count) const {
             for (size_t i = 0; i < count; ++i) {
