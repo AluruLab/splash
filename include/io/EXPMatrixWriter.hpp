@@ -33,13 +33,13 @@ class EXPMatrixWriter {
 public:
 
     static bool storeMatrixData(const char * fileName, size_t const & rows, size_t const & cols, 
-        FloatType* vectors, size_t const & stride_bytes, bool const & skip = EXP_SKIP_TWO_ROWS) {
+        FloatType const * vectors, size_t const & stride_bytes, bool const & skip = EXP_SKIP_TWO_ROWS) {
             return EXPMatrixWriter::storeMatrixData(std::string(fileName), rows, cols, vectors, stride_bytes, skip);
         }
 
 
     static bool storeMatrixData(std::string const & fileName, size_t const & rows, size_t const & cols,
-        FloatType* vectors, size_t const & stride_bytes, bool const & skip = EXP_SKIP_TWO_ROWS) {
+        FloatType const * vectors, size_t const & stride_bytes, bool const & skip = EXP_SKIP_TWO_ROWS) {
         
 		std::vector<std::string> row_names(rows);
 		for (size_t i = 0; i < rows; ++i) {
@@ -65,14 +65,14 @@ public:
     }
     
     static bool storeMatrixData(const char * fileName, std::vector<std::string> const & genes,
-			std::vector<std::string> const & samples, FloatType* vectors, 
+			std::vector<std::string> const & samples, FloatType const * vectors, 
             size_t const & stride_bytes, bool const & skip = EXP_SKIP_TWO_ROWS) {
             return EXPMatrixWriter::storeMatrixData(std::string(fileName), genes, samples, vectors, stride_bytes, skip);
         }
 
 	/*dump the matrix data.  matrix has 1 sample per row.  output has to be 1 gene per row (transposed).*/
 	static bool storeMatrixData(std::string const & fileName, std::vector<std::string> const & genes,
-            std::vector<std::string> const & samples, FloatType* vectors, 
+            std::vector<std::string> const & samples, FloatType const * vectors, 
             size_t const & stride_bytes, bool const & skip = EXP_SKIP_TWO_ROWS) {
 
         const char delim[] = "\t";
@@ -100,7 +100,7 @@ public:
             for (size_t i = 0; i < genes.size(); ++i) {
                 format_to(data, "{}{}---", genes[i], delim);
 
-                row = reinterpret_cast<FloatType *>(reinterpret_cast<unsigned char *>(vectors) + i * stride_bytes);
+                row = reinterpret_cast<FloatType const *>(reinterpret_cast<unsigned char const *>(vectors) + i * stride_bytes);
                 for (size_t j = 0; j < samples.size(); ++j) {
                     format_to(data, "{}{}", delim, row[j]);
                 }

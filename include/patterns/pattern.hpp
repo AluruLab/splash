@@ -833,8 +833,8 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                 // iterate over all tiles
                 size_t row, col, row_end, col_end;
                 size_t id = omp_tile_parts.offset;
-                auto i = omp_tile_parts.offset;
-                for (i = 0; i < omp_tile_parts.size; ++i, ++id) {
+                size_t max_id = id + omp_tile_parts.size;
+                for (; id < max_id; ++id) {
                     auto part = tiles.part(id);  // id is a linear id.  tiles are filled sequentially within each proc-thread.
                     auto data = tiles.data(id);
                     // part.print("PART: ");
@@ -869,6 +869,8 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                                 // auto yx = _ops[thread_id](input2.data(col), input1.data(row), input2.columns());
                                 // if (xy != yx)  FMT_PRINT_RT("ERROR: distcorr not symmetric at row col ({}, {}), xy: {}, yx {}\n", row, col, xy, yx);
                                 *data = run(_ops[thread_id], row, col, input1.data(row), input2.data(col), input1.columns());
+                                // if (row == col) FMT_PRINT_RT("Row col {},{} input1 row col {}x{} input2 row col {}x{} data = {}\n",
+                                //     row, col, input1.rows(), input1.columns(), input2.rows(), input2.columns(), *data);
                                 ++data;
                             }
                         }
@@ -897,9 +899,10 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                                 // within a tile on the diagonal, skip compute if lower half.
                                 if (row <= col) {
                                     // upper.  so fill in.
-                                    auto xy = run(_ops[thread_id], row, col, input1.data(row), input2.data(col), input1.columns());
-                                    *data = xy; 
-                                    if (row < col) *data2 = xy;
+                                    *data = run(_ops[thread_id], row, col, input1.data(row), input2.data(col), input1.columns());
+                                    // if (row == col) FMT_PRINT_RT("Row col {},{} input1 row col {}x{} input2 row col {}x{} data = {}\n",
+                                    //     row, col, input1.rows(), input1.columns(), input2.rows(), input2.columns(), *data);
+                                    if (row < col) *data2 = *data;
                                 }  // else lower half.  skip.
 
                                 // compute correlation
