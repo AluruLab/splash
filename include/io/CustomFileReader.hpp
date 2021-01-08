@@ -69,7 +69,7 @@ public:
 		_fileBufferSentinel = 0;
 		_fileBufferLength = 0;
 		if (_fileBufferR == NULL) {
-			PRINT_RT("ERROR: Memory allocation failed in file %s in line %d\n",
+			FMT_PRINT_RT("ERROR: Memory allocation failed in file {} in line {}\n",
 					__FUNCTION__, __LINE__);
 			exit(-1);
 		}
@@ -100,7 +100,7 @@ public:
 				*bufferSize = *buffer != NULL ? *bufferSize * 2 : (1 << 11);
 				*buffer = (char*) realloc(*buffer, *bufferSize);
 				if (!*buffer) {
-					PRINT_RT("ERROR: Memory reallocation failed (%ld)\n",
+					FMT_PRINT_RT("ERROR: Memory reallocation failed ({})\n",
 							*bufferSize * 2);
 					exit(-1);
 				}
@@ -117,7 +117,7 @@ public:
 			*bufferSize = length + 1;
 			*buffer = (char*) malloc(*bufferSize * sizeof(char));
 			if (!*buffer) {
-				PRINT_RT("ERROR: Memory reallocation failed (%ld)\n",
+				FMT_PRINT_RT("ERROR: Memory reallocation failed ({})\n",
 						*bufferSize * 2);
 				exit(-1);
 			}
@@ -144,13 +144,13 @@ public:
 		if (!fileName) {
 			_fp = myopenstdin(mode);
 			if (!_fp) {
-				PRINT_RT("ERROR: Failed to open STDIN\n");
+				FMT_PRINT_RT("ERROR: Failed to open STDIN\n");
 				exit(-1);
 			}
 		} else {
 			_fp = myfopen(fileName, mode);
 			if (!_fp) {
-				PRINT_RT("ERROR: Failed to open file: %s\n", fileName);
+				FMT_PRINT_RT("ERROR: Failed to open file: {}\n", fileName);
 				exit(-1);
 			}
 		}
@@ -177,7 +177,7 @@ public:
 				if (myfeof(_fp)) {
 					return -1;
 				} else {
-					PRINT_RT("ERROR: File reading failed in function %s line %d\n",
+					FMT_PRINT_RT("ERROR: File reading failed in function {} line {}\n",
 							__FUNCTION__, __LINE__);
 					exit(-1);
 				}
@@ -190,7 +190,7 @@ public:
 		if (_fileBufferSentinel >= 0) {
 			_fileBuffer[--_fileBufferSentinel] = ch;
 		} else {
-			PRINT_RT("ERROR: Two consecutive ungetc operations occurred\n");
+			FMT_PRINT_RT("ERROR: Two consecutive ungetc operations occurred\n");
 			return -1; /*an error occurred, return end-of-file marker*/
 		}
 		return ch;

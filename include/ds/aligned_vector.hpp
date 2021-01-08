@@ -178,11 +178,11 @@ class aligned_vector {
 
 
         void print(const char* prefix) {
-            PRINT_RT("%s ", prefix);
+            FMT_PRINT_RT("{} ", prefix);
             for (size_type i = 0; i < _cols; ++i){
-                PRINT("%f ", data(i));
+                FMT_PRINT("{} ", data(i));
             }
-            PRINT("\n");
+            FMT_PRINT("\n");
         }
 
 

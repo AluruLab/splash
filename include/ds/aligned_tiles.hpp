@@ -71,15 +71,15 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             memset(_data, 0, bytes);
 
             offsets[_count] = elements;
-                // PRINT_RT("INTERNAL _data: %p, %lu\n", _data, sizeof(_data));
-                // FLUSH();
+                // FMT_PRINT_RT("INTERNAL _data: {:p}, {}\n", _data, sizeof(_data));
+                // FMT_FLUSH();
         }
 
     public:
         aligned_tiles() : _align(splash::utils::get_cacheline_size()),
             _data(nullptr), bytes(0) {
-                // PRINT_RT("DEFAULT _data: %p, %lu\n", _data, sizeof(_data));
-                // FLUSH();
+                // FMT_PRINT_RT("DEFAULT _data: {:p}, {}\n", _data, sizeof(_data));
+                // FMT_FLUSH();
             }
 
         aligned_tiles(splash::utils::partition2D<S> const * start, size_type const & count, size_t const & align = 0) :
@@ -97,12 +97,12 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
 
             _data = reinterpret_cast<T*>(splash::utils::aalloc(bytes, _align));
             memset(_data, 0, bytes);
-                // PRINT_RT("POPULATE _data: %p, %lu\n", _data, sizeof(_data));
-                // FLUSH();
+                // FMT_PRINT_RT("POPULATE _data: {:p}, {}\n", _data, sizeof(_data));
+                // FMT_FLUSH();
         }
         ~aligned_tiles() {
-                // PRINT_RT("DELETE _data: %p, %lu\n", _data, sizeof(_data));
-                // FLUSH();
+                // FMT_PRINT_RT("DELETE _data: {:p}, {}\n", _data, sizeof(_data));
+                // FMT_FLUSH();
             if (_data) splash::utils::afree(_data);
         }
 
@@ -110,8 +110,8 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             _data = reinterpret_cast<T*>(splash::utils::aalloc(other.allocated(), _align));
             memcpy(_data, other._data, other.allocated());
             bytes = other.allocated();
-                // PRINT_RT("COPY _data: %p, %lu\n", _data, sizeof(_data));
-                // FLUSH();
+                // FMT_PRINT_RT("COPY _data: {:p}, {}\n", _data, sizeof(_data));
+                // FMT_FLUSH();
         }
         aligned_tiles & operator=(aligned_tiles const & other) {
             if (allocated() != other.allocated()) {
@@ -124,8 +124,8 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             _align = other._align;
             _parts.assign(other._parts.begin(), other._parts.end());
             offsets.assign(other.offsets.begin(), other.offsets.end());
-                // PRINT_RT("COPY= _data: %p, %lu\n", _data, sizeof(_data));
-                // FLUSH();
+                // FMT_PRINT_RT("COPY= _data: {:p}, {}\n", _data, sizeof(_data));
+                // FMT_FLUSH();
             return *this;
         }
         // move constructor.  take ownership.
@@ -135,8 +135,8 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             bytes(other.bytes) {
                 other._data = nullptr;
                 other.bytes = 0;
-                // PRINT_RT("MOVE _data: %p, %lu\n", _data, sizeof(_data));
-                // FLUSH();
+                // FMT_PRINT_RT("MOVE _data: {:p}, {}\n", _data, sizeof(_data));
+                // FMT_FLUSH();
         }
         aligned_tiles & operator=(aligned_tiles && other) {
             _align = other._align;
@@ -150,8 +150,8 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             
             bytes = other.bytes; 
             other.bytes = 0;
-                // PRINT_RT("MOVE= _data: %p, %lu\n", _data, sizeof(_data));
-                // FLUSH();
+                // FMT_PRINT_RT("MOVE= _data: {:p}, {}\n", _data, sizeof(_data));
+                // FMT_FLUSH();
             return *this;
         }
 
@@ -192,7 +192,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 ids.emplace_back(_parts[i].r.offset, _parts[i].c.offset, i, offsets[i] );
             }
             auto etime = getSysTime();
-            ROOT_PRINT("sort: set up in %f sec\n", get_duration_s(stime, etime));
+            FMT_ROOT_PRINT("sort: set up in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -201,17 +201,17 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 return (a.r_offset == b.r_offset) ? (a.c_offset < b.c_offset) : (a.r_offset < b.r_offset);
             });
             etime = getSysTime();
-            ROOT_PRINT("sort: sorted_ids in %f sec\n", get_duration_s(stime, etime));
+            FMT_ROOT_PRINT("sort: sorted_ids in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
             
             // ======= now copy with reorder
-            // ROOT_PRINT("aligned_tiles SORT ");
+            // FMT_ROOT_PRINT("aligned_tiles SORT ");
             aligned_tiles output(ids.size(), offsets.back(), _align);
-            // ROOT_PRINT("aligned_tiles SORT DONE\n");
-            // FLUSH();
+            // FMT_ROOT_PRINT("aligned_tiles SORT DONE\n");
+            // FMT_FLUSH();
             etime = getSysTime();
-            ROOT_PRINT("sort: size_output in %f sec\n", get_duration_s(stime, etime));
+            FMT_ROOT_PRINT("sort: size_output in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
             
@@ -227,7 +227,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 offset += s;
             }
             etime = getSysTime();
-            ROOT_PRINT("sort: shuffled in %f sec\n", get_duration_s(stime, etime));
+            FMT_ROOT_PRINT("sort: shuffled in {} sec\n", get_duration_s(stime, etime));
 
             return output;
         }
@@ -254,7 +254,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
 
         // transpose.  offsets don't change.  id and id_cols do not change.  r and c are swapped.
         aligned_tiles transpose() const {
-            // PRINT_RT("aligned_tiles TRANSPOSE ");
+            // FMT_PRINT_RT("aligned_tiles TRANSPOSE ");
             aligned_tiles output(_parts.data(), _parts.size(), _align);
             for (size_type i = 0; i < output._parts.size(); ++i) {
                 output._parts[i].r = _parts[i].c;
@@ -269,11 +269,11 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         }
 
         aligned_tiles merge(aligned_tiles const & other) const {
-            // PRINT_RT("aligned_tiles OPERATOR+ ");
+            // FMT_PRINT_RT("aligned_tiles OPERATOR+ ");
 
             aligned_tiles output(_parts.size() + other._parts.size(), offsets.back() + other.offsets.back(), _align);
-            // PRINT_RT("left, _parts: %ld, elements: %ld\n", size(), offsets.back());
-            // PRINT_RT("right, _parts: %ld, elements: %ld\n", other.size(), other.offsets.back());
+            // FMT_PRINT_RT("left, _parts: {}, elements: {}\n", size(), offsets.back());
+            // FMT_PRINT_RT("right, _parts: {}, elements: {}\n", other.size(), other.offsets.back());
             size_t i = 0;
             for (; i < _parts.size(); ++i) {
                 output._parts[i] = _parts[i];
@@ -287,7 +287,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 output.offsets[i] = offset + other.offsets[j];
             }
             memcpy(output._data + offsets.back(), other._data, other.allocated());
-            // PRINT_RT("addition, _parts: %ld, elements: %ld\n", output.size(), output.offsets.back());
+            // FMT_PRINT_RT("addition, _parts: {}, elements: {}\n", output.size(), output.offsets.back());
 
             return output;
         }
@@ -348,7 +348,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                     rmax = std::max(rmax, _parts[i].r.offset + _parts[i].r.size);
                     cmax = std::max(cmax, _parts[i].c.offset + _parts[i].c.size);
                 }
-                // PRINT_RT("rmin %lu rmax %lu, cmin %lu cmax %lu\n", rmin, rmax, cmin, cmax);
+                // FMT_PRINT_RT("rmin {} rmax {}, cmin {} cmax {}\n", rmin, rmax, cmin, cmax);
                 return splash::utils::partition2D<S>(
                     splash::utils::partition<S>(rmin, rmax-rmin, 0),
                     splash::utils::partition<S>(cmin, cmax-cmin, 0),
@@ -362,15 +362,15 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
         void copy_to(aligned_matrix<T> & matrix, size_t const & row_offset, size_t const & col_offset, size_t const & i) const {
             // every part.
             auto part = _parts[i];
-            // PRINT_RT("COPY_TO tile %lu: ", i);
+            // FMT_PRINT_RT("COPY_TO tile {}: ", i);
             // print("COPY TO: ", i);
             T const * src = _data + offsets[i];  // src block of data
             if ((part.r.offset < row_offset) || (part.r.offset + part.r.size > row_offset + matrix.rows())) {
-                PRINT_RT("row offset: %lu size %lu ", row_offset, matrix.rows());
+                FMT_PRINT_RT("row offset: {} size {} ", row_offset, matrix.rows());
                 part.r.print("row: ");
             }
             if ((part.c.offset < col_offset) || (part.c.offset + part.c.size > col_offset + matrix.columns())) {
-                PRINT_RT("col offset: %lu size %lu ", col_offset, matrix.columns());
+                FMT_PRINT_RT("col offset: {} size {} ", col_offset, matrix.columns());
                 part.c.print("col: ");
             }
             T * dest; 
@@ -396,13 +396,13 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             TT const *  ptr = _data + offsets[id];;
 
             _parts[id].print(prefix);
-            PRINT_RT("%s data offsets = %lu\n", prefix, offsets[id]);
+            FMT_PRINT_RT("{} data offsets = {}\n", prefix, offsets[id]);
             for (size_t r = 0; r < _parts[id].r.size; ++r) {
-                PRINT_RT("%s ", prefix);
+                FMT_PRINT_RT("{} ", prefix);
                 for (size_t c = 0; c < _parts[id].c.size; ++c, ++ptr) {
-                    PRINT("%.17lf, ", *ptr);
+                    FMT_PRINT("{}, ", *ptr);
                 }
-                PRINT("\n");
+                FMT_PRINT("\n");
             }
         }
         template <typename TT = T, typename std::enable_if<!std::is_arithmetic<TT>::value, int>::type = 1>
@@ -410,14 +410,14 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             TT const *  ptr = _data + offsets[id];;
 
             _parts[id].print(prefix);
-            PRINT_RT("%s data offsets = %lu\n", prefix, offsets[id]);
+            FMT_PRINT_RT("{} data offsets = {}\n", prefix, offsets[id]);
             for (size_t r = 0; r < _parts[id].r.size; ++r) {
-                PRINT_RT("%s ", prefix);
+                FMT_PRINT_RT("{} ", prefix);
                 for (size_t c = 0; c < _parts[id].c.size; ++c, ++ptr) {
                     ptr->print();
-                    PRINT(", ");
+                    FMT_PRINT(", ");
                 }
-                PRINT("\n");
+                FMT_PRINT("\n");
             }
         }
 
@@ -464,10 +464,10 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             }
 
             // allocate output
-            // PRINT_RT("aligned_tiles GATHER ");
+            // FMT_PRINT_RT("aligned_tiles GATHER ");
             aligned_tiles output;
             if (rank == target_rank) {  
-                // PRINT_RT("aligned_tiles GATHER assign");
+                // FMT_PRINT_RT("aligned_tiles GATHER assign");
                 output = std::move(aligned_tiles(part_offsets[procs], elem_offsets[procs], _align));
             }
             // -------- move _parts by bytes
@@ -536,7 +536,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             }
 
             // allocate output
-            // PRINT_RT("aligned_tiles GATHER ");
+            // FMT_PRINT_RT("aligned_tiles GATHER ");
             aligned_tiles output(part_offsets[procs], elem_offsets[procs], _align);
 
             // -------- move _parts by bytes
@@ -581,11 +581,11 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             auto stime = getSysTime();
 
             // -------- sort first.  we'd need things in order anyway.
-            // PRINT_RT("aligned_tiles ROW_PARTITION sort ");
+            // FMT_PRINT_RT("aligned_tiles ROW_PARTITION sort ");
             aligned_tiles sorted = sort_by_offsets();
 
             auto etime = getSysTime();
-            // ROOT_PRINT("partition: sorted in %f sec\n", get_duration_s(stime, etime));
+            // FMT_ROOT_PRINT("partition: sorted in {} sec\n", get_duration_s(stime, etime));
 
             if (procs == 1)  return sorted;
 
@@ -597,15 +597,15 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             splash::utils::mpi::datatype<int> int_dt;
             MPI_Allgather(MPI_IN_PLACE, 1, int_dt.value, upper_bounds, 1, int_dt.value, comm);
 
-            // PRINT_RT("UPPER_BOUNDS [");
+            // FMT_PRINT_RT("UPPER_BOUNDS [");
             // for (int i = 0; i < procs; ++i) {
-            //     PRINT_RT("%d ", upper_bounds[i]);
+            //     FMT_PRINT_RT("{} ", upper_bounds[i]);
             // }
-            // PRINT_RT("]\n");
+            // FMT_PRINT_RT("]\n");
 
             
-            // PRINT_RT("aligned_tiles ROW_PARTITION sort DONE\n");
-            // FLUSH();
+            // FMT_PRINT_RT("aligned_tiles ROW_PARTITION sort DONE\n");
+            // FMT_FLUSH();
             
             // -------- get counts.
             int * part_counts = new int[procs]{};
@@ -637,31 +637,31 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 // should not get segv here.
                 elem_counts[i] = sorted.offsets[part_id] - elem_offsets[i];
             } 
-            // PRINT_RT("PART count [");
+            // FMT_PRINT_RT("PART count [");
             // for (int i = 0; i < procs; ++i) {
-            //     PRINT_RT("%d ", part_counts[i]);
+            //     FMT_PRINT_RT("{} ", part_counts[i]);
             // }
-            // PRINT_RT("]\n");
-            // PRINT_RT("PART offset [");
+            // FMT_PRINT_RT("]\n");
+            // FMT_PRINT_RT("PART offset [");
             // for (int i = 0; i < procs; ++i) {
-            //     PRINT_RT("%d ", part_offsets[i]);
+            //     FMT_PRINT_RT("{} ", part_offsets[i]);
             // }
-            // PRINT_RT("]\n");
-            // PRINT_RT("ELEM count [");
+            // FMT_PRINT_RT("]\n");
+            // FMT_PRINT_RT("ELEM count [");
             // for (int i = 0; i < procs; ++i) {
-            //     PRINT_RT("%d ", elem_counts[i]);
+            //     FMT_PRINT_RT("{} ", elem_counts[i]);
             // }
-            // PRINT_RT("]\n");
-            // PRINT_RT("ELEM offset [");
+            // FMT_PRINT_RT("]\n");
+            // FMT_PRINT_RT("ELEM offset [");
             // for (int i = 0; i < procs; ++i) {
-            //     PRINT_RT("%d ", elem_offsets[i]);
+            //     FMT_PRINT_RT("{} ", elem_offsets[i]);
             // }
-            // PRINT_RT("]\n");
+            // FMT_PRINT_RT("]\n");
 
             delete [] upper_bounds;
 
             etime = getSysTime();
-            // ROOT_PRINT("partition: count _parts in %f sec\n", get_duration_s(stime, etime));
+            // FMT_ROOT_PRINT("partition: count _parts in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -679,37 +679,37 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
                 recv_part_offsets[i + 1] = recv_part_offsets[i] + recv_parts[i];
                 recv_elem_offsets[i + 1] = recv_elem_offsets[i] + recv_elems[i];
             }
-            // PRINT_RT("RECV PART count [");
+            // FMT_PRINT_RT("RECV PART count [");
             // for (int i = 0; i < procs; ++i) {
-            //     PRINT_RT("%d ", recv_parts[i]);
+            //     FMT_PRINT_RT("{} ", recv_parts[i]);
             // }
-            // PRINT_RT("]\n");
-            // PRINT_RT("RECV PART offset [");
+            // FMT_PRINT_RT("]\n");
+            // FMT_PRINT_RT("RECV PART offset [");
             // for (int i = 0; i <= procs; ++i) {
-            //     PRINT_RT("%d ", recv_part_offsets[i]);
+            //     FMT_PRINT_RT("{} ", recv_part_offsets[i]);
             // }
-            // PRINT_RT("]\n");
-            // PRINT_RT("RECV ELEM count [");
+            // FMT_PRINT_RT("]\n");
+            // FMT_PRINT_RT("RECV ELEM count [");
             // for (int i = 0; i < procs; ++i) {
-            //     PRINT_RT("%d ", recv_elems[i]);
+            //     FMT_PRINT_RT("{} ", recv_elems[i]);
             // }
-            // PRINT_RT("]\n");
-            // PRINT_RT("RECV ELEM offset [");
+            // FMT_PRINT_RT("]\n");
+            // FMT_PRINT_RT("RECV ELEM offset [");
             // for (int i = 0; i <= procs; ++i) {
-            //     PRINT_RT("%d ", recv_elem_offsets[i]);
+            //     FMT_PRINT_RT("{} ", recv_elem_offsets[i]);
             // }
-            // PRINT_RT("]\n");
+            // FMT_PRINT_RT("]\n");
             etime = getSysTime();
-            // ROOT_PRINT("partition: a2a counts in %f sec\n", get_duration_s(stime, etime));
+            // FMT_ROOT_PRINT("partition: a2a counts in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
             // --------- allocate
-            // PRINT_RT("aligned_tiles ROW_PARTITION out ");
+            // FMT_PRINT_RT("aligned_tiles ROW_PARTITION out ");
             aligned_tiles output(recv_part_offsets[procs], recv_elem_offsets[procs], _align);
-            // PRINT_RT("aligned_tiles ROW_PARTITION out DONE\n");
+            // FMT_PRINT_RT("aligned_tiles ROW_PARTITION out DONE\n");
             etime = getSysTime();
-            // ROOT_PRINT("partition: alloc out in %f sec\n", get_duration_s(stime, etime));
+            // FMT_ROOT_PRINT("partition: alloc out in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -724,7 +724,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             delete [] recv_part_offsets;
 
             etime = getSysTime();
-            // ROOT_PRINT("partition: move _parts in %f sec\n", get_duration_s(stime, etime));
+            // FMT_ROOT_PRINT("partition: move _parts in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
 
@@ -740,7 +740,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             delete [] recv_elem_offsets;
             
             etime = getSysTime();
-            // ROOT_PRINT("partition: move elem in %f sec\n", get_duration_s(stime, etime));
+            // FMT_ROOT_PRINT("partition: move elem in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
             // -------- reconstruct offsets
@@ -751,7 +751,7 @@ class aligned_tiles<T, splash::utils::partition2D<S>> {
             }
 
             etime = getSysTime();
-            // ROOT_PRINT("partition: reconstruct offset in %f sec\n", get_duration_s(stime, etime));
+            // FMT_ROOT_PRINT("partition: reconstruct offset in {} sec\n", get_duration_s(stime, etime));
 
             return output;
         }

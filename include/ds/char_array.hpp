@@ -81,7 +81,7 @@ class char_array_stl {
 			size -= output.size;
 
 			// auto etime = getSysTime();
-			// ROOT_PRINT("trim_left x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -103,9 +103,9 @@ class char_array_stl {
 			// update the output and buffer sizes.
 			output.size = std::distance(output.ptr, ptr);
 			size -= output.size;
-			// ROOT_PRINT("extract_token: %lu\n", output.size);
+			// FMT_ROOT_PRINT("extract_token: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("extract token x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 		// remove 1 delim character from buffer (or \r\n)
@@ -127,9 +127,9 @@ class char_array_stl {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
+			// FMT_ROOT_PRINT("trim_left_1: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left_1 x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 		char_array_stl trim_left_1(const char & delim) {
@@ -142,9 +142,9 @@ class char_array_stl {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
+			// FMT_ROOT_PRINT("trim_left_1: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left_1 in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -175,7 +175,7 @@ class char_array_stl {
 				}) + 1;
 
 			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens or empty in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("count tokens or empty in {} sec\n", get_duration_s(stime, etime));
 			return count;
 		}
 		// count non-empty tokens.
@@ -203,7 +203,7 @@ class char_array_stl {
 			count += !(is_delimiter(delim, ptr[size - 1]));
 			
 			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("count tokens in {} sec\n", get_duration_s(stime, etime));
 			return count;
 		}
 
@@ -268,7 +268,7 @@ class char_array_hybrid {
 			size -= output.size;
 
 			// auto etime = getSysTime();
-			// ROOT_PRINT("trim_left x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -290,9 +290,9 @@ class char_array_hybrid {
 			// update the output and buffer sizes.
 			output.size = std::distance(output.ptr, ptr);
 			size -= output.size;
-			// ROOT_PRINT("extract_token: %lu\n", output.size);
+			// FMT_ROOT_PRINT("extract_token: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("extract token x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 		// remove 1 delim character from buffer (or \r\n)
@@ -314,9 +314,9 @@ class char_array_hybrid {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
+			// FMT_ROOT_PRINT("trim_left_1: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left_1 x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 		char_array_hybrid trim_left_1(const char & delim) {
@@ -329,9 +329,9 @@ class char_array_hybrid {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
+			// FMT_ROOT_PRINT("trim_left_1: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left_1 in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -362,7 +362,7 @@ class char_array_hybrid {
 				}) + 1;
 
 			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens or empty in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("count tokens or empty in {} sec\n", get_duration_s(stime, etime));
 			return count;
 		}
 		// count non-empty tokens.
@@ -390,7 +390,7 @@ class char_array_hybrid {
 			count += !(is_delimiter(delim, ptr[size - 1]));
 			
 			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("count tokens in {} sec\n", get_duration_s(stime, etime));
 			return count;
 		}
 
@@ -451,7 +451,7 @@ class char_array_loop {
 			output.size = i;
 
 			// auto etime = getSysTime();
-			// ROOT_PRINT("trim_left x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -471,9 +471,9 @@ class char_array_loop {
 			size -= i;
 			output.size = i;
 
-			// ROOT_PRINT("extract_token: %lu\n", output.size);
+			// FMT_ROOT_PRINT("extract_token: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("extract token x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 		// remove 1 delim character from buffer (or \r\n)
@@ -495,9 +495,9 @@ class char_array_loop {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
+			// FMT_ROOT_PRINT("trim_left_1: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left_1 x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 		char_array_loop trim_left_1(const char & delim) {
@@ -510,9 +510,9 @@ class char_array_loop {
 				++ptr;
 			}
 			output.size = std::distance(output.ptr, ptr);
-			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
+			// FMT_ROOT_PRINT("trim_left_1: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left_1 in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -542,7 +542,7 @@ class char_array_loop {
 				if (is_delimiter(delim, ptr[i])) ++count;
 
 			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens or empty in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("count tokens or empty in {} sec\n", get_duration_s(stime, etime));
 			return count;
 		}
 		// count non-empty tokens.
@@ -559,7 +559,7 @@ class char_array_loop {
 			count += !(is_delimiter(delim, ptr[size - 1]));
 			
 			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("count tokens in {} sec\n", get_duration_s(stime, etime));
 			return count;
 		}
 
@@ -634,7 +634,7 @@ class char_array_template {
 			output.size = i;
 
 			// auto etime = getSysTime();
-			// ROOT_PRINT("trim_left x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -656,9 +656,9 @@ class char_array_template {
 			size -= i;
 			output.size = i;
 
-			// ROOT_PRINT("extract_token: %lu\n", output.size);
+			// FMT_ROOT_PRINT("extract_token: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("extract token x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("extract token x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -678,9 +678,9 @@ class char_array_template {
 				size -= output.size;
 				ptr += output.size;
 			}
-			// ROOT_PRINT("trim_left_1: %lu\n", output.size);
+			// FMT_ROOT_PRINT("trim_left_1: {}\n", output.size);
 			// auto etime = getSysTime();	
-			// ROOT_PRINT("trim_left_1 x in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("trim_left_1 x in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -710,7 +710,7 @@ class char_array_template {
 				if (is_delimiter<delim>(i)) ++count;
 
 			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens or empty in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("count tokens or empty in {} sec\n", get_duration_s(stime, etime));
 			return count;
 		}
 		// count non-empty tokens.
@@ -727,7 +727,7 @@ class char_array_template {
 			count += is_not_delimiter<delim>(size - 1);
 			
 			// auto etime = getSysTime();
-			// ROOT_PRINT("count tokens in %f sec\n", get_duration_s(stime, etime));
+			// FMT_ROOT_PRINT("count tokens in {} sec\n", get_duration_s(stime, etime));
 			return count;
 		}
 

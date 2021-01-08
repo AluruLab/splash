@@ -49,7 +49,7 @@ class FileReader2 {
 			file.read(output.ptr, output.size);
 
 			auto etime = getSysTime();
-			ROOT_PRINT("read file in %f sec\n", get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("read file in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -75,7 +75,7 @@ class FileReader2 {
 				}
 			}
 			auto etime = getSysTime();
-			ROOT_PRINT("map file in %f sec\n", get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("map file in {} sec\n", get_duration_s(stime, etime));
 			return output;
 		}
 
@@ -105,7 +105,7 @@ class FileReader2 {
 // 			MPI_File fh;
 // 			result = MPI_File_open(comm, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 // 			if(result != MPI_SUCCESS) 
-// 				PRINT_RT("ERROR: MPI_File_open failed for %s\n", filename);
+// 				FMT_PRINT_RT("ERROR: MPI_File_open failed for {}\n", filename);
 // 			else {
 // 				// --------- get file size
 // 				if (rank == 0) {
@@ -132,11 +132,11 @@ class FileReader2 {
 // 				MPI_Status status;
 // 				result = MPI_File_read_at_all(fh, offset, output.ptr, output.size, MPI_BYTE, &status);
 // 				if(result != MPI_SUCCESS) 
-// 					PRINT_RT("ERROR: MPI_File_read_at failed for rank %d at offset %lld for length %lu\n", rank, offset, output.size);
+// 					FMT_PRINT_RT("ERROR: MPI_File_read_at failed for rank {} at offset {} for length {}\n", rank, offset, output.size);
 // 				int bytes_read;
 // 				result = MPI_Get_elements(&status, MPI_BYTE, &bytes_read);
 // 				if(result != MPI_SUCCESS)
-// 					PRINT_RT("ERROR: MPI_Get_elements failed to get bytes_read\n");
+// 					FMT_PRINT_RT("ERROR: MPI_Get_elements failed to get bytes_read\n");
 // 				output.size = bytes_read;
 // 				MPI_File_close(&fh);
 

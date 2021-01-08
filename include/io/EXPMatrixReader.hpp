@@ -166,7 +166,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName,
 
 	/*open the file*/
 	if (!fileReader.open(fileName.c_str(), "rb")) {
-		PRINT_RT("ERROR: Failed to open file %s\n", fileName.c_str());
+		FMT_PRINT_RT("ERROR: Failed to open file {}\n", fileName.c_str());
 		return false;
 	}
 
@@ -174,7 +174,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName,
 	/*read the header to get the number of samples*/
 	numChars = fileReader.getline(&buffer, &bufferSize);
 	if (numChars <= 0) {
-		PRINT_RT("ERROR: The file is incomplete\n");
+		FMT_PRINT_RT("ERROR: The file is incomplete\n");
 		fileReader.close();
 		return false;
 	}
@@ -184,17 +184,17 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName,
 		vectorSize++;
 	}
 	vectorSize -= 2; /*exclude the first columns of the header: prob id and locus id*/
-	ROOT_PRINT("Number of samples: %ld\n", vectorSize);
+	FMT_ROOT_PRINT("Number of samples: {}\n", vectorSize);
 
 	if(skip){
 		/*skip the second and the third rows*/
 		if(fileReader.getline(&buffer, &bufferSize) <= 0){
-			PRINT_RT("ERROR: EXP file is incomplete at the second row\n");
+			FMT_PRINT_RT("ERROR: EXP file is incomplete at the second row\n");
 			fileReader.close();
 			return false;
 		}
 		if(fileReader.getline(&buffer, &bufferSize) <= 0){
-			PRINT_RT("ERROR: EXP file is incomplete at the third row\n");
+			FMT_PRINT_RT("ERROR: EXP file is incomplete at the third row\n");
 			fileReader.close();
 			return false;
 		}
@@ -208,7 +208,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName,
 		}
 		++numVectors;
 	}
-	ROOT_PRINT("Number of gene expression profiles: %ld\n", numVectors);
+	FMT_ROOT_PRINT("Number of gene expression profiles: {}\n", numVectors);
 
 	/*close the file*/
 	fileReader.close();
@@ -232,7 +232,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 	/*open the file*/
 	if (!fileReader.open(fileName.c_str(), "rb")) {
-		PRINT_RT("ERROR: Failed to open file %s\n", fileName.c_str());
+		FMT_PRINT_RT("ERROR: Failed to open file {}\n", fileName.c_str());
 		return false;
 	}
 
@@ -241,7 +241,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	/*read the header to get the number of samples*/
 	numChars = fileReader.getline(&buffer, &bufferSize);
 	if (numChars <= 0) {
-		PRINT_RT("ERROR: The file is incomplete\n");
+		FMT_PRINT_RT("ERROR: The file is incomplete\n");
 		fileReader.close();
 		return false;
 	}
@@ -249,13 +249,13 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	/*analyze the header.  first 2 entries are gene and id */
 	tok = strtok(buffer, delim);
 	if(tok == NULL){
-		PRINT_RT("ERROR: Incomplete header at line %d\n", __LINE__);
+		FMT_PRINT_RT("ERROR: Incomplete header at line {}\n", __LINE__);
 		fileReader.close();
 		return false;
 	}
 	tok = strtok(NULL, delim);
 	if(tok == NULL){
-		PRINT_RT("ERROR: Incomplete header at line %d\n", __LINE__);
+		FMT_PRINT_RT("ERROR: Incomplete header at line {}\n", __LINE__);
 		fileReader.close();
 		return false;
 	}
@@ -267,7 +267,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 	/*check consistency*/
 	if (numSamples != vectorSize) {
-		PRINT_RT("The number of samples (%ld) not equal to number of vectors (%ld)\n",
+		FMT_PRINT_RT("The number of samples ({}) not equal to number of vectors ({})\n",
 				numSamples, vectorSize);
 		fileReader.close();
 		return false;
@@ -276,12 +276,12 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	if(skip){
 		/*skip the second and third rows*/
 		if(fileReader.getline(&buffer, &bufferSize) <= 0){
-			PRINT_RT("ERROR: Incomplete file at line %d\n", __LINE__);
+			FMT_PRINT_RT("ERROR: Incomplete file at line {}\n", __LINE__);
 			fileReader.close();
 			return false;
 		}
 		if(fileReader.getline(&buffer, &bufferSize) <= 0){
-			PRINT_RT("ERROR: Incomplete file at line %d\n", __LINE__);
+			FMT_PRINT_RT("ERROR: Incomplete file at line {}\n", __LINE__);
 			fileReader.close();
 			return false;
 		}
@@ -297,7 +297,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		}
 		/*consistency check*/
 		if (numGenes >= numVectors) {
-			PRINT_RT("Error: number of genes (%ld) is not equal to (%ld)\n", numGenes, numVectors);
+			FMT_PRINT_RT("Error: number of genes ({}) is not equal to ({})\n", numGenes, numVectors);
 			fileReader.close();
 			return false;
 		}
@@ -305,7 +305,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		/*skip the first two columns*/
 		tok = strtok(buffer, delim);
 		if(tok == NULL){
-			PRINT_RT("ERROR: incomplete file at line %d\n", __LINE__);
+			FMT_PRINT_RT("ERROR: incomplete file at line {}\n", __LINE__);
 			fileReader.close();
 			return false;
 		}
@@ -315,7 +315,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 		tok = strtok(NULL, delim);
 		if(tok == NULL){
-			PRINT_RT("ERROR: incomplete file at line %d\n", __LINE__);
+			FMT_PRINT_RT("ERROR: incomplete file at line {}\n", __LINE__);
 			fileReader.close();
 			return false;
 		}
@@ -343,7 +343,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		++numGenes;
 	}
 	if (numGenes != numVectors) {
-		PRINT_RT("Error: number of genes (%ld) is inconsistent with numVectors (%ld)\n", numGenes, numVectors);
+		FMT_PRINT_RT("Error: number of genes ({}) is inconsistent with numVectors ({})\n", numGenes, numVectors);
 		fileReader.close();
 		return false;
 	}
@@ -367,7 +367,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 // 	/*open the file*/
 // 	if (!fileReader.open(fileName.c_str(), "rb")) {
-// 		PRINT_RT("ERROR: Failed to open file %s\n", fileName.c_str());
+// 		FMT_PRINT_RT("ERROR: Failed to open file {}\n", fileName.c_str());
 // 		return false;
 // 	}
 
@@ -376,7 +376,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	/*read the header to get the number of samples*/
 // 	numChars = fileReader.getline(&buffer, &bufferSize);
 // 	if (numChars <= 0) {
-// 		PRINT_RT("ERROR: The file is incomplete\n");
+// 		FMT_PRINT_RT("ERROR: The file is incomplete\n");
 // 		fileReader.close();
 // 		return false;
 // 	}
@@ -384,13 +384,13 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	/*analyze the header.  first 2 entries are gene and id */
 // 	tok = strtok(buffer, delim);
 // 	if(tok == NULL){
-// 		PRINT_RT("ERROR: Incomplete header at line %d\n", __LINE__);
+// 		FMT_PRINT_RT("ERROR: Incomplete header at line {}\n", __LINE__);
 // 		fileReader.close();
 // 		return false;
 // 	}
 // 	tok = strtok(NULL, delim);
 // 	if(tok == NULL){
-// 		PRINT_RT("ERROR: Incomplete header at line %d\n", __LINE__);
+// 		FMT_PRINT_RT("ERROR: Incomplete header at line {}\n", __LINE__);
 // 		fileReader.close();
 // 		return false;
 // 	}
@@ -402,7 +402,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 // 	/*check consistency*/
 // 	if (numSamples != output.columns()) {
-// 		PRINT_RT("The number of samples (%d) not equal to number of vectors (%d)\n",
+// 		FMT_PRINT_RT("The number of samples ({}) not equal to number of vectors ({})\n",
 // 				numSamples, output.columns());
 // 		fileReader.close();
 // 		return false;
@@ -411,12 +411,12 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	if(skip){
 // 		/*skip the second and third rows*/
 // 		if(fileReader.getline(&buffer, &bufferSize) <= 0){
-// 			PRINT_RT("ERROR: Incomplete file at line %d\n", __LINE__);
+// 			FMT_PRINT_RT("ERROR: Incomplete file at line {}\n", __LINE__);
 // 			fileReader.close();
 // 			return false;
 // 		}
 // 		if(fileReader.getline(&buffer, &bufferSize) <= 0){
-// 			PRINT_RT("ERROR: Incomplete file at line %d\n", __LINE__);
+// 			FMT_PRINT_RT("ERROR: Incomplete file at line {}\n", __LINE__);
 // 			fileReader.close();
 // 			return false;
 // 		}
@@ -432,7 +432,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 		}
 // 		/*consistency check*/
 // 		if (numGenes >= output.rows()) {
-// 			PRINT_RT("Error: number of genes (%d) is not equal to (%d)\n", numGenes, output.rows());
+// 			FMT_PRINT_RT("Error: number of genes ({}) is not equal to ({})\n", numGenes, output.rows());
 // 			fileReader.close();
 // 			return false;
 // 		}
@@ -440,7 +440,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 		/*skip the first two columns*/
 // 		tok = strtok(buffer, delim);
 // 		if(tok == NULL){
-// 			PRINT_RT("ERROR: incomplete file at line %d\n", __LINE__);
+// 			FMT_PRINT_RT("ERROR: incomplete file at line {}\n", __LINE__);
 // 			fileReader.close();
 // 			return false;
 // 		}
@@ -450,7 +450,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 // 		tok = strtok(NULL, delim);
 // 		if(tok == NULL){
-// 			PRINT_RT("ERROR: incomplete file at line %d\n", __LINE__);
+// 			FMT_PRINT_RT("ERROR: incomplete file at line {}\n", __LINE__);
 // 			fileReader.close();
 // 			return false;
 // 		}
@@ -478,7 +478,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 		++numGenes;
 // 	}
 // 	if (numGenes != output.rows()) {
-// 		PRINT_RT("Error: number of genes (%d) is inconsistent with output.rows() (%d)\n", numGenes, output.rows());
+// 		FMT_PRINT_RT("Error: number of genes ({}) is inconsistent with output.rows() ({})\n", numGenes, output.rows());
 // 		fileReader.close();
 // 		return false;
 // 	}
@@ -515,7 +515,7 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, ssi
 	MPI_File fh;
 	result = MPI_File_open(comm, fileName.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
   	if(result != MPI_SUCCESS) 
-    	PRINT_RT("ERROR: MPI_File_open failed for %s\n", fileName.c_str());
+    	FMT_PRINT_RT("ERROR: MPI_File_open failed for {}\n", fileName.c_str());
 
 	// --------- get file size
 	if (rank == 0) {
@@ -542,11 +542,11 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, ssi
 	MPI_Status status;
 	result = MPI_File_read_at_all(fh, offset, read_buffer, bytes_per_proc, MPI_BYTE, &status);
 	if(result != MPI_SUCCESS) 
-    	PRINT_RT("ERROR: MPI_File_read_at failed for rank %d at offset %lld for length %lu\n", rank, offset, bytes_per_proc);
+    	FMT_PRINT_RT("ERROR: MPI_File_read_at failed for rank {} at offset {} for length {}\n", rank, offset, bytes_per_proc);
 	int bytes_read;
 	result = MPI_Get_elements(&status, MPI_BYTE, &bytes_read);
   	if(result != MPI_SUCCESS)
-    	PRINT_RT("ERROR: MPI_Get_elements failed to get bytes_read\n");
+    	FMT_PRINT_RT("ERROR: MPI_Get_elements failed to get bytes_read\n");
 	MPI_File_close(&fh);
 
 
@@ -581,14 +581,14 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, ssi
 		// set to first non-eol character.
 		numChars = getline_start(fullbuf, max);
 		if (numChars < 0) {
-			PRINT_RT("ERROR: Incomplete file at line %d, count %ld\n", __LINE__, numChars);
+			FMT_PRINT_RT("ERROR: Incomplete file at line {}, count {}\n", __LINE__, numChars);
 			fflush(stderr);
 			err = true;
 		}
 
 		numChars = getline(fullbuf, max, buffer);
 		if (numChars < 0) {
-			PRINT_RT("ERROR: The processor has incomplete data, count %ld\n", numChars);
+			FMT_PRINT_RT("ERROR: The processor has incomplete data, count {}\n", numChars);
 			fflush(stderr);
 			err = true;
 		}
@@ -606,19 +606,19 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, ssi
 			/*skip the second and third rows*/
 			/*skip the second and the third rows*/
 			if(getline(fullbuf, max, buffer) < 0){
-				PRINT_RT("ERROR: EXP file is incomplete at the second row, count %ld\n", numChars);
+				FMT_PRINT_RT("ERROR: EXP file is incomplete at the second row, count {}\n", numChars);
 				fflush(stderr);
 				err = true;
 			}
 			if(getline(fullbuf, max, buffer) < 0){
-				PRINT_RT("ERROR: EXP file is incomplete at the third row, count %ld\n", numChars);
+				FMT_PRINT_RT("ERROR: EXP file is incomplete at the third row, count {}\n", numChars);
 				fflush(stderr);
 				err = true;
 			}
 		}
 	}
 	MPI_Bcast(&vectorSize, 1, MPI_INT, 0, comm);
-	ROOT_PRINT("Number of samples: %ld\n", vectorSize);
+	FMT_ROOT_PRINT("Number of samples: {}\n", vectorSize);
 
 	if (err) return false;
 
@@ -633,14 +633,14 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, ssi
 		} 
 		if (buffer[numChars] == '\n') {
 			// buffer[20] = 0;
-			// ROOT_PRINT("[%d] first line %s\n", rank, buffer);
+			// FMT_ROOT_PRINT("[{}] first line {}\n", rank, buffer);
 			// if ((rank == 3) && (numVectors == 0)) {
 			// 	buffer[numChars] = 0;
-			// 	ROOT_PRINT("[%d] first line %s\n", rank, buffer);
+			// 	FMT_ROOT_PRINT("[{}] first line {}\n", rank, buffer);
 			// }
 			// if ((rank == 2) && (numVectors == 32)) {
 			// 	buffer[numChars] = 0;
-			// 	ROOT_PRINT("[%d] first line %s\n", rank, buffer);
+			// 	FMT_ROOT_PRINT("[{}] first line {}\n", rank, buffer);
 			// }
 
 			++numVectors;   // line with EOL.
@@ -649,13 +649,13 @@ bool EXPMatrixReader<FloatType>::getMatrixSize_impl(string const & fileName, ssi
 
 	}
 	// last[10] = 0;
-	// ROOT_PRINT("[%d] last line %s.\n", rank, last);
+	// FMT_ROOT_PRINT("[{}] last line {}.\n", rank, last);
 
-	// ROOT_PRINT("rank %d Number of gene expression profiles: %ld\n", rank, numVectors);
+	// FMT_ROOT_PRINT("rank {} Number of gene expression profiles: {}\n", rank, numVectors);
 	fflush(stderr);
 	// allreduce
 	MPI_Allreduce(MPI_IN_PLACE, &numVectors, 1, MPI_INT, MPI_SUM, comm);
-	ROOT_PRINT("Number of gene expression profiles: %ld\n", numVectors);
+	FMT_ROOT_PRINT("Number of gene expression profiles: {}\n", numVectors);
 
 	splash::utils::afree(read_buffer);
 
@@ -686,7 +686,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	MPI_File fh;
 	result = MPI_File_open(comm, fileName.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
   	if(result != MPI_SUCCESS) 
-    	PRINT_RT("ERROR: MPI_File_open failed for %s\n", fileName.c_str());
+    	FMT_PRINT_RT("ERROR: MPI_File_open failed for {}\n", fileName.c_str());
 
 	// --------- get file size
 	if (rank == 0) {
@@ -713,11 +713,11 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	MPI_Status status;
 	result = MPI_File_read_at_all(fh, offset, read_buffer + offset, bytes_per_proc, MPI_BYTE, &status);
 	if(result != MPI_SUCCESS) 
-    	PRINT_RT("ERROR: MPI_File_read_at failed for rank %d at offset %lld for length %lu\n", rank, offset, bytes_per_proc);
+    	FMT_PRINT_RT("ERROR: MPI_File_read_at failed for rank {} at offset {} for length {}\n", rank, offset, bytes_per_proc);
 	int bytes_read;
 	result = MPI_Get_elements(&status, MPI_BYTE, &bytes_read);
   	if(result != MPI_SUCCESS)
-    	PRINT_RT("ERROR: MPI_Get_elements failed to get bytes_read\n");
+    	FMT_PRINT_RT("ERROR: MPI_Get_elements failed to get bytes_read\n");
 
 
 	// ======= allgatherv the data, then parse.  instead of parse, then gather, because we have column major data.
@@ -728,9 +728,9 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	displs[0] = 0;
 	for (int i = 1; i < procs; ++i) {
 		displs[i] = displs[i-1] + recvcounts[i-1];
-		// ROOT_PRINT("%d: count %d displ %d\n", i-1, recvcounts[i-1], displs[i-1]);
+		// FMT_ROOT_PRINT("{}: count {} displ {}\n", i-1, recvcounts[i-1], displs[i-1]);
 	}
-	// ROOT_PRINT("%d: count %d displ %d\n", procs-1, recvcounts[procs-1], displs[procs-1]);
+	// FMT_ROOT_PRINT("{}: count {} displ {}\n", procs-1, recvcounts[procs-1], displs[procs-1]);
 	
 	MPI_Allgatherv(MPI_IN_PLACE, bytes_read, MPI_BYTE, read_buffer, recvcounts, displs, MPI_BYTE, comm);
 	bytes_read = displs[procs - 1] + recvcounts[procs - 1];
@@ -778,7 +778,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	// set to first non-eol character.
 	numChars = getline_start(fullbuf, max);
 	if (numChars < 0) {
-		PRINT_RT("ERROR: Incomplete file at line %d\n", __LINE__);
+		FMT_PRINT_RT("ERROR: Incomplete file at line {}\n", __LINE__);
 		return false;
 	}
 
@@ -786,7 +786,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	/*read the header to get the number of samples*/
 	numChars = getline(fullbuf, max, buffer);
 	if (numChars <= 0) {
-		PRINT_RT("ERROR: The processor has incomplete data\n");
+		FMT_PRINT_RT("ERROR: The processor has incomplete data\n");
 		return false;
 	}
 	buffer[numChars] = 0;  // mark end of line for strtok.
@@ -794,12 +794,12 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	/*analyze the header.  first 2 entries are gene and id */
 	tok = strtok(buffer, delim);
 	if(tok == NULL){
-		PRINT_RT("ERROR: Incomplete header at line %d\n", __LINE__);
+		FMT_PRINT_RT("ERROR: Incomplete header at line {}\n", __LINE__);
 		return false;
 	}
 	tok = strtok(NULL, delim);
 	if(tok == NULL){
-		PRINT_RT("ERROR: Incomplete header at line %d\n", __LINE__);
+		FMT_PRINT_RT("ERROR: Incomplete header at line {}\n", __LINE__);
 		return false;
 	}
 	/*save sample names*/
@@ -809,7 +809,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	}
 	/*check consistency*/
 	if ((numSamples != vectorSize) || (static_cast<size_t>(numSamples) != samples.size())) {
-		PRINT_RT("The number of samples (%ld) not equal to number of vectors (%ld) sampels size %lu\n",
+		FMT_PRINT_RT("The number of samples ({}) not equal to number of vectors ({}) sampels size {}\n",
 				numSamples, vectorSize, samples.size());
 		return false;
 	}
@@ -821,7 +821,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 			numChars = getline(fullbuf, max, buffer);
 
 			if(numChars < 0){
-				PRINT_RT("ERROR: Incomplete file at line %d\n", __LINE__);
+				FMT_PRINT_RT("ERROR: Incomplete file at line {}\n", __LINE__);
 				return false;
 			}
 		}		
@@ -844,14 +844,14 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 		/*consistency check*/
 		if (numGenes >= numVectors) {
-			PRINT_RT("Error: rank %d number of genes (%ld) is about to exceed (%ld)\n", rank, numGenes, numVectors);
+			FMT_PRINT_RT("Error: rank {} number of genes ({}) is about to exceed ({})\n", rank, numGenes, numVectors);
 			return false;
 		}
 	
 		/*skip the first two columns*/
 		tok = strtok(buffer, delim);
 		if(tok == NULL){
-			PRINT_RT("ERROR: incomplete file at line %d\n", __LINE__);
+			FMT_PRINT_RT("ERROR: incomplete file at line {}\n", __LINE__);
 			return false;
 		}
 		/*save the locus id*/
@@ -860,7 +860,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 		tok = strtok(NULL, delim);
 		if(tok == NULL){
-			PRINT_RT("ERROR: incomplete file at line %d\n", __LINE__);
+			FMT_PRINT_RT("ERROR: incomplete file at line {}\n", __LINE__);
 			return false;
 		}
 
@@ -884,7 +884,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 		}
 
 		// 	buffer[20] = 0;
-		// 	ROOT_PRINT("[%d] row %d first:  %s\n", rank, numGenes, buffer);
+		// 	FMT_ROOT_PRINT("[{}] row {} first:  {}\n", rank, numGenes, buffer);
 
 
 		/*increase the gene index*/
@@ -893,7 +893,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 	}
 
 	if ((numGenes != numVectors) || (static_cast<size_t>(numGenes) != genes.size())) {
-		PRINT_RT("Error: number of genes (%ld) is inconsistent with numVectors (%ld) and  gene size %lu\n", numGenes, numVectors, genes.size());
+		FMT_PRINT_RT("Error: number of genes ({}) is inconsistent with numVectors ({}) and  gene size {}\n", numGenes, numVectors, genes.size());
 		return false;
 	}
 	splash::utils::afree(read_buffer);
@@ -922,7 +922,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	MPI_File fh;
 // 	result = MPI_File_open(comm, fileName.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
 //   	if(result != MPI_SUCCESS) 
-//     	PRINT_RT("ERROR: MPI_File_open failed for %s\n", fileName.c_str());
+//     	FMT_PRINT_RT("ERROR: MPI_File_open failed for {}\n", fileName.c_str());
 
 // 	// --------- get file size
 // 	if (rank == 0) {
@@ -949,11 +949,11 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	MPI_Status status;
 // 	result = MPI_File_read_at_all(fh, offset, read_buffer + offset, bytes_per_proc, MPI_BYTE, &status);
 // 	if(result != MPI_SUCCESS) 
-//     	PRINT_RT("ERROR: MPI_File_read_at failed for rank %d at offset %lld for length %lu\n", rank, offset, bytes_per_proc);
+//     	FMT_PRINT_RT("ERROR: MPI_File_read_at failed for rank {} at offset {} for length {}\n", rank, offset, bytes_per_proc);
 // 	int bytes_read;
 // 	result = MPI_Get_elements(&status, MPI_BYTE, &bytes_read);
 //   	if(result != MPI_SUCCESS)
-//     	PRINT_RT("ERROR: MPI_Get_elements failed to get bytes_read\n");
+//     	FMT_PRINT_RT("ERROR: MPI_Get_elements failed to get bytes_read\n");
 
 
 // 	// ======= allgatherv the data, then parse.  instead of parse, then gather, because we have column major data.
@@ -964,9 +964,9 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	displs[0] = 0;
 // 	for (int i = 1; i < procs; ++i) {
 // 		displs[i] = displs[i-1] + recvcounts[i-1];
-// 		// ROOT_PRINT("%d: count %d displ %d\n", i-1, recvcounts[i-1], displs[i-1]);
+// 		// FMT_ROOT_PRINT("{}: count {} displ {}\n", i-1, recvcounts[i-1], displs[i-1]);
 // 	}
-// 	// ROOT_PRINT("%d: count %d displ %d\n", procs-1, recvcounts[procs-1], displs[procs-1]);
+// 	// FMT_ROOT_PRINT("{}: count {} displ {}\n", procs-1, recvcounts[procs-1], displs[procs-1]);
 	
 // 	MPI_Allgatherv(MPI_IN_PLACE, bytes_read, MPI_BYTE, read_buffer, recvcounts, displs, MPI_BYTE, comm);
 // 	bytes_read = displs[procs - 1] + recvcounts[procs - 1];
@@ -1017,7 +1017,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	// set to first non-eol character.
 // 	numChars = getline_start(fullbuf, max);
 // 	if (numChars < 0) {
-// 		PRINT_RT("ERROR: Incomplete file at line %d\n", __LINE__);
+// 		FMT_PRINT_RT("ERROR: Incomplete file at line {}\n", __LINE__);
 // 		return false;
 // 	}
 
@@ -1025,7 +1025,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	/*read the header to get the number of samples*/
 // 	numChars = getline(fullbuf, max, buffer);
 // 	if (numChars <= 0) {
-// 		PRINT_RT("ERROR: The processor has incomplete data\n");
+// 		FMT_PRINT_RT("ERROR: The processor has incomplete data\n");
 // 		return false;
 // 	}
 // 	buffer[numChars] = 0;  // mark end of line for strtok.
@@ -1033,12 +1033,12 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	/*analyze the header.  first 2 entries are gene and id */
 // 	tok = strtok(buffer, delim);
 // 	if(tok == NULL){
-// 		PRINT_RT("ERROR: Incomplete header at line %d\n", __LINE__);
+// 		FMT_PRINT_RT("ERROR: Incomplete header at line {}\n", __LINE__);
 // 		return false;
 // 	}
 // 	tok = strtok(NULL, delim);
 // 	if(tok == NULL){
-// 		PRINT_RT("ERROR: Incomplete header at line %d\n", __LINE__);
+// 		FMT_PRINT_RT("ERROR: Incomplete header at line {}\n", __LINE__);
 // 		return false;
 // 	}
 // 	/*save sample names*/
@@ -1048,7 +1048,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	}
 // 	/*check consistency*/
 // 	if ((numSamples != output.columns()) || (numSamples != samples.size())) {
-// 		PRINT_RT("The number of samples (%d) not equal to number of vectors (%d) sampels size %lu\n",
+// 		FMT_PRINT_RT("The number of samples ({}) not equal to number of vectors ({}) sampels size {}\n",
 // 				numSamples, output.columns(), samples.size());
 // 		return false;
 // 	}
@@ -1060,7 +1060,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 			numChars = getline(fullbuf, max, buffer);
 
 // 			if(numChars < 0){
-// 				PRINT_RT("ERROR: Incomplete file at line %d\n", __LINE__);
+// 				FMT_PRINT_RT("ERROR: Incomplete file at line {}\n", __LINE__);
 // 				return false;
 // 			}
 // 		}		
@@ -1083,14 +1083,14 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 // 		/*consistency check*/
 // 		if (numGenes >= output.rows()) {
-// 			PRINT_RT("Error: rank %d number of genes (%d) is about to exceed (%d)\n", rank, numGenes, output.rows());
+// 			FMT_PRINT_RT("Error: rank {} number of genes ({}) is about to exceed ({})\n", rank, numGenes, output.rows());
 // 			return false;
 // 		}
 	
 // 		/*skip the first two columns*/
 // 		tok = strtok(buffer, delim);
 // 		if(tok == NULL){
-// 			PRINT_RT("ERROR: incomplete file at line %d\n", __LINE__);
+// 			FMT_PRINT_RT("ERROR: incomplete file at line {}\n", __LINE__);
 // 			return false;
 // 		}
 // 		/*save the locus id*/
@@ -1099,7 +1099,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 
 // 		tok = strtok(NULL, delim);
 // 		if(tok == NULL){
-// 			PRINT_RT("ERROR: incomplete file at line %d\n", __LINE__);
+// 			FMT_PRINT_RT("ERROR: incomplete file at line {}\n", __LINE__);
 // 			return false;
 // 		}
 
@@ -1123,7 +1123,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 		}
 
 // 		// 	buffer[20] = 0;
-// 		// 	ROOT_PRINT("[%d] row %d first:  %s\n", rank, numGenes, buffer);
+// 		// 	FMT_ROOT_PRINT("[{}] row {} first:  {}\n", rank, numGenes, buffer);
 
 
 // 		/*increase the gene index*/
@@ -1132,7 +1132,7 @@ bool EXPMatrixReader<FloatType>::loadMatrixData_impl(string const & fileName,
 // 	}
 
 // 	if ((numGenes != output.rows()) || (numGenes != genes.size())) {
-// 		PRINT_RT("Error: number of genes (%d) is inconsistent with numVectors (%d) and  gene size %lu\n", numGenes, output.rows(), genes.size());
+// 		FMT_PRINT_RT("Error: number of genes ({}) is inconsistent with numVectors ({}) and  gene size {}\n", numGenes, output.rows(), genes.size());
 // 		return false;
 // 	}
 // 	splash::utils::afree(read_buffer);

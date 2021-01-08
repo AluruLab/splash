@@ -112,9 +112,9 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
                 op.copy_parameters(_op);
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", output.size(), threads, thread_id);
+                // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}\n", output.size(), threads, thread_id);
                 part1D_type omp_tile_parts = partitioner.get_partition(part, threads, thread_id);
-                // PRINT_RT("NORM thread %d partition: ", thread_id);
+                // FMT_PRINT_RT("NORM thread {} partition: ", thread_id);
                 omp_tile_parts.print("OMP REDUC TILES: ");
 
                 // iterate over rows.
@@ -169,9 +169,9 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
 //                 op.copy_parameters(_op);
 
 //                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-//                 // ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", output.size(), threads, thread_id);
+//                 // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}\n", output.size(), threads, thread_id);
 //                 part1D_type omp_tile_parts = partitioner.get_partition(part, threads, thread_id);
-//                 // PRINT_RT("NORM thread %d partition: ", thread_id);
+//                 // FMT_PRINT_RT("NORM thread {} partition: ", thread_id);
 //                 omp_tile_parts.print("OMP REDUC TILES: ");
 
 //                 // iterate over rows.
@@ -334,12 +334,12 @@ class Transform<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_matrix<O
                 int threads = 1;
                 int thread_id = 0;
 #endif
-                // PRINT_RT("make Op copy: thread %d\n", omp_get_thread_num());
+                // FMT_PRINT_RT("make Op copy: thread {}\n", omp_get_thread_num());
                 Op op;
                 op.copy_parameters(_op);
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
+                // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}, max thread {}\n", input.rows(), threads, thread_id, omp_get_max_threads());
                 part1D_type omp_tile_parts = partitioner.get_partition(part, threads, thread_id);
                 part1D_type omp_out_part = partitioner.get_partition(out_part, threads, thread_id);
                 // omp_tile_parts.print("OMP TRANSFORM TILES: ");
@@ -439,7 +439,7 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
         using InputType2 = splash::ds::aligned_matrix<IT2>;
         using OutputType = splash::ds::aligned_matrix<OT>;
 
-        // FULL INPUT.
+        // process specified region.  NOTE: MUST RESIZE OUTPUT OUTSIDE OF THIS CALL
         void operator()(InputType const & input, part1D_type const & in_part, 
             InputType2 const & input2, part1D_type const & in2_part,
             Op const & _op, OutputType & output, part1D_type const & out_part) const {
@@ -457,12 +457,12 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
                 int threads = 1;
                 int thread_id = 0;
 #endif
-                // PRINT_RT("make Op copy: thread %d\n", omp_get_thread_num());
+                // FMT_PRINT_RT("make Op copy: thread {}\n", omp_get_thread_num());
                 Op op;
                 op.copy_parameters(_op);
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
+                // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}, max thread {}\n", input.rows(), threads, thread_id, omp_get_max_threads());
                 part1D_type omp_in_part = partitioner.get_partition(in_part, threads, thread_id);
                 part1D_type omp_in2_part = partitioner.get_partition(in2_part, threads, thread_id);
                 part1D_type omp_out_part = partitioner.get_partition(out_part, threads, thread_id);
@@ -483,6 +483,7 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
 
         void operator()(InputType const & input, InputType2 const & input2, Op const & _op, OutputType & output) const {
             part1D_type rows = part1D_type(0, input.rows(), 0);
+            output.resize(input.rows(), input.columns());
             this->operator()(input, rows, input2, rows, _op, output, rows);
         }
 };
@@ -622,14 +623,14 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 int threads = 1;
                 int thread_id = 0;
 #endif
-                // PRINT_RT("make Op copy: thread %d\n", omp_get_thread_num());
+                // FMT_PRINT_RT("make Op copy: thread {}\n", omp_get_thread_num());
                 Reduc reduc;
                 reduc.copy_parameters(_reduc);
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", output.size(), threads, thread_id);
+                // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}\n", output.size(), threads, thread_id);
                 part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts, threads, thread_id);
-                // PRINT_RT("NORM thread %d partition: ", thread_id);
+                // FMT_PRINT_RT("NORM thread {} partition: ", thread_id);
                 // omp_tile_parts.print("OMP REDUC TILES: ");
 
                 // iterate over rows.
@@ -643,7 +644,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             __buffer.allgather_inplace(mpi_tile_parts);
             
             auto etime = getSysTime();
-            ROOT_PRINT("ReduceTransform REDUCE phase in %f sec\n", get_duration_s(stime, etime));
+            FMT_ROOT_PRINT("ReduceTransform REDUCE phase in {} sec\n", get_duration_s(stime, etime));
 
             // ------------------ processing. reach element needs row and col
             // use the same partitioning
@@ -661,12 +662,12 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 int threads = 1;
                 int thread_id = 0;
 #endif
-                // PRINT_RT("make Op copy: thread %d\n", omp_get_thread_num());
+                // FMT_PRINT_RT("make Op copy: thread {}\n", omp_get_thread_num());
                 Op op;
                 op.copy_parameters(_op);
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d, max thread %d\n", input.rows(), threads, thread_id, omp_get_max_threads());
+                // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}, max thread {}\n", input.rows(), threads, thread_id, omp_get_max_threads());
                 part1D_type omp_tile_parts = partitioner.get_partition(mpi_tile_parts, threads, thread_id);
                 // omp_tile_parts.print("OMP TRANSFORM TILES: ");
 
@@ -743,7 +744,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
 
         // FULL INPUT, PARTITIONED OUTPUT.
         OutputType operator()(InputType const & input1, InputType const & input2, Op const & _op) const {
-            ROOT_PRINT("InnerProduct: input1 %lu X %lu, input2 %lu X %lu\n",
+            FMT_ROOT_PRINT("InnerProduct: input1 {} X {}, input2 {} X {}\n",
                 input1.rows(), input1.columns(), input2.rows(), input2.columns());
 
             // ---- fixed-size partiton input and filter for tiles t
@@ -757,21 +758,21 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
             else
                 tile_parts = std::move(all_tile_parts);
 
-            // PRINT_RT("Partitions: 2D %lu -> filtered %lu\n", all_tile_parts.size(), tile_parts.size());
+            // FMT_PRINT_RT("Partitions: 2D {} -> filtered {}\n", all_tile_parts.size(), tile_parts.size());
 
             // ---- partition the partitions for MPI
             part1D_type mpi_tile_parts = partitioner.get_partition(tile_parts.size(), this->procs, this->rank);
-            // PRINT_RT("MPI Rank %d partition: ", this->rank);
+            // FMT_PRINT_RT("MPI Rank {} partition: ", this->rank);
             // mpi_tile_parts.print("MPI TILEs: ");
 
             auto etime = getSysTime();
-            ROOT_PRINT("Correlation Partitioned in %f sec\n", get_duration_s(stime, etime));
+            FMT_ROOT_PRINT("Correlation Partitioned in {} sec\n", get_duration_s(stime, etime));
 
             // ---- compute correlation
             stime = getSysTime();
 
         	// ---- set up the temporary output, tiled, contains the partitions to process.
-	        // PRINT_RT("[pearson TILES] ");
+	        // FMT_PRINT_RT("[pearson TILES] ");
 	        OutputType output(tile_parts.data() + mpi_tile_parts.offset, mpi_tile_parts.size);
             // input1.print("NORMED: ");
 
@@ -794,7 +795,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
             MPI_Allreduce(MPI_IN_PLACE, &(this->processed), 1, dt.value, MPI_SUM, MPI_COMM_WORLD );
 
         	etime = getSysTime();
-	        ROOT_PRINT("Computed in %f sec\n", get_duration_s(stime, etime));
+	        FMT_ROOT_PRINT("Computed in {} sec\n", get_duration_s(stime, etime));
             return output;
         }
 
@@ -815,9 +816,9 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
 #endif
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
-                // ROOT_PRINT_RT("partitioning info : %lu, %d, %d\n", tiles.size(), threads, thread_id);
+                // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}\n", tiles.size(), threads, thread_id);
 		        part1D_type omp_tile_parts = partitioner.get_partition(tiles.size(), threads, thread_id);
-		        // PRINT_RT("thread %d partition: ", thread_id);
+		        // FMT_PRINT_RT("thread {} partition: ", thread_id);
 		        // omp_tile_parts.print("OMP PARTITION: ");
 
                 // run
@@ -866,7 +867,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                                 // compute correlation
                                 // auto xy = _ops[thread_id](input1.data(row), input2.data(col), input1.columns());
                                 // auto yx = _ops[thread_id](input2.data(col), input1.data(row), input2.columns());
-                                // if (xy != yx)  PRINT_RT("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
+                                // if (xy != yx)  FMT_PRINT_RT("ERROR: distcorr not symmetric at row col ({}, {}), xy: {}, yx {}\n", row, col, xy, yx);
                                 *data = run(_ops[thread_id], row, col, input1.data(row), input2.data(col), input1.columns());
                                 ++data;
                             }
@@ -904,7 +905,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                                 // compute correlation
                                 // auto xy = _ops[thread_id](input1.data(row), input2.data(col), input1.columns());
                                 // auto yx = _ops[thread_id](input2.data(col), input1.data(row), input2.columns());
-                                // if (xy != yx)  PRINT_RT("ERROR: distcorr not symmetric at row col (%lu, %lu), xy: %.18lf, yx %.18lf\n", row, col, xy, yx);
+                                // if (xy != yx)  FMT_PRINT_RT("ERROR: distcorr not symmetric at row col ({}, {}), xy: {}, yx {}\n", row, col, xy, yx);
                                 ++data;  // advance 1 col
                                 data2 += part.c.size;  // advance 1 row
                             }
@@ -912,7 +913,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                         }
                     }
                 }
-        		// PRINT_RT("CORR BOUNDS r: %lu %lu, c %lu %lu\n", rmin, rmax-rmin, cmin, cmax-cmin);
+        		// FMT_PRINT_RT("CORR BOUNDS r: {} {}, c {} {}\n", rmin, rmax-rmin, cmin, cmax-cmin);
 
                 count += _ops[thread_id].processed;
         	}
@@ -930,12 +931,12 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
             if (SYMMETRIC) all_tiles = tiles.reflect_diagonally();
             else all_tiles = std::move(tiles);
             auto etime = getSysTime();
-	        ROOT_PRINT("Reflected tiles in %f sec\n", get_duration_s(stime, etime));
+	        FMT_ROOT_PRINT("Reflected tiles in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
             MPI_Barrier(MPI_COMM_WORLD);
             etime = getSysTime();
-            MIN_MAX_DOUBLE_PRINT("PV2M Barrier before partition (s):", get_duration_s(stime, etime));
+            FMT_MIN_MAX_DOUBLE_PRINT("PV2M Barrier before partition (s):", get_duration_s(stime, etime));
 
             // partition tiles by row
 	        stime = getSysTime();
@@ -945,12 +946,12 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
             else
                 parted_tiles = all_tiles.row_partition(row_part);
             etime = getSysTime();
-	        ROOT_PRINT("Partitioned tiles in %f sec\n", get_duration_s(stime, etime));
+	        FMT_ROOT_PRINT("Partitioned tiles in {} sec\n", get_duration_s(stime, etime));
 
             stime = getSysTime();
             MPI_Barrier(MPI_COMM_WORLD);
             etime = getSysTime();
-            MIN_MAX_DOUBLE_PRINT("PV2M Barrier after partition (s):", get_duration_s(stime, etime));
+            FMT_MIN_MAX_DOUBLE_PRINT("PV2M Barrier after partition (s):", get_duration_s(stime, etime));
 
 
             // rows are partitioned equally, but a tile may cross that partition boundary.
@@ -964,13 +965,13 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                 bounds = parted_tiles.get_bounds().r;
             output.resize(bounds.size, cols);
             etime = getSysTime();
-	        ROOT_PRINT("Resized output in %f sec\n", get_duration_s(stime, etime));
+	        FMT_ROOT_PRINT("Resized output in {} sec\n", get_duration_s(stime, etime));
 
             // copy the tiles to matrix
 	        stime = getSysTime();
 	        parted_tiles.copy_to(output, bounds.offset, 0);	
         	etime = getSysTime();
-	        ROOT_PRINT("Copied tiles in %f sec\n", get_duration_s(stime, etime));
+	        FMT_ROOT_PRINT("Copied tiles in {} sec\n", get_duration_s(stime, etime));
 
         }
 

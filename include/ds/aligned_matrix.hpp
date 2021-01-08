@@ -557,11 +557,11 @@ class aligned_matrix {
 
             for (size_type row = 0; row < _rows; ++row){
                 d = this->_get_row(row);
-                PRINT_RT("%s: ", prefix);
+                FMT_PRINT_RT("{}: ", prefix);
                 for (size_type col = 0; col < _cols; ++col) {
-                    PRINT("%f,", d[col]);
+                    FMT_PRINT("{},", d[col]);
                 }
-                PRINT("\n");
+                FMT_PRINT("\n");
             }
         }
 
@@ -571,23 +571,23 @@ class aligned_matrix {
             const_pointer d;
 
             d = this->_get_row(row);
-            PRINT_RT("%s row %lu: ", prefix, row);
+            FMT_PRINT_RT("{} row {}: ", prefix, row);
             for (size_type col = 0; col < _cols; ++col) {
-                PRINT("%f\n", d[col]);
+                FMT_PRINT("{}\n", d[col]);
             }
-            PRINT("\n");
+            FMT_PRINT("\n");
         }
         template <typename TT = FloatType, typename std::enable_if<(!std::is_arithmetic<TT>::value), int>::type = 1>
         void print(const char* prefix) const {
             const_pointer d;
             for (size_type row = 0; row < _rows; ++row){
                 d = this->_get_row(row);
-                PRINT_RT("%s:", prefix);
+                FMT_PRINT_RT("{}:", prefix);
                 for (size_type col = 0; col < _cols; ++col) {
                     d[col].print("");
-                    PRINT(", ");
+                    FMT_PRINT(", ");
                 }
-                PRINT("\n");
+                FMT_PRINT("\n");
             }
         }
 
@@ -596,12 +596,12 @@ class aligned_matrix {
         void print(const char* prefix, size_t const & row) const {
             const_pointer d;
             d = this->_get_row(row);
-            PRINT_RT("%s row %lu:", prefix, row);
+            FMT_PRINT_RT("{} row {}:", prefix, row);
             for (size_type col = 0; col < _cols; ++col) {
                 d[col].print("");
-                PRINT("\n");
+                FMT_PRINT("\n");
             }
-            PRINT("\n");
+            FMT_PRINT("\n");
         }
 
 };

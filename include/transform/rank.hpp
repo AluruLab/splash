@@ -35,11 +35,11 @@ class Sort{
 	public:
 
 		inline void sort(IT const * in_vec, size_t const & count) const {
-			// PRINT_RT("thread %d, in %p, buffer %p, count %lu\n", omp_get_thread_num(), in_vec, __buffer.data, count);
+			// FMT_PRINT_RT("thread {}, in {:p}, buffer {:p}, count {}\n", omp_get_thread_num(), in_vec, __buffer.data, count);
 
 			__buffer.resize(count);  // ensure sufficient space.
 
-			// PRINT_RT("thread %d, in %p, resized %p, count %lu\n", omp_get_thread_num(), in_vec, __buffer.data, count);
+			// FMT_PRINT_RT("thread {}, in {:p}, resized {:p}, count {}\n", omp_get_thread_num(), in_vec, __buffer.data, count);
 			// fflush(stdout);
 			/*get the rank vector*/
 #if defined(__INTEL_COMPILER)
@@ -70,7 +70,7 @@ struct RankElemType {
 	//  note: rank can repeat. pos are unique and order follows sorting method (i.e. stable sort or not)
 
 	void print(const char* prefix) const {
-		PRINT("%s(%ld %ld)", prefix, pos, rank);
+		FMT_PRINT("{}({} {})", prefix, pos, rank);
 	}
 };
 

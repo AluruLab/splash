@@ -57,23 +57,11 @@ public:
 
     static bool storeMatrixData(const char * fileName, 
         splash::ds::aligned_matrix<FloatType> const & input, bool const & skip = EXP_SKIP_TWO_ROWS) {
-        return EXPMatrixWriter::storeMatrixData(std::string(fileName), input, skip);
+        return EXPMatrixWriter::storeMatrixData(std::string(fileName), input.rows(), input.columns(), input.data(), input.column_bytes(), skip);
     }
     static bool storeMatrixData(std::string const & fileName, 
         splash::ds::aligned_matrix<FloatType> const & input, bool const & skip = EXP_SKIP_TWO_ROWS) {
-        
-		std::vector<std::string> row_names(input.rows());
-		for (size_t i = 0; i < input.rows(); ++i) {
-			row_names[i] = std::to_string(i);
-		}
-		std::vector<std::string> col_names(input.columns());
-		for (size_t i = 0; i < input.columns(); ++i) {
-			col_names[i] = std::to_string(i);
-		}
-		return EXPMatrixWriter::storeMatrixData(fileName, 
-			row_names,
-			col_names,
-			input, skip);
+        return EXPMatrixWriter::storeMatrixData(fileName, input.rows(), input.columns(), input.data(), input.column_bytes(), skip);
     }
     
     static bool storeMatrixData(const char * fileName, std::vector<std::string> const & genes,
@@ -91,52 +79,49 @@ public:
 
         auto stime = getSysTime();
 
-        ROOT_PRINT("EXPMatrixWriter writing r %lu x c %lu\n", genes.size(), samples.size() );
+        FMT_ROOT_PRINT("EXPMatrixWriter writing r {} x c {}\n", genes.size(), samples.size() );
+
+        fmt::memory_buffer data;
+        {
+            format_to(data, "Id{}Alias", delim);
+            for (size_t i = 0; i < samples.size(); ++i) {
+                format_to(data, "{}{}", delim, samples[i]);
+            }
+            format_to(data, "\n");
+
+
+            // if skip, insert 2 empty lines
+            if (skip) {
+                format_to(data, "empty\nempty\n");
+            }
+
+            // now convert all data.  again, data is distributed so iterate over local rows.
+            FloatType const * row;
+            for (size_t i = 0; i < genes.size(); ++i) {
+                format_to(data, "{}{}---", genes[i], delim);
+
+                row = reinterpret_cast<FloatType *>(reinterpret_cast<unsigned char *>(vectors) + i * stride_bytes);
+                for (size_t j = 0; j < samples.size(); ++j) {
+                    format_to(data, "{}{}", delim, row[j]);
+                }
+                format_to(data, "\n");
+            }
+        }
+
         // open file
         std::ofstream ofs;
         ofs.open(fileName);
         if (! ofs.is_open()) {
-            PRINT_RT("ERROR: Failed to open file %s\n", fileName.c_str());
+            FMT_PRINT_RT("ERROR: Failed to open file {}\n", fileName.c_str());
             return false;
         }
-
-        // write header (samples)
-        // header has ID and ALIAS
-        ofs << "Id" << delim << "Alias";
-        for (size_t i = 0; i < samples.size(); ++i) {
-            ofs << delim << samples[i];
-        }
-        ofs << std::endl;
-
-        // if skip, insert 2 empty lines
-        if (skip) {
-            ofs << "empty" << std::endl << "empty" << std::endl;
-        }
         
-        ofs.precision(std::numeric_limits<FloatType>::max_digits10);
-
-        // now write all data. 
-        FloatType* row;
-        for (size_t i = 0; i < genes.size(); ++i) {
-
-            ofs << genes[i] << delim << "---";
-
-            row = reinterpret_cast<FloatType*>(reinterpret_cast<unsigned char *>(vectors) + i * stride_bytes);
-            for (size_t j = 0; j < samples.size(); ++j) {
-                ofs << delim << row[j];
-            }
-            // this writes in transposed way.  not using.
-            // for (size_t j = 0, jj = i; j < samples.size(); ++j, jj += stride_bytes) {
-            //     ofs << delim << vectors[jj];
-            // }
-            ofs << std::endl;
-        }
-
+        ofs.write(data.data(), data.size());
 
         ofs.close();
 
         auto etime = getSysTime();
-        ROOT_PRINT("Wrote file %s in %f sec\n", fileName.c_str(), get_duration_s(stime, etime));
+        FMT_ROOT_PRINT("Wrote file {} in {} sec\n", fileName.c_str(), get_duration_s(stime, etime));
 
         return true;
 
@@ -145,63 +130,14 @@ public:
     static bool storeMatrixData(const char * fileName, std::vector<std::string> const & genes,
 			std::vector<std::string> const & samples, splash::ds::aligned_matrix<FloatType> const & input,
             bool const & skip = EXP_SKIP_TWO_ROWS) {
-            return EXPMatrixWriter::storeMatrixData(std::string(fileName), genes, samples, input, skip);
+            return EXPMatrixWriter::storeMatrixData(std::string(fileName), genes, samples, input.data(), input.column_bytes(), skip);
         }
 
 	/*dump the matrix data.  matrix has 1 sample per row.  output has to be 1 gene per row (transposed).*/
 	static bool storeMatrixData(std::string const & fileName, std::vector<std::string> const & genes,
             std::vector<std::string> const & samples, splash::ds::aligned_matrix<FloatType> const & input,
             bool const & skip = EXP_SKIP_TWO_ROWS) {
-
-        const char delim[] = "\t";
-
-        auto stime = getSysTime();
-
-        ROOT_PRINT("EXPMatrixWriter writing r %lu x c %lu\n", genes.size(), samples.size() );
-        // open file
-        std::ofstream ofs;
-        ofs.open(fileName);
-        if (! ofs.is_open()) {
-            PRINT_RT("ERROR: Failed to open file %s\n", fileName.c_str());
-            return false;
-        }
-
-        // write header (samples)
-        // header has ID and ALIAS
-        ofs << "Id" << delim << "Alias";
-        for (size_t i = 0; i < samples.size(); ++i) {
-            ofs << delim << samples[i];
-        }
-        ofs << std::endl;
-
-        // if skip, insert 2 empty lines
-        if (skip) {
-            ofs << "empty" << std::endl << "empty" << std::endl;
-        }
-        
-        ofs.precision(std::numeric_limits<FloatType>::max_digits10);
-
-        // now write all data. 
-        auto row = input.data();
-        for (size_t i = 0; i < genes.size(); ++i) {
-
-            ofs << genes[i] << delim << "---";
-
-            row = input.data(i);
-            for (size_t j = 0; j < samples.size(); ++j) {
-                ofs << delim << row[j];
-            }
-            ofs << std::endl;
-        }
-
-
-        ofs.close();
-
-        auto etime = getSysTime();
-        ROOT_PRINT("Wrote file %s in %f sec\n", fileName.c_str(), get_duration_s(stime, etime));
-
-        return true;
-
+        return EXPMatrixWriter::storeMatrixData(fileName, genes, samples, input.data(), input.column_bytes(), skip);
     }
 
 };

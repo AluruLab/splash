@@ -198,7 +198,7 @@ void write_exp_matrix(std::string const & filename, std::vector<std::string> & r
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 		auto allout = data.gather(0);
-		ROOT_PRINT("writing file size: %lu, %lu\n", allout.rows(), allout.columns());
+		FMT_ROOT_PRINT("writing file size: {}, {}\n", allout.rows(), allout.columns());
 		if (rank == 0) {
 			splash::io::EXPMatrixWriter<T>::storeMatrixData(filename, row_names, col_names, allout);
 		}
@@ -298,14 +298,14 @@ void write_csv_matrix(std::string const & filename, std::vector<std::string> & r
 	splash::ds::aligned_matrix<T> const & data) {
 	if (filename.length() > 0) {
 		// write to file.  MPI enabled.  Not thread enabled.
-		// ROOT_PRINT("name sizes: %lu, %lu\n", row_names.size(), col_names.size());
-		// ROOT_PRINT("outputing matrix size: %lu, %lu\n", data.rows(), data.columns());
+		// FMT_ROOT_PRINT("name sizes: {}, {}\n", row_names.size(), col_names.size());
+		// FMT_ROOT_PRINT("outputing matrix size: {}, {}\n", data.rows(), data.columns());
 #ifdef USE_MPI		
 		int rank = 0;
 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 		auto allout = data.gather(0);
-		ROOT_PRINT("writing file size: %lu, %lu\n", allout.rows(), allout.columns());
+		FMT_ROOT_PRINT("writing file size: {}, {}\n", allout.rows(), allout.columns());
 		if (rank == 0) {
 			splash::io::MatrixWriter<T>::storeMatrixData(filename, row_names, col_names, allout);
 		}
@@ -324,8 +324,8 @@ void write_csv_matrix_distributed(std::string const & filename, std::vector<std:
 	splash::ds::aligned_matrix<T> const & data, MPI_Comm const & comm = MPI_COMM_WORLD) {
 	if (filename.length() > 0) {
 		// write to file.  MPI enabled.  Not thread enabled.
-		// ROOT_PRINT("name sizes: %lu, %lu\n", row_names.size(), col_names.size());
-		// ROOT_PRINT("outputing matrix size: %lu, %lu\n", data.rows(), data.columns());
+		// FMT_ROOT_PRINT("name sizes: {}, {}\n", row_names.size(), col_names.size());
+		// FMT_ROOT_PRINT("outputing matrix size: {}, {}\n", data.rows(), data.columns());
 #ifdef USE_MPI
 		splash::io::MatrixWriter<T>::storeMatrixDistributed(filename, row_names, col_names, data, comm);
 #else

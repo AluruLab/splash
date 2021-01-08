@@ -194,6 +194,7 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 #include_directories("${CMAKE_BINARY_DIR}")
 include_directories("${EXT_PROJECTS_DIR}") 
 include_directories("${EXT_PROJECTS_DIR}/CLI11/include") 
+include_directories("${EXT_PROJECTS_DIR}/fmt/include") 
 
 
 if (BUILD_APPLICATIONS)

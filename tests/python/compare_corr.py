@@ -74,7 +74,7 @@ def main():
         absdiff = np.absolute(f - s)
         maxdiff = np.amax(absdiff)
         meandiff = np.mean(absdiff)
-        stdevdiff = np.std(absdiff)
+        stdevdiff = np.std(absdiff, ddof=1)
 
         print("absolute value difference max {}, mean {}, stdev {}".format(maxdiff, meandiff, stdevdiff))
     

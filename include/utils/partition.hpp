@@ -49,7 +49,7 @@ struct partition {
     partition& operator=(partition && other) = default;
 
     void print(const char * prefix) {
-        PRINT_RT("%s Partition: offset: %ld, size: %ld, id: %ld\n", prefix, offset, size, id);
+        FMT_PRINT_RT("{} Partition: offset: {}, size: {}, id: {}\n", prefix, offset, size, id);
     }  
 
 
@@ -228,7 +228,7 @@ struct partition2D {
         r.print(pre);
         strcpy(pre + strlen(prefix), " COL ");
         c.print(pre);
-        PRINT_RT("%s Partition2D id: %lu, id row width %lu\n", prefix, id, id_cols);
+        FMT_PRINT_RT("{} Partition2D id: {}, id row width {}\n", prefix, id, id_cols);
     }  
 };
 
@@ -499,8 +499,8 @@ class banded_diagonal_filter {
         template <typename T>
         inline T get_linear_id(T const & r, T const & c, T const & w, T const & bw) const {
             // do some checks.  ASSUMPTION: height < width
-            if (r >= w) PRINT_RT("ERROR: row id exceed width (==height): %ld >= %ld\n", r, w);
-            if (c >= w) PRINT_RT("ERROR: col id exceed width: %ld >= %ld\n", c, w);
+            if (r >= w) FMT_PRINT_RT("ERROR: row id exceed width (==height): {} >= {}\n", r, w);
+            if (c >= w) FMT_PRINT_RT("ERROR: col id exceed width: {} >= {}\n", c, w);
 
             // shifted by -r.  then shift by w to make all positive, then % w to restrict to [0, w)
             // this converts column id to relative to the off-diagonal (0 if main diagonal)
@@ -511,7 +511,7 @@ class banded_diagonal_filter {
             T id = r * bw + c_id;
             id = (diag_id < mx) ? id : -1;
 
-            // PRINT_RT("r, c->cid = %ld, %ld->%ld, id = %ld\n", r, c, c_id, id);
+            // FMT_PRINT_RT("r, c->cid = {}, {}->{}, id = {}\n", r, c, c_id, id);
             return id;
         }
 
@@ -537,9 +537,9 @@ class banded_diagonal_filter {
 
             id_type bw = (w / 2 + 1);
             bw = std::min(static_cast<id_type>(this->band_width), bw);
-            ROOT_PRINT("Banded Diagnonal Filter for tiles: width = %ld,  bandwidth = %ld\n", w, bw);
+            FMT_ROOT_PRINT("Banded Diagnonal Filter for tiles: width = {},  bandwidth = {}\n", w, bw);
 
-            if (this->off_diag >= w) PRINT_RT("ERROR: diagonal offset exceed width: %ld >= %ld\n", this->off_diag, w);
+            if (this->off_diag >= w) FMT_PRINT_RT("ERROR: diagonal offset exceed width: {} >= {}\n", this->off_diag, w);
             
             for (auto part : parts) {
                 id = get_linear_id(part.r.id, part.c.id, w, bw);
@@ -559,7 +559,7 @@ class banded_diagonal_filter {
             using id_type = typename partition2D<ST>::id_type;
             id_type w = part.front().id_cols;
 
-            if (this->off_diag >= w) PRINT_RT("ERROR: diagonal offset exceed width: %ld >= %ld\n", this->off_diag, w);
+            if (this->off_diag >= w) FMT_PRINT_RT("ERROR: diagonal offset exceed width: {} >= {}\n", this->off_diag, w);
 
             id_type bw = (w / 2 + 1);
             bw = std::min(static_cast<id_type>(this->band_width), bw);

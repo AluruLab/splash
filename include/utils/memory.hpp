@@ -56,7 +56,7 @@ namespace splash { namespace utils {
 inline size_t get_cacheline_size() {
     long val = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
     if (val < 1) {
-        PRINT_ERR("%s:%d: Unable to detect cacheline size.  using default of 64\n", __FILE__, __LINE__);
+        FMT_PRINT_ERR("{}:{}: Unable to detect cacheline size.  using default of 64\n", __FILE__, __LINE__);
         return 64UL;
     } else 
         return val;
@@ -92,7 +92,7 @@ inline void afree(void* data) {
 // like malloc, but aligned. default is cache line size.
 inline void* aalloc(size_t const & bytes, size_t const & alignment) {
     if (bytes == 0) {
-        PRINT_ERR("%s:%d: aligned alloc with size == 0\n", __FILE__, __LINE__);
+        FMT_PRINT_ERR("{}:{}: aligned alloc with size == 0\n", __FILE__, __LINE__);
         return nullptr;
         // throw std::logic_error("aalloc with size == 0");
     }
@@ -106,7 +106,7 @@ inline void* aalloc(size_t const & bytes, size_t const & alignment) {
     data = aligned_alloc(alignment, splash::utils::get_aligned_size(bytes, alignment));
 #endif
     if (!data) {
-        PRINT_ERR("%s:%d: Memory allocation failed\n", __FILE__, __LINE__);
+        FMT_PRINT_ERR("{}:{}: Memory allocation failed\n", __FILE__, __LINE__);
         throw std::bad_alloc();
     }
     return data;
@@ -355,7 +355,7 @@ inline std::pair<void *, size_t> arealloc_2D(void * data, size_t const & old_row
     size_t bytes = rows * a_col_bytes;
 
     if (bytes == 0) {
-        PRINT_ERR("%s:%d: aligned realloc_2D with row or col == 0\n", __FILE__, __LINE__);
+        FMT_PRINT_ERR("{}:{}: aligned realloc_2D with row or col == 0\n", __FILE__, __LINE__);
         throw std::logic_error("arealloc with row or col == 0");
     }
     bool allocate = (data == nullptr) || (old_bytes < bytes) || (a_old_col_bytes < a_col_bytes);  // second condition requires memmove in reverse to expand. simpler to allocate.
@@ -397,7 +397,7 @@ inline std::pair<void *, size_t> arecalloc_2D(void * data, size_t const & old_ro
     size_t old_bytes = old_rows * a_old_col_bytes;
     size_t bytes = rows * a_col_bytes;
     if (bytes == 0) {
-        PRINT_ERR("%s:%d: aligned realloc_2D with row or col == 0\n", __FILE__, __LINE__);
+        FMT_PRINT_ERR("{}:{}: aligned realloc_2D with row or col == 0\n", __FILE__, __LINE__);
         throw std::logic_error("arealloc with row or col == 0");
     }
     bool allocate = (data == nullptr) || (old_bytes < bytes) || (a_old_col_bytes < a_col_bytes);  // second condition requires memmove in reverse to expand. simpler to allocate.

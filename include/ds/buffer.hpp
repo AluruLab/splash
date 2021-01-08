@@ -11,7 +11,7 @@ struct buffer {
 
         buffer() : data(nullptr), count(0) {
 // #ifdef USE_OPENMP
-// 			PRINT_RT("construct BUFFER, thread %d\n", omp_get_thread_num());
+// 			FMT_PRINT_RT("construct BUFFER, thread {}\n", omp_get_thread_num());
 // #endif  
 		}
 		~buffer() {

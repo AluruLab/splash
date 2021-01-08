@@ -43,7 +43,7 @@ class mpi_parameters : public parameters_base {
 
         virtual void config(CLI::App& app) {
 #ifdef USE_MPI
-            ROOT_PRINT("Config: warm up MPI with %d procs\n", procs);
+            FMT_ROOT_PRINT("Config: warm up MPI with {} procs\n", procs);
 
             int * data = (int*)malloc(procs * sizeof(int));
             MPI_Alltoall(MPI_IN_PLACE, 1, MPI_INT, data, 1, MPI_INT, MPI_COMM_WORLD);
@@ -52,7 +52,7 @@ class mpi_parameters : public parameters_base {
         }
 
         virtual void print(const char* prefix) {
-            ROOT_PRINT("%s Number of MPI processes: %d\n", prefix, procs);
+            FMT_ROOT_PRINT("{} Number of MPI processes: {}\n", prefix, procs);
         }
 };
 
@@ -120,18 +120,18 @@ class common_parameters : public parameters_base {
 
         virtual void print(const char* prefix) {
             size_t numPairs = (num_vectors + 1) * num_vectors / 2;	/*including self-vs-self*/
-            // ROOT_PRINT("Single precision: %d\n", use_single ? 1 : 0);
-            ROOT_PRINT("%s Input: %s\n", prefix, input.c_str());
-            ROOT_PRINT("%s Skip lines 2 and 3: %s\n", prefix, (skip ? "Y" : "N"));
-            ROOT_PRINT("%s Random Input: %s\n", prefix, (random ? "Y" : "N"));
-            ROOT_PRINT("%s Output: %s\n", prefix, output.c_str());
-            ROOT_PRINT("%s Number of vectors: %ld\n", prefix, num_vectors);
-            ROOT_PRINT("%s Vector size: %ld\n", prefix, vector_size);
-            ROOT_PRINT("%s number of pairs: %lu\n", prefix, numPairs);
-            ROOT_PRINT("%s Number of threads: %lu\n", prefix, num_threads);
-            ROOT_PRINT("%s random number generator seed: %ld\n", prefix, rseed);
-            ROOT_PRINT("%s random number min: %f\n", prefix, rmin);
-            ROOT_PRINT("%s random number max: %f\n", prefix, rmax);
+            // FMT_ROOT_PRINT("Single precision: {}\n", use_single ? 1 : 0);
+            FMT_ROOT_PRINT("{} Input: {}\n", prefix, input.c_str());
+            FMT_ROOT_PRINT("{} Skip lines 2 and 3: {}\n", prefix, (skip ? "Y" : "N"));
+            FMT_ROOT_PRINT("{} Random Input: {}\n", prefix, (random ? "Y" : "N"));
+            FMT_ROOT_PRINT("{} Output: {}\n", prefix, output.c_str());
+            FMT_ROOT_PRINT("{} Number of vectors: {}\n", prefix, num_vectors);
+            FMT_ROOT_PRINT("{} Vector size: {}\n", prefix, vector_size);
+            FMT_ROOT_PRINT("{} number of pairs: {}\n", prefix, numPairs);
+            FMT_ROOT_PRINT("{} Number of threads: {}\n", prefix, num_threads);
+            FMT_ROOT_PRINT("{} random number generator seed: {}\n", prefix, rseed);
+            FMT_ROOT_PRINT("{} random number min: {}\n", prefix, rmin);
+            FMT_ROOT_PRINT("{} random number max: {}\n", prefix, rmax);
         }
 
 };

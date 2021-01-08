@@ -87,7 +87,7 @@ class CSVMatrixReader2 : public FileReader2 {
 
 			splash::ds::char_array_template buffer = this->data;
 			if (buffer.ptr == nullptr) {
-				PRINT_RT("ERROR: File not read\n");
+				FMT_PRINT_RT("ERROR: File not read\n");
 				return false;
 			}
 
@@ -99,21 +99,21 @@ class CSVMatrixReader2 : public FileReader2 {
 			/*read the header to get the number of samples*/
 			splash::ds::char_array_template line = buffer.get_token<LF>();
 			if (line.size <= 0) {
-				PRINT_RT("ERROR: The file is incomplete\n");
+				FMT_PRINT_RT("ERROR: The file is incomplete\n");
 				return false;
 			}
 
 			/*analyze the header on the first row*/
-			ROOT_PRINT("line size = %lu, ptr = %p\n", line.size, line.ptr);
+			FMT_ROOT_PRINT("line size = {}, ptr = {:p}\n", line.size, line.ptr);
 			vectorSize = line.count_token_or_empty<COMMA>() - 1;
-			ROOT_PRINT("Number of samples: %ld\n", vectorSize);
+			FMT_ROOT_PRINT("Number of samples: {}\n", vectorSize);
 
 			/*get gene expression profiles.  skip empty lines*/ 
 			numVectors = buffer.count_token<LF>();
-			ROOT_PRINT("Number of gene expression profiles: %ld\n", numVectors);
+			FMT_ROOT_PRINT("Number of gene expression profiles: {}\n", numVectors);
 
 			auto etime = getSysTime();
-			ROOT_PRINT("get matrix size in %f sec\n", get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("get matrix size in {} sec\n", get_duration_s(stime, etime));
 			return true;
 
 		}
@@ -132,11 +132,11 @@ class CSVMatrixReader2 : public FileReader2 {
 			/*read the header to get the names of  samples*/
 			line = buffer.get_token<LF>();
 			if (line.size <= 0) {
-				PRINT_RT("ERROR: The file is incomplete\n");
+				FMT_PRINT_RT("ERROR: The file is incomplete\n");
 				return false;
 			}
 			auto etime = getSysTime();
-			ROOT_PRINT("load 1st line in %f sec\n", get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("load 1st line in {} sec\n", get_duration_s(stime, etime));
 
 			stime = getSysTime();
 			/*analyze the header.  first entry is skipped.  save the sample names */
@@ -149,12 +149,12 @@ class CSVMatrixReader2 : public FileReader2 {
 			}
 			/*check consistency*/
 			if (numSamples < vectorSize) {
-				PRINT_RT("ERROR The number of samples (%ld) read is less than vectorSize (%ld)\n",
+				FMT_PRINT_RT("ERROR The number of samples ({}) read is less than vectorSize ({})\n",
 						numSamples, vectorSize);
 				return false;
 			}
 			etime = getSysTime();
-			ROOT_PRINT("parse column headers %ld in %f sec\n", numSamples, get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("parse column headers {} in {} sec\n", numSamples, get_duration_s(stime, etime));
 
 			stime = getSysTime();
 
@@ -190,12 +190,12 @@ class CSVMatrixReader2 : public FileReader2 {
 			}
 			/*consistency check*/
 			if (numGenes < numVectors) {
-				PRINT_RT("ERROR The number of genes (%ld) read is less than numVectors (%ld)\n",
+				FMT_PRINT_RT("ERROR The number of genes ({}) read is less than numVectors ({})\n",
 						numGenes, numVectors);
 				return false;
 			}
 			etime = getSysTime();
-			ROOT_PRINT("load values in %f sec\n", get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("load values in {} sec\n", get_duration_s(stime, etime));
 
 			return true;
 
@@ -216,11 +216,11 @@ class CSVMatrixReader2 : public FileReader2 {
 			/*read the header to get the names of  samples*/
 			line = buffer.get_token<LF>();
 			if (line.size <= 0) {
-				PRINT_RT("ERROR: The file is incomplete\n");
+				FMT_PRINT_RT("ERROR: The file is incomplete\n");
 				return false;
 			}
 			auto etime = getSysTime();
-			ROOT_PRINT("load 1st line in %f sec\n", get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("load 1st line in {} sec\n", get_duration_s(stime, etime));
 
 			stime = getSysTime();
 			/*analyze the header.  first entry is skipped.  save the sample names */
@@ -233,12 +233,12 @@ class CSVMatrixReader2 : public FileReader2 {
 			}
 			/*check consistency*/
 			if (numSamples < vectorSize) {
-				PRINT_RT("ERROR The number of samples (%ld) read is less than vectorSize (%ld)\n",
+				FMT_PRINT_RT("ERROR The number of samples ({}) read is less than vectorSize ({})\n",
 						numSamples, vectorSize);
 				return false;
 			}
 			etime = getSysTime();
-			ROOT_PRINT("parse column headers %ld in %f sec\n", numSamples, get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("parse column headers {} in {} sec\n", numSamples, get_duration_s(stime, etime));
 
 			stime = getSysTime();
 
@@ -274,12 +274,12 @@ class CSVMatrixReader2 : public FileReader2 {
 			}
 			/*consistency check*/
 			if (numGenes < numVectors) {
-				PRINT_RT("ERROR The number of genes (%ld) read is less than numVectors (%ld)\n",
+				FMT_PRINT_RT("ERROR The number of genes ({}) read is less than numVectors ({})\n",
 						numGenes, numVectors);
 				return false;
 			}
 			etime = getSysTime();
-			ROOT_PRINT("load values in %f sec\n", get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("load values in {} sec\n", get_duration_s(stime, etime));
 
 			return true;
 
