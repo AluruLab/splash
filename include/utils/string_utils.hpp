@@ -19,6 +19,11 @@
 #pragma once
 
 #include "utils/precise_float.hpp"
+#if __cplusplus >= 201703L // C++17 and later 
+#include <string_view>
+#else
+#include <string>
+#endif
 
 namespace splash { namespace utils {
 
@@ -188,5 +193,54 @@ inline double atof(const char *p)
 /** multiply has 1 cycle throughput but 2 cycle latency even on coffee lake.
  * dec 10 is bin 1010.  10x + y = x << 3 + x << 1 + y
 */
+
+
+//========= Suffix/Prefix matching.
+// https://stackoverflow.com/questions/874134/find-out-if-string-ends-with-another-string-in-c
+
+#if __cplusplus >= 201703L // C++17 and later 
+#include <string_view>
+
+static bool endsWith(std::string_view str, std::string_view suffix)
+{
+    return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+}
+
+// static bool startsWith(std::string_view str, std::string_view prefix)
+// {
+//     return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
+// }
+#else  // C++ 14 and earlier.
+
+// static bool endsWith(const std::string& str, const std::string& suffix)
+// {
+//     return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+// }
+
+// static bool startsWith(const std::string& str, const std::string& prefix)
+// {
+//     return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
+// }
+
+static bool endsWith(const std::string& str, const char* suffix, unsigned suffixLen)
+{
+    return str.size() >= suffixLen && 0 == str.compare(str.size()-suffixLen, suffixLen, suffix, suffixLen);
+}
+
+static bool endsWith(const std::string& str, const char* suffix)
+{
+    return endsWith(str, suffix, std::string::traits_type::length(suffix));
+}
+
+// static bool startsWith(const std::string& str, const char* prefix, unsigned prefixLen)
+// {
+//     return str.size() >= prefixLen && 0 == str.compare(0, prefixLen, prefix, prefixLen);
+// }
+
+// static bool startsWith(const std::string& str, const char* prefix)
+// {
+//     return startsWith(str, prefix, std::string::traits_type::length(prefix));
+// }
+#endif
 
 }}
