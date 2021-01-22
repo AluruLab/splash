@@ -163,6 +163,7 @@ include("${CMAKE_MODULE_DIR}/OpenMP.cmake")
 include("${CMAKE_MODULE_DIR}/MPI.cmake")
 include("${CMAKE_MODULE_DIR}/SIMD.cmake")
 include("${CMAKE_MODULE_DIR}/MKL.cmake")
+include("${CMAKE_MODULE_DIR}/HDF5.cmake")
 include("${CMAKE_MODULE_DIR}/CodeAnalysis.cmake")
 include("${CMAKE_MODULE_DIR}/Sanitizer.cmake")
 
