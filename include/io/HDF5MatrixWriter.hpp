@@ -17,6 +17,8 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <bitset>  // for python pandas "transposed" attribute.
+#include <algorithm>  // for ::std::fill.
 
 #include "utils/benchmark.hpp"
 #include "utils/report.hpp"
@@ -37,7 +39,128 @@ class HDF5MatrixWriter {
 protected:
     std::string filename;
 
-    void writeStrings(hid_t file_id, std::string const & path, std::vector<std::string> const & names) {
+    //***** attributes:
+        /* for / group:  
+         * CLASS: UTF8 String GROUP
+         * PYTABLES_FORMAT_VERSION: 2.1
+         * TITLE: 
+         * VERSION: 1.0
+         * 
+         */
+        /* for array group:  
+         * CLASS: UTF8 String GROUP
+         * TITLE: 
+         * VERSION: 1.0
+         * axis0_variety: regular
+         * axis1_variety: regular
+         * block0_items_variety: regular
+         * encoding: UTF-8
+         * errors:strict
+         * nblocks: 1
+         * ndim: 2
+         * pandas_type: frame
+         * pandas_version: 0.15.2
+         */
+        /* for dataset:  
+         * CLASS: ARRAY
+         * FLAVOR: numpy
+         * TITLE: 
+         * VERSION: 2.4
+         * kind: string
+         * name: N. (axis0, block0_items)  genes (axis1)
+         * transposed: 0x01
+         */
+    // single threaded.
+    template <typename T>
+    void writeAttribute(hid_t obj_id, std::string const & name, T const & value) {
+        splash::utils::hdf5::datatype<T> type;
+        hid_t type_id = type.value;
+
+        hid_t space_id = H5Screate(H5S_SCALAR);
+
+        hid_t attr_id;
+        auto exists = H5Aexists(obj_id, name.c_str());
+        if (exists) {
+            // open
+            attr_id = H5Aopen(obj_id, name.c_str(), H5P_DEFAULT);
+        } else {
+            // create
+            attr_id = H5Acreate(obj_id, name.c_str(), type_id, space_id, H5P_DEFAULT, H5P_DEFAULT);
+        }
+        H5Awrite(attr_id, type_id, &value);
+
+        H5Sclose(space_id);
+        H5Aclose(attr_id);
+    }
+
+    void writeAttribute(hid_t obj_id, std::string const & name, const char* value, bool const & ascii = false) {
+        writeAttribute(obj_id, name, std::string(value), ascii);
+    }
+
+    void writeAttribute(hid_t obj_id, std::string const & name, std::string const & value, bool const & ascii = false) {
+        bool empty = value.length() == 0;
+        // type
+        hid_t type_id = H5Tcopy (H5T_C_S1);
+        if (!ascii) H5Tset_cset(type_id, H5T_CSET_UTF8);  // for compatibility with Python Pandas.
+        size_t len = empty ? 1 : value.length();
+        H5Tset_size(type_id, len);
+
+        hid_t space_id = empty ? H5Screate(H5S_NULL) : H5Screate(H5S_SCALAR);
+
+        hid_t attr_id;
+        auto exists = H5Aexists(obj_id, name.c_str());
+        if (exists) {
+            // open
+            attr_id = H5Aopen(obj_id, name.c_str(), H5P_DEFAULT);
+        } else {
+            // create
+            attr_id = H5Acreate(obj_id, name.c_str(), type_id, space_id, H5P_DEFAULT, H5P_DEFAULT);
+        }
+        if (!empty)
+            H5Awrite(attr_id, type_id, value.c_str());
+
+        H5Sclose(space_id);
+        H5Aclose(attr_id);
+        H5Tclose(type_id);
+    }
+
+    void _writeGroupAttributes(hid_t group_id) {
+        writeAttribute(group_id, "CLASS", "GROUP");
+        writeAttribute(group_id, "TITLE", "");
+        writeAttribute(group_id, "VERSION", "1.0");
+    }
+    void writeRootGroupAttributes(hid_t root_id) {
+        _writeGroupAttributes(root_id);
+        writeAttribute(root_id, "PYTABLES_FORMAT_VERSION", "2.1");
+    }
+    void writeDataGroupAttributes(hid_t group_id, int64_t const & nblocks, int64_t const & ndim) {
+        _writeGroupAttributes(group_id);
+        writeAttribute(group_id, "axis0_variety", "regular");
+        writeAttribute(group_id, "axis1_variety", "regular");
+        writeAttribute(group_id, "block0_items_variety", "regular");
+        writeAttribute(group_id, "encoding", "UTF-8"); 
+        writeAttribute(group_id, "errors", "strict");
+        writeAttribute(group_id, "nblocks", nblocks);
+        writeAttribute(group_id, "ndim", ndim);
+        writeAttribute(group_id, "pandas_type", "frame");
+        writeAttribute(group_id, "pandas_version", "0.15.2");
+    }
+    void writeDatasetAttributes(hid_t dataset_id) {
+        writeAttribute(dataset_id, "CLASS", "ARRAY");
+        writeAttribute(dataset_id, "FLAVOR", "numpy");
+        writeAttribute(dataset_id, "TITLE", "");
+        writeAttribute(dataset_id, "VERSION", "2.4");
+        ::std::bitset<8> transposed(1);
+        writeAttribute(dataset_id, "transposed", transposed);
+    }
+    void writeAxisAttributes(hid_t dataset_id, std::string const & kind, std::string const & name, bool const & ascii_name = true) {
+        writeDatasetAttributes(dataset_id);
+        writeAttribute(dataset_id, "kind", kind);
+        writeAttribute(dataset_id, "name", name, ascii_name); 
+    }
+
+    void writeStrings(hid_t file_id, std::string const & path, std::string const & meaning, std::vector<std::string> const & names,
+        bool const & ascii_meaning = false) {
         // from https://stackoverflow.com/questions/581209/how-to-best-write-out-a-stdvector-stdstring-container-to-a-hdf5-dataset
         // modified to use C api.
 
@@ -63,7 +186,7 @@ protected:
 
         // Variable length string
         hid_t type_id = H5Tcopy (H5T_C_S1);
-        H5Tset_cset(type_id, H5T_CSET_UTF8);
+        // H5Tset_cset(type_id, H5T_CSET_UTF8);  // Axis names are in ASCII in pandas H5.
         H5Tset_size(type_id, max_len);
         hid_t dataset_id = H5Dcreate(file_id, path.c_str(), type_id, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         if (dataset_id < 0) {
@@ -76,6 +199,7 @@ protected:
 
         // out data needs to be a continuous block!!!!
         H5Dwrite(dataset_id, type_id, dataspace_id, H5S_ALL, H5P_DEFAULT, data);
+        writeAxisAttributes(dataset_id, "string", meaning, ascii_meaning);
 
         // H5Dflush(dataset_id);  // here does not cause "HDF5: infinite loop closing library" with MPI-IO
         H5Dclose(dataset_id);
@@ -117,6 +241,7 @@ protected:
         // may need to use hyperslab....
         hid_t memspace_id = H5Screate_simple(2, memspace_dim, NULL);
         H5Dwrite(dataset_id, type_id, memspace_id, filespace_id, H5P_DEFAULT, vectors);
+        writeDatasetAttributes(dataset_id);
 
         // H5Dflush(dataset_id);  // here does not cause "HDF5: infinite loop closing library" with MPI-IO
         H5Sclose(memspace_id);
@@ -181,6 +306,7 @@ protected:
         hid_t memspace_id = H5Screate_simple(2, memspace_dim, NULL);
 
         H5Dwrite(dataset_id, type_id, memspace_id, filespace_id, plist_id, vectors);
+        writeDatasetAttributes(dataset_id);  // ALL PROCS WRITE?
 
         // H5Dflush(dataset_id);  // KNOWN to cause "HDF5: infinite loop closing library" with MPI-IO
         H5Sclose(memspace_id);
@@ -240,6 +366,7 @@ public:
             FMT_PRINT_ERR("ERROR: failed to open PHDF5 file {}\n", filename);
             return false;
         }
+        writeRootGroupAttributes(file_id);
 
         // ------------- create the group
         hid_t group_id;
@@ -252,12 +379,12 @@ public:
             FMT_PRINT_ERR("WARN: unable to get group {} in file {}\n", path, filename);
             return false;
         }
-            
+        writeDataGroupAttributes(group_id, 1, 2);
 
         // ------------- write the names.
-        writeStrings(group_id, "axis1", row_names);  // row names are in axis 1?
-        writeStrings(group_id, "axis0", col_names);  // col names are in axis 0?
-        writeStrings(group_id, "block0_items", col_names);  // col names are in axis 0?
+        writeStrings(group_id, "axis1", "genes", row_names);  // row names are in axis 1?
+        writeStrings(group_id, "axis0", "N.", col_names, true);  // col names are in axis 0?
+        writeStrings(group_id, "block0_items", "N.", col_names, true);  // col names are in axis 0?
 
         auto etime = getSysTime();
         FMT_PRINT_RT("Wrote names in file {}{} in {} sec\n", filename, path, get_duration_s(stime, etime));
@@ -327,6 +454,8 @@ public:
             H5Pclose(plist_id);
             return false;
         }
+        writeRootGroupAttributes(file_id);
+
         // create group
         hid_t group_id = H5Gcreate(file_id, path.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         if (group_id < 0) {
@@ -336,6 +465,7 @@ public:
             if (status < 0) FMT_PRINT_ERR("ERROR: file is not closed\n");
             return false;
         } else {
+            writeDataGroupAttributes(group_id, 1, 2);
             // H5Gflush(group_id); // KNOWN to cause "HDF5: infinite loop closing library" with MPI-IO
             H5Gclose(group_id);
             H5Fflush(file_id, H5F_SCOPE_GLOBAL);
@@ -375,9 +505,9 @@ public:
             if (exists > 0) {
                 group_id = H5Gopen(file_id, path.c_str(), H5P_DEFAULT);
                 // ------------- write the names.
-                writeStrings(group_id, "axis1", row_names);  // row names are in axis 1?
-                writeStrings(group_id, "axis0", col_names);  // col names are in axis 0?
-                writeStrings(group_id, "block0_items", col_names);  // col names are in axis 0?
+                writeStrings(group_id, "axis1", "genes", row_names);  // row names are in axis 1?
+                writeStrings(group_id, "axis0", "N.", col_names);  // col names are in axis 0?
+                writeStrings(group_id, "block0_items", "N.", col_names);  // col names are in axis 0?
 
                 // H5Gflush(group_id);  // here does not cause "HDF5: infinite loop closing library" with MPI-IO
                 H5Gclose(group_id);  // close the group immediately
