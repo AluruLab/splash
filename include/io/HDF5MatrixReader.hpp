@@ -147,10 +147,14 @@ class HDF5MatrixReader {
 			H5Sget_simple_extent_dims(filespace_id, file_dims, NULL);
 			
 			// create target space
-			hsize_t mem_dims[ndims];
-			mem_dims[0] = rows;
-			mem_dims[1] = cols;
+			hsize_t mem_dims[ndims] = {rows, cols};
 			hid_t memspace_id = H5Screate_simple(ndims, mem_dims, NULL);
+			// select hyperslab of memory, for row by row traversal
+			hsize_t mstart[2] = {0, 0};  // element offset for first block
+			hsize_t mcount[2] = {rows, 1}; // # of blocks
+			hsize_t mstride[2] = {1, stride_bytes / sizeof(FloatType)};  // element stride to get to next block
+			hsize_t mblock[2] = {1, cols};  // block size  1xcols
+			H5Sselect_hyperslab(memspace_id, H5S_SELECT_SET, mstart, mstride, mcount, mblock);
 
 			// float type
 			splash::utils::hdf5::datatype<FloatType> type;
@@ -204,8 +208,14 @@ class HDF5MatrixReader {
 			hsize_t count[2] = {rows, cols};   // number of row and col blocks.
 			H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, start, NULL, count, NULL);
 
-			count[1] = stride_bytes / sizeof(FloatType);
-			hid_t memspace_id = H5Screate_simple(ndims, count, NULL);
+			hsize_t mem_dims[ndims] = {rows, stride_bytes / sizeof(FloatType) };
+			hid_t memspace_id = H5Screate_simple(ndims, mem_dims, NULL);
+			// select hyperslab of memory, for row by row traversal
+			hsize_t mstart[2] = {0, 0};  // element offset for first block
+			hsize_t mcount[2] = {rows, 1}; // # of blocks
+			hsize_t mstride[2] = {1, stride_bytes / sizeof(FloatType)};  // element stride to get to next block
+			hsize_t mblock[2] = {1, cols};  // block size  1xcols
+			H5Sselect_hyperslab(memspace_id, H5S_SELECT_SET, mstart, mstride, mcount, mblock);
 
 			// float type
 			splash::utils::hdf5::datatype<FloatType> type;
