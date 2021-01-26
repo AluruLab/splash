@@ -145,9 +145,9 @@ class HDF5MatrixReader {
 			const int ndims = H5Sget_simple_extent_ndims(filespace_id);
 			hsize_t file_dims[ndims];
 			H5Sget_simple_extent_dims(filespace_id, file_dims, NULL);
-			
+
 			// create target space
-			hsize_t mem_dims[ndims] = {rows, cols};
+			hsize_t mem_dims[ndims] = {rows, stride_bytes / sizeof(FloatType)};
 			hid_t memspace_id = H5Screate_simple(ndims, mem_dims, NULL);
 			// select hyperslab of memory, for row by row traversal
 			hsize_t mstart[2] = {0, 0};  // element offset for first block
