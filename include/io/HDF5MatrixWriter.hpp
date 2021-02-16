@@ -449,6 +449,7 @@ public:
         if (procs == 1) { // rank 0 only.
             return HDF5MatrixWriter::storeMatrixData(path, row_names, col_names, input);
         }
+        FMT_PRINT_ERR("NOTICE: parallel write using HDF5 OpenMPI versions in Ubuntu 18.04.5 LTS does not work.\n");
 
         // ------- do some tests of sizes.
         // NOTE: does not support full size input but each process writing only a part of the input.
