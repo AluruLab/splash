@@ -196,22 +196,22 @@ void write_exp_matrix(std::string const & filename, std::vector<std::string> & r
 	splash::ds::aligned_matrix<T> const & data) {
 		// NOTE: rank 0 writes out.
 			// write to file.  MPI enabled.  Not thread enabled.
-#ifdef USE_MPI
-		int rank = 0;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+// #ifdef USE_MPI
+// 		int rank = 0;
+// 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-		auto allout = data.gather(0);
-		FMT_ROOT_PRINT("writing file size: {}, {}\n", allout.rows(), allout.columns());
-		if (rank == 0) {
-			splash::io::EXPMatrixWriter<T>::storeMatrixData(filename, row_names, col_names, allout);
-		}
-			// std::stringstream ss;
-			// ss << filename << "." << rank << ".exp";
-			// std::string fn = ss.str();
-			// splash::io::EXPMatrixWriter<T>::storeMatrixData(fn, row_names, col_names, data);
-#else
+// 		auto allout = data.gather(0);
+// 		FMT_ROOT_PRINT("writing file size: {}, {}\n", allout.rows(), allout.columns());
+// 		if (rank == 0) {
+// 			splash::io::EXPMatrixWriter<T>::storeMatrixData(filename, row_names, col_names, allout);
+// 		}
+// 			// std::stringstream ss;
+// 			// ss << filename << "." << rank << ".exp";
+// 			// std::string fn = ss.str();
+// 			// splash::io::EXPMatrixWriter<T>::storeMatrixData(fn, row_names, col_names, data);
+// #else
 		splash::io::EXPMatrixWriter<T>::storeMatrixData(filename, row_names, col_names, data);
-#endif
+// #endif
 
 };
 
@@ -303,18 +303,18 @@ void write_csv_matrix(std::string const & filename, std::vector<std::string> & r
 		// write to file.  MPI enabled.  Not thread enabled.
 		// FMT_ROOT_PRINT("name sizes: {}, {}\n", row_names.size(), col_names.size());
 		// FMT_ROOT_PRINT("outputing matrix size: {}, {}\n", data.rows(), data.columns());
-#ifdef USE_MPI		
-		int rank = 0;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+// #ifdef USE_MPI		
+// 		int rank = 0;
+// 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-		auto allout = data.gather(0);
-		FMT_ROOT_PRINT("writing file size: {}, {}\n", allout.rows(), allout.columns());
-		if (rank == 0) {
-			splash::io::MatrixWriter<T>::storeMatrixData(filename, row_names, col_names, allout);
-		}
-#else
+// 		auto allout = data.gather(0);
+// 		FMT_ROOT_PRINT("writing file size: {}, {}\n", allout.rows(), allout.columns());
+// 		if (rank == 0) {
+// 			splash::io::MatrixWriter<T>::storeMatrixData(filename, row_names, col_names, allout);
+// 		}
+// #else
 		splash::io::MatrixWriter<T>::storeMatrixData(filename, row_names, col_names, data);
-#endif
+// #endif
 	} else {
 		// dump to console.  TODO: MPI
 		data.print("matrix: ");
@@ -416,19 +416,20 @@ void write_hdf5_matrix(std::string const & filename,
 		// FMT_ROOT_PRINT("name sizes: {}, {}\n", row_names.size(), col_names.size());
 		// FMT_ROOT_PRINT("outputing matrix size: {}, {}\n", data.rows(), data.columns());
 		splash::io::HDF5MatrixWriter<T> writer(filename);
-#ifdef USE_MPI		
-		int rank = 0;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+// #ifdef USE_MPI		
+// 		int rank = 0;
+// 		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-		auto allout = data.gather(0);
-		FMT_ROOT_PRINT("writing file size: {}, {}\n", allout.rows(), allout.columns());
-		if (rank == 0) {
-			writer.storeMatrixData(datasetname, row_names, col_names, allout);
-		}
-		MPI_Barrier(MPI_COMM_WORLD);
-#else
-		writer::storeMatrixData(datasetname, row_names, col_names, data);
-#endif
+// 		auto allout = data.gather(0);
+// 		FMT_ROOT_PRINT("writing file size: {}, {}\n", allout.rows(), allout.columns());
+// 		if (rank == 0) {
+// 			writer.storeMatrixData(datasetname, row_names, col_names, allout);
+// 		}
+// 		MPI_Barrier(MPI_COMM_WORLD);
+// #else
+		// sequential writes only.
+		writer.storeMatrixData(datasetname, row_names, col_names, data);
+// #endif
 	} else {
 		// dump to console.  TODO: MPI
 		data.print("matrix: ");
