@@ -111,8 +111,9 @@ class HDF5MatrixReader {
 			char * ptr = data;
 			for(size_t x=0; x < dims[0]; ++x, ptr += max_len)
 			{
-				//FMT_ROOT_PRINT("GOT STRING {} {:p} {}\n", x, ptr, std::string(ptr, max_len) );
-				out.emplace_back(ptr, max_len);
+				// auto l = strlen(ptr);
+				// FMT_ROOT_PRINT("GOT STRING {} {:p} {} \"{}\"\n", x, ptr, l, std::string(ptr, l) );
+				out.emplace_back(ptr, strlen(ptr));
 			}
 			// H5Dvlen_reclaim (filetype_id, dataspace_id, H5P_DEFAULT, data);
 			free(data);

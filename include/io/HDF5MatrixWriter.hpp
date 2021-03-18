@@ -170,6 +170,7 @@ protected:
         {
             max_len = std::max(max_len, names[ii].length());
         }
+        ++max_len;
         // copy data into continuous block.
         char * data = reinterpret_cast<char *>(calloc(names.size(), max_len * sizeof(char)));
         char * ptr = data;
