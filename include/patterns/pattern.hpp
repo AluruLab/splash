@@ -744,8 +744,8 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
 
         // FULL INPUT, PARTITIONED OUTPUT.
         OutputType operator()(InputType const & input1, InputType const & input2, Op const & _op) const {
-            FMT_ROOT_PRINT("InnerProduct: input1 {} X {}, input2 {} X {}\n",
-                input1.rows(), input1.columns(), input2.rows(), input2.columns());
+            FMT_ROOT_PRINT("InnerProduct: input1 {} X {}, input2 {} X {} -> {} x {}\n",
+                input1.rows(), input1.columns(), input2.rows(), input2.columns(), input1.rows(), input2.rows());
 
             // ---- fixed-size partiton input and filter for tiles t
             auto stime = getSysTime();
@@ -868,6 +868,7 @@ class InnerProduct<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_tiles
                                 // auto xy = _ops[thread_id](input1.data(row), input2.data(col), input1.columns());
                                 // auto yx = _ops[thread_id](input2.data(col), input1.data(row), input2.columns());
                                 // if (xy != yx)  FMT_PRINT_RT("ERROR: distcorr not symmetric at row col ({}, {}), xy: {}, yx {}\n", row, col, xy, yx);
+                                // FMT_PRINT_RT("[r, c] = [{}, {}], cols = {} {}\n", row, col, input1.columns(), input2.columns());
                                 *data = run(_ops[thread_id], row, col, input1.data(row), input2.data(col), input1.columns());
                                 // if (row == col) FMT_PRINT_RT("Row col {},{} input1 row col {}x{} input2 row col {}x{} data = {}\n",
                                 //     row, col, input1.rows(), input1.columns(), input2.rows(), input2.columns(), *data);
