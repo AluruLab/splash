@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
 		} else {
 			input = read_exp_matrix_fast<double>(common_params.input, 
 				common_params.num_vectors, common_params.vector_size,
-				genes, samples, app_params.atof_method);
+				genes, samples, false, app_params.atof_method);
 		}
 	}
 	etime = getSysTime();

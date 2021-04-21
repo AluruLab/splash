@@ -134,7 +134,7 @@ splash::ds::aligned_matrix<T> read_exp_matrix(std::string const & filename, S & 
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> read_exp_matrix_fast(std::string const & filename, S & rows, S & cols,
 	std::vector<std::string> & genes, std::vector<std::string> & samples,
-	int const & atof_type = 1, bool skip = false
+	bool skip = false, int const & atof_type = 1
 ) {
 	ssize_t nvecs = std::numeric_limits<ssize_t>::max();
 	ssize_t vecsize = std::numeric_limits<ssize_t>::max();
@@ -143,6 +143,8 @@ splash::ds::aligned_matrix<T> read_exp_matrix_fast(std::string const & filename,
 	// MPI compatible, not OpenMP enabled.
 	splash::io::EXPMatrixReader2<T> reader(filename.c_str(), atof_type);
 	reader.getMatrixSize(nvecs, vecsize, skip);
+
+	FMT_ROOT_PRINT("num vectors: {}, vecsize {}\n", nvecs, vecsize);
 
 	// get the minimum array size.
 	rows = (rows > 0) ? std::min(static_cast<S>(nvecs), rows) : nvecs;
@@ -154,13 +156,15 @@ splash::ds::aligned_matrix<T> read_exp_matrix_fast(std::string const & filename,
 	// now read the data.  // MPI compatible, not OpenMP enabled.
 	reader.loadMatrixData(genes, samples, input, skip);
 
+	FMT_ROOT_PRINT("num genes {}, num samples {}. inputsize {}x{}\n", genes.size(), samples.size(), input.rows(), input.columns());
+
 	return input;
 };
 
 // template <typename T, typename S>
 // splash::ds::aligned_matrix<T> read_exp_matrix_distributed(std::string const & filename, S & rows, S & cols,
 // 	std::vector<std::string> & genes, std::vector<std::string> & samples,
-// 	int const & atof_type = 1, bool skip = false
+// 	bool skip = false, int const & atof_type = 1
 // ) {
 // 	ssize_t nvecs = std::numeric_limits<ssize_t>::max();
 // 	ssize_t vecsize = std::numeric_limits<ssize_t>::max();
@@ -471,7 +475,7 @@ splash::ds::aligned_matrix<T> read_matrix(std::string const & filename,
 	if (splash::utils::endsWith(filename, ".csv")) {
 		return read_csv_matrix_fast<T>(filename, rows, cols, genes, samples, atof_type);
 	} else if (splash::utils::endsWith(filename, ".exp")) {
-		return read_exp_matrix_fast<T>(filename, rows, cols, genes, samples, skip);
+		return read_exp_matrix_fast<T>(filename, rows, cols, genes, samples, skip, atof_type);
 	} else if ((splash::utils::endsWith(filename, "hdf5")) || (splash::utils::endsWith(filename, ".h5"))) {
 		return read_hdf5_matrix<T>(filename, datasetname, rows, cols, genes, samples);
 	} else {
