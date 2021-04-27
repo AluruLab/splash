@@ -53,7 +53,6 @@ class HDF5MatrixReader {
 
 		bool getSize(hid_t file_id, std::string const & path, ssize_t & rows, ssize_t & cols) {
 			// https://stackoverflow.com/questions/15786626/get-the-dimensions-of-a-hdf5-dataset#:~:text=First%20you%20need%20to%20get,int%20ndims%20%3D%20H5Sget_simple_extent_ndims(dspace)%3B
-			FMT_PRINT_RT("get size\n");
 			auto exists = H5Lexists(file_id, path.c_str(), H5P_DEFAULT);
 			if (exists <= 0) return false;
 
@@ -304,7 +303,7 @@ class HDF5MatrixReader {
 			H5Fclose(file_id);
 
 			auto etime = getSysTime();
-			FMT_ROOT_PRINT("get matrix size in {} sec\n", get_duration_s(stime, etime));
+			FMT_ROOT_PRINT("get matrix size {}x{} in {} sec\n", numVectors, vectorSize, get_duration_s(stime, etime));
 			return res;
 		}
 

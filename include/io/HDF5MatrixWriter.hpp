@@ -225,6 +225,10 @@ protected:
 
         hsize_t filespace_dim[2] = { rows, cols };  // what the file will contain.
         hid_t filespace_id = H5Screate_simple(2, filespace_dim, NULL);
+        // select hyperslab of memory, for row by row traversal
+        hsize_t start[2] = {0, 0};  // element offset for first block
+        hsize_t count[2] = {rows, cols}; // # of blocks
+        H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, start, NULL, count, NULL);
 
         // try opening the group first.  
         // NOTE: cannot delete dataset or replace dataset with smaller one.
@@ -306,7 +310,6 @@ protected:
         // each process defines dataset in memory and hyperslab in file.
         hsize_t start[2] = {row_offset, 0};  // starting offset, row, then col.
         hsize_t count[2] = {rows, cols};   // number of row and col blocks.
-
         H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, start, NULL, count, NULL);
 
         hsize_t memspace_dim[2] = {rows, stride_bytes / sizeof(FloatType)};
@@ -450,7 +453,7 @@ public:
         if (procs == 1) { // rank 0 only.
             return HDF5MatrixWriter::storeMatrixData(path, row_names, col_names, input);
         }
-        FMT_PRINT_ERR("NOTICE: parallel write using HDF5 OpenMPI versions in Ubuntu 18.04.5 LTS does not work.\n");
+        FMT_ROOT_PRINT("NOTICE: parallel write using HDF5 OpenMPI versions in Ubuntu 18.04.5 LTS may not work.\n");
 
         // ------- do some tests of sizes.
         // NOTE: does not support full size input but each process writing only a part of the input.
