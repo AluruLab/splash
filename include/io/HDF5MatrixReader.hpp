@@ -293,6 +293,7 @@ class HDF5MatrixReader {
                 group_id = H5Gopen(file_id, path.c_str(), H5P_DEFAULT);
             } else {
                 FMT_PRINT_ERR("WARN: unable to get group {} in file {}\n", path, filename);
+				H5Fclose(file_id);
                 return false;
             }
 
@@ -331,6 +332,7 @@ class HDF5MatrixReader {
 			hid_t file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, plist_id);
 			if (file_id < 0) {
 				FMT_PRINT_ERR("ERROR: failed to open PHDF5 file {}\n", filename);
+				H5Pclose(plist_id);
 				return false;
 			}
 
@@ -340,6 +342,8 @@ class HDF5MatrixReader {
                 group_id = H5Gopen(file_id, path.c_str(), H5P_DEFAULT);
             } else {
                 FMT_PRINT_ERR("WARN: unable to get group {} in file {}\n", path, filename);
+				H5Fclose(file_id);
+				H5Pclose(plist_id);
                 return false;
             }
 
@@ -385,6 +389,7 @@ class HDF5MatrixReader {
                 group_id = H5Gopen(file_id, path.c_str(), H5P_DEFAULT);
             } else {
                 FMT_PRINT_ERR("WARN: unable to get group {} in file {}\n", path, filename);
+				H5Fclose(file_id);
                 return false;
             }
 

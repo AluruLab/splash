@@ -193,6 +193,9 @@ protected:
         if (dataset_id < 0) {
             // failed.  print error and return
             FMT_PRINT_RT("ERROR: unable to create dataset {}.\n", path);
+            H5Tclose(type_id);
+            H5Sclose(dataspace_id);
+            free(data);
             return;
         } else {
             FMT_PRINT_RT("Created dataset {}.\n", path);
@@ -237,6 +240,7 @@ protected:
         if (dataset_id < 0) {
             // failed.  print error and return
             FMT_PRINT_RT("ERROR: unable to create dataset.\n");
+            H5Sclose(filespace_id);
             return;
         }
 
@@ -304,6 +308,8 @@ protected:
         if (dataset_id < 0) {
             // failed.  print error and return
             FMT_PRINT_RT("ERROR: unable to create dataset.\n");
+            H5Sclose(filespace_id);
+            H5Pclose(plist_id);
             return;
         }
 
@@ -394,6 +400,7 @@ public:
             group_id = H5Gcreate(file_id, path.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         } else {
             FMT_PRINT_ERR("WARN: unable to get group {} in file {}\n", path, filename);
+            H5Fclose(file_id);
             return false;
         }
         writeDataGroupAttributes(group_id, 1, 2);
@@ -478,9 +485,9 @@ public:
         hid_t group_id = H5Gcreate(file_id, path.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         if (group_id < 0) {
             FMT_PRINT_ERR("ERROR: failed to open PHDF5 group {}/{}\n", filename, path);
-            H5Pclose(plist_id);
             status = H5Fclose(file_id);
             if (status < 0) FMT_PRINT_ERR("ERROR: file is not closed\n");
+            H5Pclose(plist_id);
             return false;
         } else {
             writeDataGroupAttributes(group_id, 1, 2);
@@ -489,6 +496,7 @@ public:
             H5Fflush(file_id, H5F_SCOPE_GLOBAL);
             status = H5Fclose(file_id);
             if (status < 0) FMT_PRINT_ERR("ERROR: file is not closed\n");
+            H5Pclose(plist_id);
         }
 
         auto etime = getSysTime();
@@ -502,13 +510,14 @@ public:
         MPI_Allreduce(MPI_IN_PLACE, &total, 1, MPI_UNSIGNED_LONG, MPI_SUM, comm);
         if (total != row_names.size()) {
             FMT_ROOT_PRINT("ERROR: input partitioning incorrect.  total {} != num of rows {}\n", total, row_names.size());
-            H5Pclose(plist_id);
             return false;
         }
         etime = getSysTime();
         FMT_ROOT_PRINT("Total rows {} in {} sec\n", total, get_duration_s(stime, etime));
 
-        // first write the column and row names,
+        MPI_Barrier(comm);
+
+        // first write the column and row names.  Single proc.
         stime = getSysTime();
         if (rank == 0) {
         
@@ -532,8 +541,9 @@ public:
                 H5Fflush(file_id, H5F_SCOPE_GLOBAL);  //must flush else could get problem opening next.
             } else {
                 FMT_PRINT_ERR("WARN: unable to get group {} in file {}\n", path, filename);
-                H5Pclose(plist_id);
-
+                status = H5Fclose(file_id);
+                if (status < 0) FMT_PRINT_ERR("ERROR: file is not closed\n");
+                
                 return false;
             }
 
@@ -547,6 +557,8 @@ public:
         //============ now write the data in parallel.
 
         stime = getSysTime();
+        plist_id = H5Pcreate(H5P_FILE_ACCESS);
+        H5Pset_fapl_mpio(plist_id, comm, MPI_INFO_NULL);
 
         if ((file_id = H5Fopen(filename.c_str(), H5F_ACC_RDWR, plist_id)) < 0) {
             FMT_PRINT_ERR("ERROR: failed to open PHDF5 file to write values {}\n", filename);
@@ -557,17 +569,17 @@ public:
         auto exists = H5Lexists(file_id, path.c_str(), H5P_DEFAULT);
         if (exists <= 0) {
             FMT_PRINT_ERR("ERROR: failed to get PHDF5 file {} group {} to write values\n", filename, path);
-            H5Pclose(plist_id);
             status = H5Fclose(file_id);
             if (status < 0) FMT_PRINT_ERR("ERROR: file is not closed\n");
+            H5Pclose(plist_id);
             return false;
         }
         group_id = H5Gopen(file_id, path.c_str(), H5P_DEFAULT);
         if (group_id < 0) {
             FMT_PRINT_ERR("ERROR: failed to open PHDF5 group {}/{}\n", filename, path);
-            H5Pclose(plist_id);
             status = H5Fclose(file_id);
             if (status < 0) FMT_PRINT_ERR("ERROR: file is not closed 3\n");
+            H5Pclose(plist_id);
 
             return false;
         }
@@ -579,9 +591,9 @@ public:
         H5Fflush(file_id, H5F_SCOPE_GLOBAL);  //must flush else could get problem opening next.
 
         H5Gclose(group_id);
-        H5Pclose(plist_id);
         status = H5Fclose(file_id);
         if (status < 0) FMT_PRINT_ERR("ERROR: file is not closed 3\n");
+        H5Pclose(plist_id);
 
         etime = getSysTime();
         FMT_ROOT_PRINT("PHDF5 MPI-IO wrote {}/{} in {} sec\n", filename, path, get_duration_s(stime, etime));
