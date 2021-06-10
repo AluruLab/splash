@@ -112,6 +112,11 @@ class RandomVectorGenerator : public splash::kernel::generate<OT, splash::kernel
             this->operator()(output.size(), output.data());
         }
 
+        inline void operator()(splash::ds::aligned_vector<OT> & vector,
+            splash::utils::partition<size_t> const & part) const {
+            this->operator()(part.size, vector.data(part.offset));
+        }
+
 		inline virtual void operator()(size_t const & count, OT * out_vector) const {
             Distribution distribution(mn, mx);
 

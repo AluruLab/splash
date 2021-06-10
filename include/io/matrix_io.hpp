@@ -23,6 +23,39 @@
 #endif
 
 template <typename T, typename S>
+splash::ds::aligned_vector<T> make_random_vector(
+	long const & seed, T const & rmin, T const & rmax,
+	S const & cols
+) {
+	// allocate input.
+	splash::ds::aligned_vector<T> input(cols);
+
+	// random generate data.   output: every proc has full data.
+	// OMP compatible, rows per thread.  MPI compatible, rows per proc.
+	splash::kernel::random_number_generator<> generators(seed);
+	splash::kernel::UniformRandomVectorGenerator<T> vec_gen(generators, rmin, rmax);
+
+	// split by proc
+	splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
+
+	int procs = 1;
+	int rank = 0;
+
+#ifdef USE_MPI
+	MPI_Comm_size(MPI_COMM_WORLD, &procs);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif 
+
+	splash::utils::partition<S> part = partitioner.get_partition(cols, procs, rank);
+	part.print("random: ");
+
+	vec_gen(input, part);
+	input.allgather_inplace(part);
+
+	return input;
+};
+
+template <typename T, typename S>
 splash::ds::aligned_matrix<T> make_random_matrix(
 	long const & seed, T const & rmin, T const & rmax,
 	S const & rows, S const & cols,
@@ -64,6 +97,7 @@ splash::ds::aligned_matrix<T> make_random_matrix(
 
 	return input;
 };
+
 
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> make_random_matrix_distributed(
