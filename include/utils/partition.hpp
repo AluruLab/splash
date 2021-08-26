@@ -51,7 +51,23 @@ struct partition {
     void print(const char * prefix) {
         FMT_PRINT_RT("{} Partition: offset: {}, size: {}, id: {}\n", prefix, offset, size, id);
     }  
+#ifdef USE_MPI
+    static partition make_partition(ST const & size, MPI_Comm comm = MPI_COMM_WORLD) {
+        int procs;
+        int rank;
+        MPI_Comm_size(comm, &procs);
+        MPI_Comm_rank(comm, &rank);
 
+        ST offset = 0;
+        splash::utils::mpi::datatype<ST> dt;
+        MPI_Exscan(&size, &offset, 1, dt.value, MPI_SUM, comm);
+        return partition(offset, size, rank);
+    }
+#else
+    static partition make_partition(ST const & size) {
+        return partition(0, size, 0);
+    }
+#endif
 
 };
 
@@ -229,7 +245,7 @@ struct partition2D {
         strcpy(pre + strlen(prefix), " COL ");
         c.print(pre);
         FMT_PRINT_RT("{} Partition2D id: {}, id row width {}\n", prefix, id, id_cols);
-    }  
+    }
 };
 
 #ifdef USE_MPI
