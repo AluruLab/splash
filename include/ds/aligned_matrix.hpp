@@ -215,7 +215,9 @@ class aligned_matrix {
             // if was not managing, now is.
             manage = true;
         }
-
+        inline void zero() {
+            memset(_data, 0, _rows * _bytes_per_row);
+        }
 
         inline size_type rows() const {  return _rows; }
         inline size_type columns() const {  return _cols; }

@@ -149,7 +149,9 @@ class aligned_vector {
             // if was not managing, now is.
             manage = true;
         }
-
+        inline void zero() {
+            memset(_data, 0, splash::utils::get_aligned_size(_cols * sizeof(FloatType), _align));
+        }
 
 
         inline size_type size() const { return _cols; }
