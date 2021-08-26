@@ -482,7 +482,7 @@ class BinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<IT2>, 
         }
 
         void operator()(InputType const & input, InputType2 const & input2, Op const & _op, OutputType & output) const {
-            part1D_type rows = part1D_type(0, input.rows(), 0);
+            part1D_type rows(0, input.rows(), 0);
             output.resize(input.rows(), input.columns());
             this->operator()(input, rows, input2, rows, _op, output, rows);
         }
