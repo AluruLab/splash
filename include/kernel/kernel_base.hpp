@@ -185,6 +185,14 @@ class ternary_op<IT, IT1, IT2, OT, DEGREE::SCALAR> : public kernel_base {
         virtual ~ternary_op() {};
         inline virtual OT operator()(IT const & in, IT1 const & aux1, IT2 const & aux2) const = 0;
 };
+template <typename IT, typename IT1, typename IT2, typename OT>
+class ternary_op<IT, IT1, IT2, OT, DEGREE::VECTOR> : public kernel_base {
+    public:
+        using OutputType = OT;
+        virtual ~ternary_op() {};
+        inline virtual void operator()(IT const * in, IT1 const * aux1, IT2 const * aux2, size_t const & count, OT * out_vector) const = 0;
+};
+
 
 // vector -> vector operator.
 template <typename IT, typename OT, int DEG>

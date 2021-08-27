@@ -675,9 +675,10 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 size_t rid = omp_tile_parts.offset;
                 size_t offset = mpi_tile_parts.offset;
                 for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
-                    for (unsigned int j = 0; j < input.columns(); ++j) {
-                        output(rid - offset, j) = op(input(rid, j), __buffer[rid], __buffer[j]);
-                    }
+                    op(input.data(rid), __buffer.data(rid), __buffer.data(), input.columns(), output.data(rid - offset));
+                    // for (unsigned int j = 0; j < input.columns(); ++j) {
+                    //     output(rid - offset, j) = op(input(rid, j), __buffer[rid], __buffer[j]);
+                    // }
                 }
 
                 count += op.processed;
