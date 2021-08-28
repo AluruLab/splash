@@ -216,7 +216,7 @@ class aligned_vector {
             aligned_vector<FloatType> output(col_offsets[procs], _align);
 
             // gatherv.
-            splash::utils::mpi::datatype<aligned_vector<FloatType>> col_dt;
+            splash::utils::mpi::datatype<FloatType> col_dt;;
             MPI_Allgatherv(_data, _cols, col_dt.value, 
                 output.data(), col_counts, col_offsets, col_dt.value, 
                 comm);

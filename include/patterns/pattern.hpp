@@ -605,8 +605,6 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             auto stime = getSysTime();
 
             // get sizes and dimensions
-            size_t local_rows = input.rows();
-
             // THIS IMPLEMENTATION IS ONLY FOR SYMMETRIC MATRICES.
             splash::ds::aligned_vector<MT> buf(input.rows());
 
