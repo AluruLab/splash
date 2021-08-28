@@ -550,7 +550,7 @@ class GlobalBinaryOp<splash::ds::aligned_matrix<IT>, splash::ds::aligned_matrix<
 template <typename IN, typename Reduc, typename Op, typename OUT>
 class ReduceTransform;
 
-// output is distributed.
+// input and output are distributed.  ONLY FOR SYMMETRIC MATRIX.
 template <typename IT, typename Reduc, typename Op, typename OT>
 class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::aligned_matrix<OT>> :
     public OpBase {
@@ -599,7 +599,158 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             assert((output.columns() == input.columns())  && "Transform requires output and input to have same number of columns.");
 
             // for now, require symmetry.
-            // assert((input.rows() == input.columns())  && "Transform requires output and input to be symmetric.");
+            // assert((total_rows == input.columns())  && "Transform requires output and input to be symmetric.");            
+
+            // first perform a row-wise reduction
+            auto stime = getSysTime();
+
+            // get sizes and dimensions
+            size_t local_rows = input.rows();
+
+            // THIS IMPLEMENTATION IS ONLY FOR SYMMETRIC MATRICES.
+            splash::ds::aligned_vector<MT> buf(input.rows());
+
+            // split the input amongst the processors.
+
+            // ---- parallel compute
+#ifdef USE_OPENMP
+#pragma omp parallel 
+            {
+                int threads = omp_get_num_threads();
+                int thread_id = omp_get_thread_num();
+#else 
+            {
+                int threads = 1;
+                int thread_id = 0;
+#endif
+                // FMT_PRINT_RT("make Op copy: thread {}\n", omp_get_thread_num());
+                Reduc reduc;
+                reduc.copy_parameters(_reduc);
+
+                // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
+                // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}\n", output.size(), threads, thread_id);
+                part1D_type omp_tile_parts = partitioner.get_partition(input.rows(), threads, thread_id);
+                // FMT_PRINT_RT("NORM thread {} partition: ", thread_id);
+                // omp_tile_parts.print("OMP REDUC TILES: ");
+
+                // iterate over rows.
+                size_t rid = omp_tile_parts.offset;
+                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
+                    buf[rid] = reduc_run(reduc, rid, input.data(rid), input.columns());
+                }
+            }
+
+            // MPI to allgather results.
+            __buffer = buf.allgather();  // smallish vector, performance okay.
+            
+            auto etime = getSysTime();
+            FMT_PRINT_RT("ReduceTransform REDUCE phase in {} sec\n", get_duration_s(stime, etime));
+            FMT_ROOT_PRINT("ReduceTransform REDUCE phase in {} sec\n", get_duration_s(stime, etime));
+
+            // ------------------ processing. reach element needs row and col
+            // use the same partitioning
+            output.resize(input.rows(), input.columns());
+
+            // now do the transform using the intermediate results.
+            size_t count = 0;
+#ifdef USE_OPENMP
+#pragma omp parallel reduction(+:count)
+            {
+                int threads = omp_get_num_threads();
+                int thread_id = omp_get_thread_num();
+#else 
+            {
+                int threads = 1;
+                int thread_id = 0;
+#endif
+                // FMT_PRINT_RT("make Op copy: thread {}\n", omp_get_thread_num());
+                Op op;
+                op.copy_parameters(_op);
+
+                // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
+                // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}, max thread {}\n", input.rows(), threads, thread_id, omp_get_max_threads());
+                part1D_type omp_tile_parts = partitioner.get_partition(input.rows(), threads, thread_id);
+                // omp_tile_parts.print("OMP TRANSFORM TILES: ");
+
+                // iterate over rows.
+                size_t rid = omp_tile_parts.offset;
+                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
+                    op(input.data(rid), buf.data(rid), __buffer.data(), input.columns(), output.data(rid));
+                    // for (unsigned int j = 0; j < input.columns(); ++j) {
+                    //     output(rid - offset, j) = op(input(rid, j), __buffer[rid], __buffer[j]);
+                    // }
+                }
+
+                count += op.processed;
+            }
+            this->processed = count;
+
+            // ----- allgather in place. 
+            // output.allgather_inplace(mpi_tile_parts);
+
+            // allreduce
+            splash::utils::mpi::datatype<size_t> dt;
+            MPI_Allreduce(MPI_IN_PLACE, &(this->processed), 1, dt.value, MPI_SUM, MPI_COMM_WORLD );
+        }
+
+};
+
+
+
+// reduction and transform
+template <typename IN, typename Reduc, typename Op, typename OUT>
+class GlobalReduceTransform;
+
+// output is distributed.    ONLY FOR SYMMETRIC MATRIX.
+template <typename IT, typename Reduc, typename Op, typename OT>
+class GlobalReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::aligned_matrix<OT>> :
+    public OpBase {
+    protected:
+	    splash::utils::partitioner1D<PARTITION_EQUAL> partitioner;
+        using part1D_type = splash::utils::partition<size_t>;
+        int procs;
+        int rank;
+        using MT = typename Reduc::OutputType;
+        mutable splash::ds::aligned_vector<MT> __buffer;
+        // using ROW_REDUC = splash::pattern::GlobalReduce<splash::ds::aligned_matrix<IT>, Reduc, splash::ds::aligned_vector<MT>, DIM_INDEX::ROW>;
+        // using COL_REDUC = splash::pattern::GlobalReduce<splash::ds::aligned_matrix<IT>, Reduc, splash::ds::aligned_vector<MT>, DIM_INDEX::COLUMN>;
+        
+        template <typename OO, typename I, typename std::enable_if<splash::pattern::has_operator<OO, size_t const &, I const *, size_t const &>::value, int>::type = 1>
+        inline MT reduc_run(OO const & op, size_t const & r, I const * row, size_t const & count) const {
+            return op(r, row, count);
+        }
+	
+        template <typename OO, typename I, typename std::enable_if<!splash::pattern::has_operator<OO, size_t const &, I const *, size_t const &>::value, int>::type = 1>
+        inline MT reduc_run(OO const & op, size_t const & r, I const * row, size_t const & count) const {
+            return op(row, count);
+        }
+
+
+    public:
+        using InputType = splash::ds::aligned_matrix<IT>;
+        using OutputType = splash::ds::aligned_matrix<OT>;
+
+#ifdef USE_MPI
+        GlobalReduceTransform(MPI_Comm comm = MPI_COMM_WORLD) {
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+        }
+#else
+        GlobalReduceTransform() : procs(1), rank(0) {};
+#endif
+        GlobalReduceTransform(int const & _procs, int const & _rank) :
+            procs(_procs), rank(_rank) {};
+
+        // assume input is symmetric.
+        // FULL INPUT
+        void operator()(InputType const & input, 
+            Reduc const & _reduc, Op const & _op, 
+            OutputType & output) const {
+            assert((output.rows() == input.rows())  && "Transform requires output and input to have same number of rows.");
+            assert((output.columns() == input.columns())  && "Transform requires output and input to have same number of columns.");
+
+            // for now, require symmetry.
+            assert((input.rows() == input.columns())  && "Transform requires output and input to be symmetric.");
 
 
             // first perform a row-wise reduction
@@ -641,10 +792,11 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             }
 
             // MPI to allgather results.
-            __buffer.allgather_inplace(mpi_tile_parts);
+            __buffer.allgather_inplace(mpi_tile_parts);  // smallish vector, performance okay.
             
             auto etime = getSysTime();
-            FMT_ROOT_PRINT("ReduceTransform REDUCE phase in {} sec\n", get_duration_s(stime, etime));
+            FMT_PRINT_RT("GloblaReduceTransform REDUCE phase in {} sec\n", get_duration_s(stime, etime));
+            FMT_ROOT_PRINT("GlobalReduceTransform REDUCE phase in {} sec\n", get_duration_s(stime, etime));
 
             // ------------------ processing. reach element needs row and col
             // use the same partitioning
@@ -694,6 +846,8 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
         }
 
 };
+
+
 
 
 // Multiply pattern, i.e. M1 * M2' -> M3
