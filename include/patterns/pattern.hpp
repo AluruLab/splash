@@ -642,9 +642,9 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             __buffer = buf.allgather();  // smallish vector, performance okay.
             
             auto etime = getSysTime();
-            FMT_PRINT_RT("ReduceTransform REDUCE phase in {} sec\n", get_duration_s(stime, etime));
             FMT_ROOT_PRINT("ReduceTransform REDUCE phase in {} sec\n", get_duration_s(stime, etime));
 
+            stime = getSysTime();
             // ------------------ processing. reach element needs row and col
             // use the same partitioning
             output.resize(input.rows(), input.columns());
@@ -682,6 +682,9 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
                 count += op.processed;
             }
             this->processed = count;
+
+            etime = getSysTime();
+            FMT_ROOT_PRINT("ReduceTransform TRANSFORM phase in {} sec\n", get_duration_s(stime, etime));
 
             // ----- allgather in place. 
             // output.allgather_inplace(mpi_tile_parts);
