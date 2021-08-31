@@ -89,7 +89,6 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
         using InputType = splash::ds::aligned_matrix<IT>;
         using OutputType = splash::ds::aligned_vector<OT>;
 
-    protected:
         // same input and output rows.
         void operator()(InputType const & input, part1D_type part, Op const & _op, OutputType & output) const {
             assert((output.size() == input.rows()) && "Reduce requires output vector size to be same as input row count.");
@@ -128,7 +127,6 @@ class Reduce<splash::ds::aligned_matrix<IT>, Op, splash::ds::aligned_vector<OT>,
             this->processed = count;
         }
 
-    public:
         void operator()(InputType const & input, Op const & _op, OutputType & output) const {
             this->operator()(input, part1D_type(0, input.rows(), 0), _op, output);
         }
