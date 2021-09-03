@@ -254,6 +254,25 @@ class reduce<IT, OT, DEGREE::VECTOR, DIM::ALL>  : public kernel_base {
 };
 
 
+// general reduction template
+// REDUC_PER indicates which dimenion to preserve.  reduction is done across the other dims.
+template <typename IT, typename LABEL, typename OT, int IN_DEG, int REDUC_PER = DIM::ALL>
+class masked_reduce; 
+
+template <typename IT, typename LABEL, typename OT>
+class masked_reduce<IT, LABEL, OT, DEGREE::VECTOR, DIM::ALL>  : public kernel_base {
+    public:
+        using InputType = IT;
+        using MaskType = LABEL;
+        using OutputType = OT;
+         virtual ~reduce() {};
+       inline virtual OT operator()(IT const * in_vector, 
+            LABEL const * in_label,
+            size_t const & count) const = 0;
+    protected:
+        inline virtual void initialize(size_t const & count) {};
+};
+
 // // this will always be row-wise reduction.
 // template <typename IT, typename OT>
 // class reduce<IT, OT, DEGREE::MATRIX, DIM::ROW>  : public kernel_base {
