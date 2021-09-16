@@ -265,8 +265,8 @@ class masked_reduce<IT, LABEL, OT, DEGREE::VECTOR, DIM::ALL>  : public kernel_ba
         using InputType = IT;
         using MaskType = LABEL;
         using OutputType = OT;
-         virtual ~reduce() {};
-       inline virtual OT operator()(IT const * in_vector, 
+        virtual ~masked_reduce() {};
+        inline virtual OT operator()(IT const * in_vector, 
             LABEL const * in_label,
             size_t const & count) const = 0;
     protected:
