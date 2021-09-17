@@ -53,9 +53,9 @@ class GaussianParams : public splash::kernel::reduce<IT, std::pair<OT, OT>, spla
             /*compute the stdev*/
             FT stdev;
             if (SampleStats) 
-                stdev = std::sqrt(meanX2 - (static_cast<FT>(count) * sample_avg) * mean * mean );
+                stdev = std::sqrt(std::abs(meanX2 - (static_cast<FT>(count) * sample_avg) * mean * mean));
             else
-                stdev = std::sqrt(meanX2 - mean * mean);
+                stdev = std::sqrt(std::abs(meanX2 - mean * mean));
 
 			return {mean, stdev};
         }
@@ -155,9 +155,9 @@ class GaussianParamsExclude1 : public splash::kernel::reduce_except1<IT, std::pa
             /*compute the stdev*/
             FT stdev;
             if (SampleStats) 
-                stdev = std::sqrt(meanX2 - (static_cast<FT>(cnt) * sample_avg) * mean * mean );
+                stdev = std::sqrt(std::abs(meanX2 - (static_cast<FT>(cnt) * sample_avg) * mean * mean));
             else
-                stdev = std::sqrt(meanX2 - mean * mean);
+                stdev = std::sqrt(std::abs(meanX2 - mean * mean));
 
 			return {mean, stdev};
         }
