@@ -84,6 +84,16 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
             OT meanX, stdevX;
             std::tie(meanX, stdevX) = stats(in_vec, count);
 
+            if (stdevX == 0)
+#if defined(__INTEL_COMPILER)
+#pragma vector aligned
+#endif
+#if defined(USE_SIMD)
+#pragma omp simd
+#endif
+                for (size_t j = 0; j < count; ++j) {
+                    out_vec[j] = 0;
+
             OT invStdevX = 1.0L / stdevX;
             OT x;
             /*normalize the data*/
