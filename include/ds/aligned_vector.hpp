@@ -188,6 +188,62 @@ class aligned_vector {
             FMT_PRINT("\n");
         }
 
+            
+#ifdef USE_MPI
+        aligned_vector<FloatType> gather(int target_rank = 0, MPI_Comm comm = MPI_COMM_WORLD) const {
+            int procs;
+            int rank;
+            MPI_Comm_size(comm, &procs);
+            MPI_Comm_rank(comm, &rank);
+
+            if (procs == 1) return *this;
+
+            // get total row count
+            int cols = _cols;
+            int *col_counts = nullptr;
+            if (rank == target_rank) {
+                col_counts = new int[procs];
+            }
+            splash::utils::mpi::datatype<int> i_dt;
+            MPI_Gather(&cols, 1, i_dt.value, 
+                col_counts, 1, i_dt.value, 
+                target_rank, comm);
+            
+            int *col_offsets = nullptr;
+            if (rank == target_rank) {
+                col_offsets = new int[procs + 1];
+                col_offsets[0] = 0;
+                for (int i = 0; i < procs; ++i) {
+                    col_offsets[i + 1] = col_offsets[i] + col_counts[i];
+                }
+            }
+            
+            // allocate output
+            aligned_vector<FloatType> output;
+            if (rank == target_rank) {
+                // allocate final
+                output = std::move(aligned_vector<FloatType>(col_offsets[procs], _align));
+            }
+
+            // gatherv, row by row.
+            splash::utils::mpi::datatype<FloatType> col_dt;
+            MPI_Gatherv(_data, _cols, col_dt.value, 
+                output.data(), col_counts, col_offsets, col_dt.value, 
+                target_rank, comm);
+
+            if (rank == target_rank) {
+                delete [] col_counts;
+                delete [] col_offsets;
+            }      
+            // return
+            return output;
+        }
+#else
+        aligned_vector<FloatType> gather(int target_rank = 0) const {
+            return *this;
+        }
+#endif
+
 
 #ifdef USE_MPI
         aligned_vector<FloatType> allgather(MPI_Comm comm = MPI_COMM_WORLD) const {
