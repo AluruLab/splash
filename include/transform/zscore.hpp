@@ -91,7 +91,7 @@ class StandardScore : public splash::kernel::transform<IT, OT, splash::kernel::D
 #if defined(USE_SIMD)
 #pragma omp simd
 #endif
-                for (size_t j = 0; j < count; ++j) {
+                for (size_t j = 0; j < count; ++j)
                     out_vec[j] = 0;
 
             OT invStdevX = 1.0L / stdevX;
