@@ -99,7 +99,7 @@ class HDF5MatrixReader {
 			H5Sget_simple_extent_dims(dataspace_id, dims, NULL);
 			
 			// get continuous space now...
-			char * data = reinterpret_cast<char *>(calloc( dims[0], max_len * sizeof(char)));
+			char * data = reinterpret_cast<char *>(calloc( (dims[0] + 1), max_len * sizeof(char)));
 			data[dims[0]*max_len] = 0;
 			//FMT_ROOT_PRINT("In read STRING dataset, got number of strings: [{}].  temp array at {:p}\n", dims[0], data );
 
