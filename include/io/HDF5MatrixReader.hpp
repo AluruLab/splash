@@ -72,6 +72,13 @@ class HDF5MatrixReader {
 			return true;
 		}
 
+		// max length is set.
+		inline size_t strnlen(char * str, size_t n) {
+			size_t i = 0;
+			while ((i < n) && (str[i] != 0)) ++i;
+			return i;
+		}
+
 		bool readStrings(hid_t file_id, std::string const & path, std::vector<std::string> & out ) {
 			// from https://stackoverflow.com/questions/581209/how-to-best-write-out-a-stdvector-stdstring-container-to-a-hdf5-dataset
 			// MODIFIED to use C api.
@@ -93,6 +100,7 @@ class HDF5MatrixReader {
 			
 			// get continuous space now...
 			char * data = reinterpret_cast<char *>(calloc( dims[0], max_len * sizeof(char)));
+			data[dims[0]*max_len] = 0;
 			//FMT_ROOT_PRINT("In read STRING dataset, got number of strings: [{}].  temp array at {:p}\n", dims[0], data );
 
 			// prepare output
@@ -112,7 +120,7 @@ class HDF5MatrixReader {
 			{
 				// auto l = strlen(ptr);
 				// FMT_ROOT_PRINT("GOT STRING {} {:p} {} \"{}\"\n", x, ptr, l, std::string(ptr, l) );
-				out.emplace_back(ptr, strlen(ptr));
+				out.emplace_back(ptr, strnlen(ptr, max_len));
 			}
 			// H5Dvlen_reclaim (filetype_id, dataspace_id, H5P_DEFAULT, data);
 			free(data);
