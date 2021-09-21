@@ -605,6 +605,7 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
             // get sizes and dimensions
             // THIS IMPLEMENTATION IS ONLY FOR SYMMETRIC MATRICES.
             splash::ds::aligned_vector<MT> buf(input.rows());
+            part1D_type mpi_parts = part1D_type::make_partition(input.rows());
 
             // split the input amongst the processors.
 
@@ -625,14 +626,15 @@ class ReduceTransform<splash::ds::aligned_matrix<IT>, Reduc, Op, splash::ds::ali
 
                 // partition the local 2D tiles.  omp_tile_parts.offset is local to this processor.
                 // FMT_ROOT_PRINT_RT("partitioning info : {}, {}, {}\n", output.size(), threads, thread_id);
-                part1D_type omp_tile_parts = partitioner.get_partition(input.rows(), threads, thread_id);
+                part1D_type omp_tile_parts = partitioner.get_partition(mpi_parts, threads, thread_id);
                 // FMT_PRINT_RT("NORM thread {} partition: ", thread_id);
                 // omp_tile_parts.print("OMP REDUC TILES: ");
 
                 // iterate over rows.
-                size_t rid = omp_tile_parts.offset;
-                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++rid) {
-                    buf[rid] = reduc_run(reduc, rid, input.data(rid), input.columns());
+                size_t global_offset = omp_tile_parts.offset;
+                size_t rank_offset = omp_tile_parts.offset - mpi_parts.offset;
+                for (size_t i = 0; i < omp_tile_parts.size; ++i, ++global_offset, ++rank_offset) {
+                    buf[rank_offset] = reduc_run(reduc, global_offset, input.data(rank_offset), input.columns());
                 }
             }
 
