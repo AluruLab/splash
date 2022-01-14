@@ -75,7 +75,7 @@ struct RankElemType {
 };
 
 
-template <typename IT, typename RT = IT>
+template <typename IT, typename RT = IT, long firstRank = 1>
 class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT> {
     public:
 		using InputType = IT;
@@ -83,7 +83,6 @@ class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VE
 		static_assert(std::is_arithmetic<OutputType>::value, "Rank type must be numeric");
 
 	protected:	
-        OutputType firstRank;
 
 		inline void rank(size_t const & count, OutputType * out_vec) const {
 			// unsort with rank.  can't vectorize either because of random memory access or because of forward dependency.
@@ -99,12 +98,7 @@ class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VE
 		}
 
     public:
-		Rank(OutputType const & first = 1) : firstRank(first) {}
 		virtual ~Rank() {}
-
-		void copy_parameters(Rank const & other) {
-			firstRank = other.firstRank;
-		}
 
         inline virtual void operator()(IT const * in_vec, size_t const & count,
             OutputType * out_vec) const {
@@ -115,8 +109,8 @@ class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VE
 
 
 
-template <typename IT, typename RT>
-class Rank<IT, RankElemType<RT>> :  public splash::kernel::transform<IT, RankElemType<RT>, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT> {
+template <typename IT, typename RT, long firstRank>
+class Rank<IT, RankElemType<RT>, firstRank> :  public splash::kernel::transform<IT, RankElemType<RT>, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT> {
     public:
         using RankType = RT;
 		static_assert(std::is_arithmetic<RankType>::value, "Rank type must be numeric");
@@ -125,7 +119,6 @@ class Rank<IT, RankElemType<RT>> :  public splash::kernel::transform<IT, RankEle
 	    using OutputType = RankElemType<RT>;
 
 	protected:	
-        RankType firstRank;
 
 		inline void rank(size_t const & count, OutputType * out_vec) const {
 
@@ -147,12 +140,7 @@ class Rank<IT, RankElemType<RT>> :  public splash::kernel::transform<IT, RankEle
 		}
 
     public:
-		Rank(RankType const & first = 1) :  firstRank(first) {}
 		virtual ~Rank() {}
-
-		void copy_parameters(Rank const & other) {
-			firstRank = other.firstRank;
-		}
 
         inline virtual void operator()(IT const * in_vec, size_t const & count,
             OutputType * out_vec) const {
