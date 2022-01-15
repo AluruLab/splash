@@ -26,7 +26,7 @@ namespace splash { namespace kernel {
 /* TODO:
  * [ ] make buffer threadsafe
  */
-template <typename IT>
+template <typename IT, bool ASCEND = true>
 class Sort{
 	protected:
 		using PairType = std::pair<IT, size_t>;
@@ -54,10 +54,15 @@ class Sort{
 			}
 
 			// sort to get rank.
-			std::stable_sort(__buffer.data, __buffer.data + count, [](PairType const & x, PairType const & y){
-				return x.first < y.first;
-			});
-
+			if (ASCEND) {
+				std::stable_sort(__buffer.data, __buffer.data + count, [](PairType const & x, PairType const & y){
+					return x.first < y.first;
+				});
+			} else {
+				std::stable_sort(__buffer.data, __buffer.data + count, [](PairType const & x, PairType const & y){
+					return x.first >= y.first;
+				});
+			}
 		}
 
 };
@@ -75,8 +80,8 @@ struct RankElemType {
 };
 
 
-template <typename IT, typename RT = IT, long firstRank = 1>
-class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT> {
+template <typename IT, typename RT = IT, long firstRank = 1, bool ASCEND = true>
+class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT, ASCEND> {
     public:
 		using InputType = IT;
         using OutputType = RT;
@@ -109,8 +114,8 @@ class Rank : public splash::kernel::transform<IT, RT, splash::kernel::DEGREE::VE
 
 
 
-template <typename IT, typename RT, long firstRank>
-class Rank<IT, RankElemType<RT>, firstRank> :  public splash::kernel::transform<IT, RankElemType<RT>, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT> {
+template <typename IT, typename RT, long firstRank, bool ASCEND>
+class Rank<IT, RankElemType<RT>, firstRank, ASCEND> :  public splash::kernel::transform<IT, RankElemType<RT>, splash::kernel::DEGREE::VECTOR>, public splash::kernel::Sort<IT, ASCEND> {
     public:
         using RankType = RT;
 		static_assert(std::is_arithmetic<RankType>::value, "Rank type must be numeric");
