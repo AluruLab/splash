@@ -58,9 +58,7 @@ splash::ds::aligned_vector<T> make_random_vector(
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> make_random_matrix(
 	long const & seed, T const & rmin, T const & rmax,
-	S const & rows, S const & cols,
-	std::vector<std::string> & row_names, std::vector<std::string> & col_names
-) {
+	S const & rows, S const & cols) {
 	// allocate input.
 	splash::ds::aligned_matrix<T> input(rows, cols);
 
@@ -86,6 +84,14 @@ splash::ds::aligned_matrix<T> make_random_matrix(
 	mat_gen(input, part);
 	input.allgather_inplace(part);
 
+	return input;
+};
+
+template <typename T, typename S>
+splash::ds::aligned_matrix<T> make_random_matrix(
+	long const & seed, T const & rmin, T const & rmax,
+	S const & rows, S const & cols) {
+
 	row_names.resize(rows);
 	for (size_t i = 0; i < rows; ++i) {
 		row_names[i] = std::to_string(i);
@@ -95,16 +101,14 @@ splash::ds::aligned_matrix<T> make_random_matrix(
 		col_names[i] = std::to_string(i);
 	}
 
-	return input;
+	return make_random_matrix(seed, rmin, rmax, rows, cols);
 };
 
 
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> make_random_matrix_distributed(
 	long const & seed, T const & rmin, T const & rmax,
-	S const & rows, S const & cols,
-	std::vector<std::string> & row_names, std::vector<std::string> & col_names
-) {
+	S const & rows, S const & cols) {
 	// random generate data.   output: every proc has full data.
 	// OMP compatible, rows per thread.  MPI compatible, rows per proc.
 	splash::kernel::random_number_generator<> generators(seed);
@@ -129,6 +133,16 @@ splash::ds::aligned_matrix<T> make_random_matrix_distributed(
 
 	mat_gen(input);
 
+	return input;
+};
+
+template <typename T, typename S>
+splash::ds::aligned_matrix<T> make_random_matrix_distributed(
+	long const & seed, T const & rmin, T const & rmax,
+	S const & rows, S const & cols,
+	std::vector<std::string> & row_names, std::vector<std::string> & col_names
+) {
+
 	row_names.resize(rows);
 	for (size_t i = 0; i < rows; ++i) {
 		row_names[i] = std::to_string(i);
@@ -138,7 +152,7 @@ splash::ds::aligned_matrix<T> make_random_matrix_distributed(
 		col_names[i] = std::to_string(i);
 	}
 
-	return input;
+	return make_random_matrix_distributed(seed, rmin, rmax, rows, cols);
 };
 
 template <typename T, typename S>
