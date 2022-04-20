@@ -11,13 +11,13 @@
 #include <string>
 
 #include "CLI/CLI.hpp"
-#include "io/CLIParserCommon.hpp"
-#include "io/parameters_base.hpp"
-#include "utils/benchmark.hpp"
-#include "utils/report.hpp"
-#include "ds/aligned_matrix.hpp"
+#include "splash/io/CLIParserCommon.hpp"
+#include "splash/io/parameters_base.hpp"
+#include "splash/utils/benchmark.hpp"
+#include "splash/utils/report.hpp"
+#include "splash/ds/aligned_matrix.hpp"
 
-#include "io/matrix_io.hpp"
+#include "splash/io/matrix_io.hpp"
 
 #ifdef USE_OPENMP
 #include <omp.h>
@@ -39,9 +39,9 @@ class app_parameters : public parameters_base {
             app.add_option("-m,--method", reader_method, "reader impl: lightpcc=0, delim_str=1, delim_char=2");
 		}
 		virtual void print(const char * prefix) {
-            ROOT_PRINT("%s atof method: %s\n", prefix, (atof_method == std ? "std::atof" : 
+            C_ROOT_PRINT("%s atof method: %s\n", prefix, (atof_method == std ? "std::atof" : 
 				"fast"));
-            ROOT_PRINT("%s reader method: %s\n", prefix, (reader_method == lightpcc ? "lightpcc" : 
+            C_ROOT_PRINT("%s reader method: %s\n", prefix, (reader_method == lightpcc ? "lightpcc" : 
 				reader_method == delim_str ? "multi-char delim" : "single-char delim"));
 		}
 };
@@ -68,16 +68,16 @@ int main(int argc, char* argv[]) {
 	CLI11_PARSE(app, argc, argv);
 
 	// print out, for fun.
-	ROOT_PRINT_RT("command line: ");
+	C_ROOT_PRINT_RT("command line: ");
 	for (int i = 0; i < argc; ++i) {
-		ROOT_PRINT("%s ", argv[i]);
+		C_ROOT_PRINT("%s ", argv[i]);
 	}
-	ROOT_PRINT("\n");
+	C_ROOT_PRINT("\n");
 
 #ifdef USE_OPENMP
 	// omp_set_dynamic(0);
 	omp_set_num_threads(common_params.num_threads);
-	PRINT_RT("omp num threads %d.  user threads %lu\n", omp_get_max_threads(), common_params.num_threads);
+	C_PRINT_RT("omp num threads %d.  user threads %lu\n", omp_get_max_threads(), common_params.num_threads);
 #endif
 
 	// =============== SETUP INPUT ===================
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
 
 	}
 	etime = getSysTime();
-	ROOT_PRINT("Load data in %f sec\n", get_duration_s(stime, etime));
+	C_ROOT_PRINT("Load data in %f sec\n", get_duration_s(stime, etime));
 	// input.print("INPUT: ");
 
 	if (mpi_params.rank == 0) {
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
             // write to file.  MPI enabled.  Not thread enabled.
         write_csv_matrix_distributed(common_params.output, genes, samples, input);
         etime = getSysTime();
-        ROOT_PRINT("dump input in %f sec\n", get_duration_s(stime, etime));
+        C_ROOT_PRINT("dump input in %f sec\n", get_duration_s(stime, etime));
     }
 
 	return 0;
