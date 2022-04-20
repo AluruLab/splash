@@ -90,7 +90,9 @@ splash::ds::aligned_matrix<T> make_random_matrix(
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> make_random_matrix(
 	long const & seed, T const & rmin, T const & rmax,
-	S const & rows, S const & cols) {
+	S const & rows, S const & cols,
+	std::vector<std::string> & row_names, std::vector<std::string> & col_names
+) {
 
 	row_names.resize(rows);
 	for (size_t i = 0; i < rows; ++i) {
