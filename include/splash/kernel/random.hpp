@@ -87,6 +87,66 @@ class random_number_generator {
 };
 
 
+
+template<typename OT, typename Distribution, typename Generator>
+class RandomNumberGenerator : public splash::kernel::generate<OT, splash::kernel::DEGREE::SCALAR> {
+    protected:
+        random_number_generator<Generator> & generators;
+        OT mn;
+        OT mx;
+        Distribution distribution;
+
+	public:
+        using InputType = void;
+        using OutputType = OT;
+
+        RandomNumberGenerator(random_number_generator<Generator> & _gen, OT const & min = 0.0, OT const & max = 1.0) : 
+            generators(_gen), mn(min), mx(max), distribution(min, max) {}
+        virtual ~RandomNumberGenerator() {}
+        void copy_parameters(RandomNumberGenerator const & other) {
+            generators = other.generators;
+            mn = other.mn;
+            mx = other.mx;
+            distribution = other.distribution;
+        }
+
+		inline virtual OT operator()() const {
+            size_t num_threads = 1;
+            size_t thread_id = 0;
+
+#ifdef USE_OPENMP
+#pragma omp parallel
+            {
+                thread_id = omp_get_thread_num();
+                num_threads = omp_get_num_threads();
+            }
+#endif
+
+            // get the per-thread generator
+            auto generator = generators.get_generator(thread_id);
+
+            // compute. lambda capture is by reference.
+            return distribution(generator);
+		};
+};
+
+
+template <typename OT>
+using UniformRandomNumberGenerator = 
+    splash::kernel::RandomNumberGenerator<OT, 
+        typename ::std::conditional<
+            ::std::is_floating_point<OT>::value,
+            std::uniform_real_distribution<OT>,
+            std::uniform_int_distribution<OT>>::type,
+        std::default_random_engine>;
+
+template <typename OT>
+using NormalRandomNumberGenerator = 
+    splash::kernel::RandomNumberGenerator<OT, 
+        std::normal_distribution<OT>,
+        std::default_random_engine>;
+
+
 template<typename OT, typename Distribution, typename Generator>
 class RandomVectorGenerator : public splash::kernel::generate<OT, splash::kernel::DEGREE::VECTOR> {
     protected:

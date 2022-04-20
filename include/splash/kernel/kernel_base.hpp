@@ -136,6 +136,18 @@ template <typename OT, int DEG>
 class generate;
 
 template <typename OT>
+class generate<OT, DEGREE::SCALAR>  : public kernel_base {
+    public:
+        using InputType = void;
+        using OutputType = OT;
+        virtual ~generate() {};
+        inline virtual OT operator()() const = 0;
+    protected:
+        inline virtual void initialize() {};
+};
+
+
+template <typename OT>
 class generate<OT, DEGREE::VECTOR>  : public kernel_base {
     public:
         using InputType = void;
