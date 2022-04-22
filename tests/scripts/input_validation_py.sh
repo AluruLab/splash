@@ -1,5 +1,7 @@
 #!/bin/bash
 
+
+
 echo "It is recommended that this script be run in a python virtual environment."
 echo "required packages:  pandas and dcor"
 
