@@ -23,7 +23,7 @@
 class parameters_base {
     public:
         virtual void config(CLI::App& app) = 0;
-        virtual void print(const char* prefix) = 0;
+        virtual void print(const char* prefix) const = 0;
 
         parameters_base() {};
         virtual ~parameters_base() {};

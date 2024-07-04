@@ -32,10 +32,12 @@
 
 #pragma once
 
+#include <ostream>
 #include <string>  // string
 #include <algorithm> 
 #include <vector>
 #include <string>
+#include <iostream>
 #include "splash/ds/aligned_matrix.hpp"  // matrix
 #include "splash/ds/char_array.hpp"  // char_array_template
 
@@ -61,6 +63,9 @@ class HDF5MatrixReader {
 
 	protected:
 		std::string filename;
+		std::string gene_data_path;
+		std::string samples_data_path;
+		std::string matrix_data_path;
 
 		bool getSize(hid_t file_id, std::string const & path, ssize_t & rows, ssize_t & cols) {
 			// https://stackoverflow.com/questions/15786626/get-the-dimensions-of-a-hdf5-dataset#:~:text=First%20you%20need%20to%20get,int%20ndims%20%3D%20H5Sget_simple_extent_ndims(dspace)%3B
@@ -101,40 +106,73 @@ class HDF5MatrixReader {
 			hid_t dataset_id = H5Dopen(file_id, path.c_str(), H5P_DEFAULT);
 
 			hid_t filetype_id = H5Dget_type(dataset_id);
-			size_t max_len = H5Tget_size(filetype_id);
+            if(H5Tdetect_class(filetype_id, H5T_STRING) <= 0){
+                FMT_ROOT_PRINT("ERROR: NOT a string type dataset {}.\n", path);
+                H5Dclose(dataset_id);
+                H5Tclose(filetype_id);
+                return false;
+            }
 
+
+			size_t max_len = H5Tget_size(filetype_id);
+            // auto cid =  H5Tget_class (filetype_id);
+			// FMT_ROOT_PRINT("In read dataset, cid [{}];  ptr size {}\n",
+            //               cid == H5T_STRING ? "string" : "non-string",  max_len );
 			// open data space and get dimensions
 			hid_t dataspace_id = H5Dget_space(dataset_id);
 			const int ndims = H5Sget_simple_extent_ndims(dataspace_id);
 			hsize_t dims[ndims];
 			H5Sget_simple_extent_dims(dataspace_id, dims, NULL);
 			
-			// get continuous space now...
-			char * data = reinterpret_cast<char *>(calloc( (dims[0] + 1), max_len * sizeof(char)));
-			data[dims[0]*max_len] = 0;
-			//FMT_ROOT_PRINT("In read STRING dataset, got number of strings: [{}].  temp array at {:p}\n", dims[0], data );
+			// FMT_ROOT_PRINT("In read STRING dataset, got number of strings: [{}] \n", dims[0]);
+            if(H5Tis_variable_str(filetype_id)) {
+			    // Variable length string type -- max_len is the ptr size 
+                // data is array of pointers : char **
+                // https://docs.hdfgroup.org/hdf5/v1_14/group___h5_t.html#title25
+			    char **data = reinterpret_cast<char **>(calloc(dims[0] ,
+                                                        max_len * sizeof(char)));
 
-			// prepare output
+			    // prepare output
+			    //auto status = 
+			    H5Dread(dataset_id, filetype_id, H5S_ALL, dataspace_id, H5P_DEFAULT, data);
 
-			// Variable length string type
-			// read data.  use mem_type is variable length string.  memspace is same as file space. 
-			// NOTE: data should be a continuous memory block.  
-			// NOTE: Not sure why online docs show as char** with automatic allocation assumption. API behavior change?
-			//auto status = 
-			H5Dread(dataset_id, filetype_id, H5S_ALL, dataspace_id, H5P_DEFAULT, data);
+			    // convert to string objects
+			    out.clear();
+			    out.reserve(dims[0]);
+			    char * ptr = *data;
+                for(size_t x=0; x < dims[0]; ++x, ptr = *(data + x)) {
+			    	auto l = strlen(ptr);
+			    	// FMT_ROOT_PRINT("GOT STRING {} {:p} {} \"{}\"\n", x, ptr, l, std::string(ptr, l) );
+			    	out.emplace_back(ptr, l);
+			    }
+                // TODO(x): vlen reclaim is supposed to be deprecated
+                //   libraries in current server doesn't reflect this
+                // https://docs.hdfgroup.org/hdf5/v1_12/group___h5_d.html#title31
+			    H5Dvlen_reclaim (filetype_id, dataspace_id, H5P_DEFAULT, data);
+			    free(data);
+            } else {
+      			// Fixed length strings :  max_len is the size of the string;
+                // data should be a continuous memory block.  
+                char* data = reinterpret_cast<char*>(
+                    calloc((dims[0] + 1), max_len * sizeof(char)));
+                data[dims[0]*max_len] = 0;
+                out.clear();
+                out.reserve(dims[0]);
 
-			// convert to string objects
-			out.clear();
-			out.reserve(dims[0]);
-			char * ptr = data;
-			for(size_t x=0; x < dims[0]; ++x, ptr += max_len)
-			{
-				// auto l = strlen(ptr);
-				// FMT_ROOT_PRINT("GOT STRING {} {:p} {} \"{}\"\n", x, ptr, l, std::string(ptr, l) );
-				out.emplace_back(ptr, strnlen(ptr, max_len));
-			}
-			// H5Dvlen_reclaim (filetype_id, dataspace_id, H5P_DEFAULT, data);
-			free(data);
+                // read the block of data
+                H5Dread(dataset_id, filetype_id, H5S_ALL, dataspace_id,
+                        H5P_DEFAULT, data);
+                //
+                char * ptr = data;
+                for(size_t x=0; x < dims[0]; ++x, ptr += max_len) {
+                    // auto l = strlen(ptr);
+                    // FMT_ROOT_PRINT("GOT STRING {} {:p} {} \"{}\"\n", x, ptr, l, std::string(ptr, l) );
+                    out.emplace_back(ptr, strnlen(ptr, max_len));
+                }
+                free(data);
+            }
+            // std::cout << " OUT " << out.size() << " " << dims[0] << std::endl;
+
 			H5Dclose(dataset_id);
 			H5Sclose(dataspace_id);
 			H5Tclose(filetype_id);
@@ -166,7 +204,7 @@ class HDF5MatrixReader {
 			H5Sget_simple_extent_dims(filespace_id, file_dims, NULL);
 
 			// create target space
-			hsize_t mem_dims[ndims] = {rows, stride_bytes / sizeof(FloatType)};
+			hsize_t mem_dims[2] = {rows, stride_bytes / sizeof(FloatType)};
 			hid_t memspace_id = H5Screate_simple(ndims, mem_dims, NULL);
 			// select hyperslab of memory, for row by row traversal
 			hsize_t mstart[2] = {0, 0};  // element offset for first block
@@ -227,7 +265,7 @@ class HDF5MatrixReader {
 			hsize_t count[2] = {rows, cols};   // number of row and col blocks.
 			H5Sselect_hyperslab(filespace_id, H5S_SELECT_SET, start, NULL, count, NULL);
 
-			hsize_t mem_dims[ndims] = {rows, stride_bytes / sizeof(FloatType) };
+			hsize_t mem_dims[2] = {rows, stride_bytes / sizeof(FloatType) };
 			hid_t memspace_id = H5Screate_simple(ndims, mem_dims, NULL);
 			// select hyperslab of memory, for row by row traversal
 			hsize_t mstart[2] = {0, 0};  // element offset for first block
@@ -260,7 +298,12 @@ class HDF5MatrixReader {
 
 	public:
 
-		HDF5MatrixReader(std::string const & _filename) : filename(_filename) {}
+		HDF5MatrixReader(std::string const & _filename,
+                         std::string const & _gdpath="axis1",
+                         std::string const & _sdpath="axis0",
+                         std::string const & _mtxpath="block0_values") : 
+            filename(_filename), gene_data_path(_gdpath),
+            samples_data_path(_sdpath), matrix_data_path(_mtxpath) {}
 		virtual ~HDF5MatrixReader() {}
 
 			// // open the file for reading only.
@@ -316,7 +359,7 @@ class HDF5MatrixReader {
                 return false;
             }
 
-			bool res = getSize(group_id, "block0_values", numVectors, vectorSize);
+			bool res = getSize(group_id, matrix_data_path, numVectors, vectorSize);
 
 
 			H5Gclose(group_id);
@@ -366,8 +409,8 @@ class HDF5MatrixReader {
                 return false;
             }
 
-			readStrings(group_id, "axis1", genes);
-			readStrings(group_id, "axis0", samples);
+			readStrings(group_id, gene_data_path, genes);
+			readStrings(group_id, samples_data_path, samples);
 				
 			auto etime = getSysTime();
 			FMT_PRINT_RT("Read headers for {}/{} in {} sec\n", filename, path, get_duration_s(stime, etime));
@@ -375,7 +418,7 @@ class HDF5MatrixReader {
 			stime = getSysTime();
 
 			// read the data.
-			readValues(group_id, "block0_values", numVectors, vectorSize, vectors, stride_bytes);
+			readValues(group_id, matrix_data_path, numVectors, vectorSize, vectors, stride_bytes);
 
 			H5Gclose(group_id);
 			H5Fclose(file_id);
@@ -413,11 +456,11 @@ class HDF5MatrixReader {
             }
 
 			// read the names.
-			readStrings(group_id, "axis1", genes);
-			readStrings(group_id, "axis0", samples);
+			readStrings(group_id, gene_data_path, genes);
+			readStrings(group_id, samples_data_path, samples);
 
 			// read the data.
-			readValues(group_id, "block0_values", numVectors, vectorSize, vectors, stride_bytes);
+			readValues(group_id, matrix_data_path, numVectors, vectorSize, vectors, stride_bytes);
 
 			H5Gclose(group_id);
 			H5Fclose(file_id);

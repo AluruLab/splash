@@ -22,6 +22,7 @@
 #include <vector>
 #include <algorithm>
 #include <type_traits>
+#include <limits>
 
 #ifdef USE_MPI
 #include <mpi.h>

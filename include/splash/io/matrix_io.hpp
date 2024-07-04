@@ -415,7 +415,10 @@ void write_csv_matrix_distributed(std::string const & filename, std::vector<std:
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> read_hdf5_matrix(std::string const & filename, 
 	std::string const & datasetname, S & rows, S & cols, 
-	std::vector<std::string> & row_names, std::vector<std::string> & col_names) {
+	std::vector<std::string> & row_names, std::vector<std::string> & col_names,
+    std::string const & gene_data_path,
+    std::string const & samples_data_path,
+    std::string const & matrix_data_path) {
 	if (filename.length() <= 0)  return splash::ds::aligned_matrix<T>();
 
 	ssize_t nvecs = std::numeric_limits<ssize_t>::max();
@@ -423,7 +426,8 @@ splash::ds::aligned_matrix<T> read_hdf5_matrix(std::string const & filename,
 	
 	// read file to get size (HAVE TO DO 2 PASS to get size.)
 	// MPI compatible, not OpenMP enabled.
-	splash::io::HDF5MatrixReader<T> reader(filename);
+	splash::io::HDF5MatrixReader<T> reader(filename, gene_data_path, 
+                                           samples_data_path, matrix_data_path);
 	reader.getMatrixSize(datasetname, nvecs, vecsize);
 
 	// get the minimum array size.
@@ -444,6 +448,9 @@ template <typename T, typename S>
 splash::ds::aligned_matrix<T> read_hdf5_matrix_distributed(std::string const & filename, 
 	std::string const & datasetname, S & rows, S & cols,
 	std::vector<std::string> & row_names, std::vector<std::string> & col_names,
+    std::string const & gene_data_path,
+    std::string const & samples_data_path,
+    std::string const & matrix_data_path,
 	MPI_Comm const & comm = MPI_COMM_WORLD) {
 
 	if (filename.length() <= 0)  return splash::ds::aligned_matrix<T>();
@@ -452,7 +459,8 @@ splash::ds::aligned_matrix<T> read_hdf5_matrix_distributed(std::string const & f
 	ssize_t vecsize = std::numeric_limits<ssize_t>::max();
 	
 	// MPI compatible, not OpenMP enabled.
-	splash::io::HDF5MatrixReader<T> reader(filename);
+	splash::io::HDF5MatrixReader<T> reader(filename, gene_data_path,
+                                           samples_data_path, matrix_data_path);
 	reader.getMatrixSize(datasetname, nvecs, vecsize, comm);
 
 	// get the minimum array size.
@@ -535,16 +543,23 @@ void write_hdf5_matrix_distributed(std::string const & filename,
 template <typename T, typename S>
 splash::ds::aligned_matrix<T> read_matrix(std::string const & filename, 
 	std::string const & datasetname, S & rows, S & cols,
-	std::vector<std::string> & genes, std::vector<std::string> & samples, 
+	std::vector<std::string> & genes, std::vector<std::string> & samples,
 	bool skip = false,
-	int const & atof_type = 1 ) {
+	int const & atof_type = 1,
+    std::string const & gene_data_path="axis1",
+    std::string const & samples_data_path="axis0",
+    std::string const & matrix_data_path="block0_values") {
 	
 	if (splash::utils::endsWith(filename, ".csv")) {
 		return read_csv_matrix_fast<T>(filename, rows, cols, genes, samples, atof_type);
 	} else if (splash::utils::endsWith(filename, ".exp")) {
 		return read_exp_matrix_fast<T>(filename, rows, cols, genes, samples, skip, atof_type);
-	} else if ((splash::utils::endsWith(filename, "hdf5")) || (splash::utils::endsWith(filename, ".h5"))) {
-		return read_hdf5_matrix<T>(filename, datasetname, rows, cols, genes, samples);
+	} else if ((splash::utils::endsWith(filename, "hdf5")) ||
+               (splash::utils::endsWith(filename, ".h5")) || 
+               (splash::utils::endsWith(filename, ".loom")) ||
+               (splash::utils::endsWith(filename, ".h5ad"))) {
+		return read_hdf5_matrix<T>(filename, datasetname, rows, cols, genes, samples,
+                                   gene_data_path, samples_data_path, matrix_data_path);
 	} else {
 		FMT_PRINT_ERR("ERROR: unsupported file format {}.", filename);
 		return splash::ds::aligned_matrix<T>();

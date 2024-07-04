@@ -277,7 +277,16 @@ inline double dotp_avx512(double const * xx, double const * yy, size_t const & c
 #endif
 }   
 
-
+// Use default Open MP implementations for float
+inline float dotp_sse(float const * xx, float const * yy, size_t const & count) {
+    return dotp_omp(xx, yy, count);
+}
+inline float dotp_avx(float const * xx, float const * yy, size_t const & count) {
+    return dotp_omp(xx, yy, count);
+}
+inline float dotp_avx512(float const * xx, float const * yy, size_t const & count) {
+    return dotp_omp(xx, yy, count);
+}
 
 template<typename IT, typename OT>
 class DotProductKernel : public splash::kernel::inner_product<IT, OT, splash::kernel::DEGREE::VECTOR> {
